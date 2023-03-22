@@ -18,6 +18,7 @@ import re
 
 # import custom libraries
 from .misc import read_to_df
+from .misc import revcomp
 
 class Aligner:
     '''
@@ -45,7 +46,7 @@ class Aligner:
         func = getattr(self, self.params['method'])
         df = func(df_q, df_r)
         sort = self.params['sort']
-        df = aligner.filter_idx(df, 'query_id', sort[0], sort[1])
+        df = Aligner.filter_idx(df, 'query_id', sort[0], sort[1])
         df.to_csv(self.params['ofile'], index=False)
         return df
 
@@ -94,9 +95,9 @@ class Aligner:
                 out[out[:,1]==0,1] = L
         else:
             # fwd and reverse search
-            fwd_out = aligner.search_DNA(qry, ref, fwd_only=True, exact=exact, circular=circular)
-            rev_ref = base.revcomp(ref)
-            rev_out = aligner.search_DNA(qry, rev_ref, fwd_only=True, exact=exact, circular=circular)
+            fwd_out = Aligner.search_DNA(qry, ref, fwd_only=True, exact=exact, circular=circular)
+            rev_ref = revcomp(ref)
+            rev_out = Aligner.search_DNA(qry, rev_ref, fwd_only=True, exact=exact, circular=circular)
             # correct reverse locations
             for i in range(len(rev_out)):
                 s1 = rev_out.iat[i,0]
@@ -134,7 +135,7 @@ class Aligner:
                     db = Bio.Seq.Seq(ref+ref)[i:].translate()
                 else:
                     db = Bio.Seq.Seq(ref)[i:].translate()
-                df = aligner.search_DNA(qry, db, fwd_only=True, exact=True, circular=False)
+                df = Aligner.search_DNA(qry, db, fwd_only=True, exact=True, circular=False)
                 for [start, end, strand] in df[['start','end','strand']].values:
                     # convert back to base pair location
                     start = start*3 + i
@@ -151,9 +152,9 @@ class Aligner:
             return pd.DataFrame(out, columns=['start','end','strand'])
         else:
             # fwd and reverse search
-            fwd_out = aligner.search_protein(qry, ref, fwd_only=True, circular=circular)
-            rev_ref = base.revcomp(ref)
-            rev_out = aligner.search_protein(qry, rev_ref, fwd_only=True, circular=circular)
+            fwd_out = Aligner.search_protein(qry, ref, fwd_only=True, circular=circular)
+            rev_ref = revcomp(ref)
+            rev_out = Aligner.search_protein(qry, rev_ref, fwd_only=True, circular=circular)
             # correct reverse locations
             for i in range(len(rev_out)):
                 s1 = rev_out.iat[i,0]
@@ -208,12 +209,12 @@ class Aligner:
         '''
         Exact string search against query and reference
         '''
-        qry = aligner.str_to_df(qry, 'query')
-        ref = aligner.str_to_df(ref, 'ref')
+        qry = Aligner.str_to_df(qry, 'query')
+        ref = Aligner.str_to_df(ref, 'ref')
         out = []
         for rname, rseq in ref[['name','sequence']].values:
             for qname, qseq in qry[['name','sequence']].values:
-                x = aligner.search_DNA(qseq, rseq)
+                x = Aligner.search_DNA(qseq, rseq)
                 x['query_id'] = qname
                 x['ref_id'] = rname
                 out.append(x)
@@ -229,12 +230,12 @@ class Aligner:
         '''
         k = self.params['minimap']['k']
         w = self.params['minimap']['w']
-        qry = aligner.str_to_df(qry, 'query')
-        ref = aligner.str_to_df(ref, 'ref')
+        qry = Aligner.str_to_df(qry, 'query')
+        ref = Aligner.str_to_df(ref, 'ref')
 
         out = []
         for rname, rseq in ref[['name','sequence']].values:
-            a = mappy.Aligner(seq=rseq)
+            a = mappy.aligner(seq=rseq)
             for qname, qseq in qry[['name','sequence']].values:
                 for h in a.map(qseq):
                     out.append([qname, len(qseq), h.q_st, h.q_en, rname, h.ctg_len, h.r_st, h.r_en, h.trans_strand, h.read_num,
@@ -254,15 +255,15 @@ class Aligner:
         mat = self.params['parasail']['mat']
         method = self.params['parasail']['method']
 
-        qry = aligner.str_to_df(qry, 'query')
-        ref = aligner.str_to_df(ref, 'ref')
+        qry = Aligner.str_to_df(qry, 'query')
+        ref = Aligner.str_to_df(ref, 'ref')
 
         out = []
         # select aligner function to use
         paligner = getattr(parasail, method)
         for rname, rseq in ref[['name','sequence']].values:
             for qname, qseq in qry[['name','sequence']].values:
-                qseqR = base.revcomp(qseq)
+                qseqR = revcomp(qseq)
                 res = paligner(qseq, rseq, g1, g2, mat)
                 resR = paligner(qseqR, rseq, g1, g2, mat)
                 cigarF = ''
@@ -270,8 +271,8 @@ class Aligner:
                 if 'trace' in method:
                     cigarF = res.cigar.decode.decode('UTF-8')
                     cigarR = resR.cigar.decode.decode('UTF-8')
-                sF = aligner.cigar_to_stats(cigarF)
-                sR = aligner.cigar_to_stats(cigarR)
+                sF = Aligner.cigar_to_stats(cigarF)
+                sR = Aligner.cigar_to_stats(cigarR)
                 out.append([qname, len(qseq), rname, len(rseq), 1, res.score, sF[1]+sF[2], sF[0], sF[1], sF[2], cigarF])
                 out.append([qname, len(qseq), rname, len(rseq), -1, resR.score, sR[1]+sR[2], sR[0], sR[1], sR[2], cigarR])
         col = ['query_id','q_len','ref_id','t_len','strand','AS','NM','match','mismatch','indel','cigar']
@@ -302,7 +303,7 @@ class Aligner:
         m = 0
         x = 0
         indel = 0
-        for n,c in aligner.cigar_to_list(cigar):
+        for n,c in Aligner.cigar_to_list(cigar):
             if c in ['M','=']:
                 m+=n
             if c in ['X']:
@@ -323,7 +324,7 @@ class Aligner:
         align = ''
         i1 = 0
         i2 = 0
-        for n, c in aligner.cigar_to_list(cigar):
+        for n, c in Aligner.cigar_to_list(cigar):
             span = int(n)
             if c == 'M' or c=='=':
                 qa+=query[i1:i1+span]

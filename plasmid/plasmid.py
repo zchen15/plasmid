@@ -15,18 +15,59 @@ from .misc import search_key
 from .misc import format_to_dna
 from .misc import revcomp
 from .misc import isDNA
-from .misc import read_csv
 from .misc import read_to_df
 from .misc import get_timestamp
 from .graphic import Graphic
+from .aligner import Aligner
 
 def read_genbank(fname):
     '''
-    Place holder function to load genbank file into plasmid class object
+    Reads a genbank file into plasmid class object
     fname = genbank file to read
     returns Plasmid object with data loaded
     '''
-    return Plasmid.read(fname)
+    # load data with SeqIO
+    print('reading ',fname,' as genbank file')
+    SeqRecord = Bio.SeqIO.read(fname, 'genbank')
+
+    # add some info to the genbank files
+    for gene in SeqRecord.features:
+        # find the label ordering is the label that takes precedance
+        name = ['ApEinfo_label','label','locus_tag','gene']
+        label = 'unknown'
+        for k in name:
+            if k in gene.qualifiers:
+                if type(gene.qualifiers[k]) == list:
+                    label = gene.qualifiers[k][0]
+                elif type(gene.qualifiers[k]) == str:
+                    label = gene.qualifiers[k]
+        gene.qualifiers['locus_tag'] = [label]
+
+    # correct genbank read issue in parsing features with CompoundLocations which wrap around the origin
+    for j in range(0, len(SeqRecord.features)):
+        d = SeqRecord.features[j].location.__dict__ 
+        if 'parts' in d and len(d['parts'])==2:
+            # if ordering is wrong, swap it
+            if d['parts'][0].start==0 and d['parts'][1].end==len(SeqRecord.seq) and d['parts'][0].strand == d['parts'][1].strand:
+                SeqRecord.features[j].location.__dict__['parts'] = [d['parts'][1], d['parts'][0]]
+
+    # create the Plasmid dataframe
+    return Plasmid(SeqRecord)
+
+def read_fasta(fname):
+    '''
+    Read sequences from csv or fasta files
+    fname = file to read
+    returns list of Plasmid objects with data loaded
+    '''
+    df = read_to_df(fname)
+    out = []
+    # generate list of plasmids
+    for name, seq in df[['name','sequence']].values: # todo test debug
+        x = Plasmid(seq)
+        x = x.annotate(label=name, sequence=seq)
+        out.append(x)
+    return out
 
 class Plasmid:
     '''
@@ -52,6 +93,7 @@ class Plasmid:
             self.features = self.SeqRecord.features
         except:
             print('error object is not a Bio.SeqRecord or String')
+        
         # set default cmap
         features = ['rbs','cds','promoter','misc_binding','ncRNA','terminator','primer_bind','unknown','rep_origin','protein_bind']
         palette = 'Category20_20'
@@ -63,72 +105,6 @@ class Plasmid:
         # update the feature list ordering
         self.reset_colors(ow_type=False, ow_locus=False, inplace=True)
         self.update(inplace=True)
-
-    def read(fname):
-        '''
-        Reads sequences from a genbank, fasta, csv, or text file and returns a Plasmid object
-        fname = filenames to read sequences from
-        returns a Plasmid object or list of plasmid objects
-        '''
-        try:
-            # load data with SeqIO
-            print('reading '+fname+' as genbank file')
-            SeqRecord = Bio.SeqIO.read(fname, 'genbank')
-            
-            # add some info to the genbank files
-            for gene in SeqRecord.features:
-                # find the label ordering is the label that takes precedance
-                name = ['ApEinfo_label','label','locus_tag','gene']
-                label = 'unknown'
-                for k in name:
-                    if k in gene.qualifiers:
-                        if type(gene.qualifiers[k]) == list:
-                            label = gene.qualifiers[k][0]
-                        elif type(gene.qualifiers[k]) == str:
-                            label = gene.qualifiers[k]
-                gene.qualifiers['locus_tag'] = [label]
-
-            # correct genbank read issue in parsing features with CompoundLocations which wrap around the origin
-            for j in range(0, len(SeqRecord.features)):
-                d = SeqRecord.features[j].location.__dict__ 
-                if 'parts' in d and len(d['parts'])==2:
-                    # if ordering is wrong, swap it
-                    if d['parts'][0].start==0 and d['parts'][1].end==len(SeqRecord.seq) and d['parts'][0].strand == d['parts'][1].strand:
-                        SeqRecord.features[j].location.__dict__['parts'] = [d['parts'][1], d['parts'][0]]
-            
-            # create the Plasmid dataframe
-            return Plasmid(SeqRecord)
-        except:
-            print('failed to read '+fname+' as a genbank file')
-        
-        # Read as list of genbank files
-        try:
-            print('Reading',fname,'as list of genbank files')
-            if type(fname) == list:
-                out = []
-                for f in fname:
-                    x = Plasmid.read(f)
-                    if type(x)==list:
-                        out+=x
-                    else:
-                        out.append(x)
-                return x
-        except:
-            print('failed to read',fname,'as list of genbank files')
-        
-        # Read sequences as csv, fasta, or text file
-        try:
-            if type(fname) == str:
-                df = read_to_df(fname)
-                out = []
-                # generate list of plasmids
-                for name, seq in df[['name','sequence']]: # todo test debug
-                    x = Plasmid(seq)
-                    x = x.annotate(label=name, sequence=seq)
-                    out.append(x)
-                return out
-        except:
-            print('failed to read '+fname)
 
     def reset_colors(self, ow_type=True, ow_locus=True, inplace=False):
         '''
@@ -281,10 +257,14 @@ class Plasmid:
             if end > seq_length:
                 print('Warning: annotation issues with '+gene.qualifiers['locus_tag'][0]+' end > seq_length')
                 good = False
+        
         # check header consistency
         for k in self.default_annotations.keys():
             if ~(k in self.SeqRecord.annotations.keys()):
                 self.SeqRecord.annotations[k] = self.default_annotations[k]
+        
+        if good==False:
+            sys.error()
         return good
 
     def to_genbank(self, filename, timestamp=False):
@@ -712,12 +692,6 @@ class Plasmid:
             keep = np.arange(len(key))[key==False]
             self.SeqRecord.features = [self.SeqRecord.features[i] for i in keep]
 
-    def seq(self):
-        '''
-        Get nucleotide sequence of Plasmid dataframe
-        '''
-        return str(self.SeqRecord.seq)
-
     def translate(self, strand=None, frame=0, table='Standard'):
         '''
         Translate the DNA sequence to amino acids
@@ -773,16 +747,18 @@ class Plasmid:
         return pd.DataFrame(data, columns=col)
 
     def __repr__(self):
-
+        '''
+        Return string showing memory address and table contents
+        '''
         # get memory address
         loc = str(type(self))+' at '+hex(id(self))
         return str(loc)+'\n' + self.get_table()
 
     def __str__(self):
         '''
-        Returns string representation of Plasmid
+        Returns nucleotide sequence of Plasmid dataframe
         '''
-        return self.seq()
+        return str(self.SeqRecord.seq)
 
     def __len__(self):
         '''
@@ -790,14 +766,15 @@ class Plasmid:
         '''
         return len(self.SeqRecord.features)
     
-    def print(self, width=0, legend=False):
+    def print(self, width=0):
         '''
         Print out colored representation of Plasmid
         width = number of characters per line
-        legend = add labels for each features # todo
         '''
         rec = Graphic(data=self)
-        print(rec.colorize_plasmid(width=width))
+        out = rec.colorize_plasmid(width=width)
+        print(out)
+        return out
  
     def get_table(self):
         # add genbank header info
@@ -810,7 +787,7 @@ class Plasmid:
         for c in np.unique(df['color']):
             val = Graphic().get_colored_text(c,fg=c)
             table = table.replace(c,val)
-        table+= 'total length:'+str(len(self.seq()))+'\n'
+        table+= 'total length:'+str(len(self.__str__()))+'\n'
         return table
 
     def annotate(self, file='', label='', sequence='', pos=[], feature='unknown', color=['cyan','dodgerblue'], circular=True, inplace=False):
@@ -848,10 +825,10 @@ class Plasmid:
             if isDNA(sequence):
                 # convert U to T for DNA sequence only
                 sequence = sequence.lower().replace('u','t')
-                pos = aligner.search_DNA(sequence, str(out.SeqRecord.seq), exact=False, circular=circular)
+                pos = Aligner.search_DNA(sequence, str(out.SeqRecord.seq), exact=False, circular=circular)
             # search for protein sequence
             else:
-                pos = aligner.search_protein(sequence, str(out.SeqRecord.seq), circular=circular)
+                pos = Aligner.search_protein(sequence, str(out.SeqRecord.seq), circular=circular)
             # add the annotation
             for [start, end, strand] in pos[['start','end','strand']].values:
                 # create compound location which can wrap around the origin

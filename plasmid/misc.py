@@ -74,39 +74,35 @@ def load_args(args, params=None):
                 params[k] = argvars[k]
     return params
 
-def read_to_df(files):
+def read_to_df(fname):
     '''
     Function used to read csv, genbank, fasta, or text file of sequences
+    fname = filename to read
     return pandas dataframe of sequences in the file
     '''
     out = []
-    if type(files) == str:
+    if type(fname) == str:
         try:
-            print('Try reading',files,'as genbank')
+            print('Try reading',fname,'as genbank')
             rec = Bio.SeqIO.read(fname, 'genbank')
             out = [[fname, fname, str(rec.seq)]]
         except:
-            print('Failed to read',files,'as genbank')
+            print('Failed to read',fname,'as genbank')
             
             try:
-                print('Try reading',files,'as csv')
-                out = read_csv(files)
+                print('Try reading',fname,'as csv')
+                out = read_csv(fname)
             except:
-                print('Failed to read',files,'as csv')
+                print('Failed to read',fname,'as csv')
 
                 try:
-                    print('Try reading',files,'as fasta')
-                    out = read_fasta(files)
+                    print('Try reading',fname,'as fasta')
+                    out = read_fasta(fname)
                 except:
-                    print('Failed to read',files,'as fasta')
+                    print('Failed to read',fname,'as fasta')
 
-    else:
-        # read from multiple files
-        for fname in files:
-            out+=read(fname)
     # format into a pandas dataframe
     out = pd.DataFrame(out, columns=['filename','name','sequence'])
-    out['sequence'] = [s.upper() for s in out['sequence']]
     return out
 
 def read_csv(fname):
@@ -118,7 +114,7 @@ def read_csv(fname):
     df = pd.read_csv(fname)
     # figure out which has name
     name = [fname]*len(df)
-    col = ['name','label','Strand']
+    col = ['name','label','Strand','locus_tag']
     for c in col:
         if c in df.columns:
             name = df[c].values
@@ -164,6 +160,7 @@ def complement(seq):
 def format_to_dna(sequence):
     '''
     Convert a string to have only IUPAC dna codes. Other erroneous letters are removed.
+    sequence = string to change to IUPAC only codes
     return the cleaned string
     '''
     allowed = 'ATGCRYSWKMBDHVN'
@@ -181,10 +178,10 @@ def format_to_dna(sequence):
         out = out.replace(i,'')
     return out
 
-def isDNA(self, seq):
+def isDNA(seq):
     return set(seq.upper()).issubset(set('ATGCU'))
 
-def isAA(self, seq):
+def isAA(seq):
     return set(seq).issubset(set(codons))
 
 def search_key(data, keyword, rev=False):

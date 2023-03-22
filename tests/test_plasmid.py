@@ -5,40 +5,81 @@ import plasmid
 import glob
 import copy
 
-def test_genbank_read():
-    # Checks reading and loading genbank files
+def test_read_genbank():
+    # Read a genbank file
     fname = 'data/dcas9_LacI.gb'
-    x = plasmid.read_genbank(fname)
+    x = plasmid.read_genbank(fname)        
     assert type(x).__name__ == 'Plasmid'
     return x
-df = test_genbank_read()
+df = test_read_genbank()
+
+def test_read_fasta():
+    # Read csv and fasta
+    fname = glob.glob('data/*.csv')[0]
+    y = plasmid.plasmid.read_fasta(fname)
+    fname = glob.glob('data/*.fa')[0]
+    y+= plasmid.plasmid.read_fasta(fname)
+    assert type(y) == list
+    for x in y:
+        assert type(x).__name__ == 'Plasmid'
 
 def test_plasmid_print():
     # Check printing
     assert type(df.__str__())==str
-    print(df.__repr__())
+    assert type(df.print())==str
     assert type(df.__repr__())==str
-    print(df.print())    
 
-def test_concatenation():
+def test_rotation():
+    # Checks rotation of entries
+    fname = 'data/dcas9_LacI.gb'
+    x = plasmid.read_genbank(fname)
+    ori = x[x['locus_tag'].str.contains('TetR')]['start'].values[0]
+    x = x.set_origin(ori)
+    assert 'TetR' in x['locus_tag'].values[0]
+    
+def test_del():
+    # Checks deletion of entries
+    fname = 'data/dcas9_LacI.gb'
+    x = plasmid.read_genbank(fname)
+    f1 = x[0]
+    f2 = x[1]
+    del(x[0])
+    # debug output
+    print('f1', f1.__repr__())
+    print('f2', f2.__repr__())
+    print('x', x.__repr__())
+    c1 = f2['locus_tag'].values[0]
+    c2 = x['locus_tag'].values[0]
+    print('==', c1==c2)
+    assert c1==c2
+
+def test_add():
     # Checks concatenation
     x = df+df
-    print(df)
-    print(x)
     assert type(x).__name__ == 'Plasmid'
-    
-def test_deletion():
+    N = len(df)
+    f1 = x[0]
+    f2 = x[N]
+    print(f1.__repr__())
+    print(f2.__repr__())
+    c1 = f1['locus_tag'].values[0]
+    c2 = f2['locus_tag'].values[0]
+    assert c1==c2
+
+def test_set():
     # Checks deletion of entries
-    x = copy.copy(df)
-    x0 = x[0]
-    print(x[0], x0)
-    assert (x0==x[0])==False
-
-def test_rotation():
-    # Checks rotation of entries
-    assert True
+    fname = 'data/dcas9_LacI.gb'
+    x = plasmid.read_genbank(fname)
+    assert c1==c2
     
-def test_rotation():
-    # Checks rotation of entries
-    assert True
+def test_slice():
+    # Checks deletion of entries
+    fname = 'data/dcas9_LacI.gb'
+    x = plasmid.read_genbank(fname)
+    assert c1==c2
 
+def test_slice():
+    # Checks deletion of entries
+    fname = 'data/dcas9_LacI.gb'
+    x = plasmid.read_genbank(fname)
+    assert c1==c2

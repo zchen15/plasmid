@@ -37,7 +37,7 @@ class Graphic:
         if data!=None:
             self.Plasmid = data
             self.features = data.to_dataframe(str_only=False)
-            self.params['nt'] = len(data.seq())  # total length of the plasmid
+            self.params['nt'] = len(data.__str__())  # total length of the plasmid
             self.params['plots']['R'] = self.params['nt']/(2*np.pi)
             self.auto_level()
 
@@ -256,7 +256,7 @@ class Graphic:
         width = chars per line
         '''
         carr, cdict = self.get_color_array()
-        seq = self.Plasmid.seq()
+        seq = self.Plasmid.__str__()
         if width==0:
             return self.color_by_array(seq, cdict, carr)
         else:
@@ -280,7 +280,7 @@ class Graphic:
         cdict = {}
         idict = {}
         j = 1
-        seq = self.Plasmid.seq()
+        seq = self.Plasmid.__str__()
         carr = np.zeros(len(seq))
         for loc, color in df[['location','color']].values:
             if (color in idict.keys())==False:
