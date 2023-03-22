@@ -1,38 +1,27 @@
+# Plasmid: A python library for gene editing and annotation
+`Plasmid` is a python library for reading, annotating, and editing genbank records in Jupyter Notebooks or ipython shell. This project was inspired by [ApE](https://jorgensen.biology.utah.edu/wayned/ape/) and [pandas](https://pandas.pydata.org/). The goal of the project was address the lack of cross platform support provided by `ApE` and provide a more user friendly open source interface for manipulating genbank records in a programmable manner.
 
-## Introduction
-The following is a python library for editing plasmids in jupyter notebook or ipython shell. This library was inspired by [ApE](https://jorgensen.biology.utah.edu/wayned/ape/) and [pandas](https://pandas.pydata.org/). Genbank information is stored in an object class called plasmid. The plasmid object can be manipulated in similar manner to a pandas dataframe. Useful functions for gene editing have been supplemented in this class.
+The functionalities of this library are organized into the following modules
 
-## Dependencies
-This library uses [biopython](https://biopython.org/), [dna_features_viewer](https://github.com/Edinburgh-Genome-Foundry/DnaFeaturesViewer), and [pyspoa](https://github.com/nanoporetech/pyspoa).
-```
-pip install biopython             # for reading genbank files
-pip install pyspoa                # for multi-alignment
-```
+`Plasmid` contains functions for reading, generating, and manipulating genbank records
+
+`Graphic` contains functions for text colorization and plot generation
+
+`Aligner` contains functions for sequence alignment and search
+
+`Designer` contains functions for generation of primers for extension PCR, Gibson Assembly, and Golden Gate Assembly
 
 ## Installation
-Clone this repository and link `gene_editor.py` to the current directory where you will run your jupyter notebook.
+Run the following commands to clone and install this library. This package will be published to pypi once testing is complete.
 
-## Quick start
 ```
-import gene_editor as pyge        # loads the library
-
-plasmid = pyge.read('seq.gb')     # loads genbank data into the plasmid dataframe
-print(plasmid)                    # prints a table containing the layout of the plasmid
-df = plasmid.get_dataframe()      # obtain a pandas dataframe of the genetic features on the plasmid
-
-graphic_record = plasmid.linear_record() # obtain a linear graphic record for plotting with dna_features_viewer
-plasmid.linear_record().plot()           # obtain a linear graphic record and plot a linear map of plasmid
-plasmid.circular_record().plot()         # obtain a circular graphic record and plot a circular map of the plasmid
-
-plasmid.to_genbank('output.gb')  # writes the plasmid dataframe to a genbank file 
+git clone https://github.com/zchen15/plasmid
+cd plasmid
+pip3 install .
 ```
 
-More examples can be found in the demos folder.
+## Usage 
+The `demos/` directory contains example jupyter notebooks that display some of functionality provided by `Plasmid`. More detailed documentation will be provided later.
 
 ## Issues
-Please submit issues on the issues tab of this repository.
-
-## Citation
-If you use this library for scientific publication, please also cite [dna_features_viewer](https://github.com/Edinburgh-Genome-Foundry/DnaFeaturesViewer)
-
-
+If you experience any issues with the code, please post them on the issues section along with the log file. I will monitor this periodically and try to fix issues as they arise.

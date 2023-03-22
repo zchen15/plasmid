@@ -83,3 +83,5 @@ def test_slice():
     fname = 'data/dcas9_LacI.gb'
     x = plasmid.read_genbank(fname)
     assert c1==c2
+
+    
