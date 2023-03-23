@@ -333,7 +333,7 @@ class Oligos:
                     fname = ofile+fname
                     seq = seq.replace(' ','')
                     y = plasmid(seq)
-                    y = y.annotate(label=fname, sequence=seq)
+                    y = y.annotate(name=fname, sequence=seq)
                     y = x+y
                     print('writing to '+fname)
                     y.set_origin(ori, inplace=True)

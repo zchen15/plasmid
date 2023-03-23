@@ -70,18 +70,65 @@ def test_set():
     # Checks deletion of entries
     fname = 'data/dcas9_LacI.gb'
     x = plasmid.read_genbank(fname)
-    assert c1==c2
     
-def test_slice():
-    # Checks deletion of entries
-    fname = 'data/dcas9_LacI.gb'
-    x = plasmid.read_genbank(fname)
-    assert c1==c2
+    # index set
+    val = 'hello'
+    col = 'locus_tag'
+    i = 1
+    x[col, i] = val
+    assert x[col].values[i] == val 
+    
+    val = 'hello'
+    col = 'color'
+    i = 1
+    x[i, col] = val
+    assert x[col].values[i] == val 
 
-def test_slice():
-    # Checks deletion of entries
+    # bool setting
+    val = 'blue'
+    col = 'color'
+    idx = x['type'] == 'terminator'
+    x[idx, col] = val
+    x = x['color'].values[idx]
+    for y in x:
+        assert y==val
+    
+def test_splice():
+    # Checks splicing of sequences
     fname = 'data/dcas9_LacI.gb'
     x = plasmid.read_genbank(fname)
-    assert c1==c2
+    i = 1
+    name1, s1, s2 = x[['locus_tag','start','end']].values[i]
+    seq1 = x[s1:s2].splice().__str__()
+    seq2 = x.__str__()[s1:s2]
+
+    assert seq1==seq2
+
+def test_replace():
+    # Checks sequence replacement
+    fname = 'data/dcas9_LacI.gb'
+    x = plasmid.read_genbank(fname)
+    i = 2
+    val = 'TTTTTTAAAAAA'
+    
+    # check initial values
+    s1 = x[i]['start'].values[0]
+    s2 = s1 + len(val)
+    print(s1, s2)
+
+    # set to new value
+    x[i] = val
+
+    # check new values
+    seq = x.__str__()[s1:s2]
+    print(val, seq)
+    assert val == seq
+    
+def test_merge():
+    # Checks merger of records todo
+    fname = 'data/dcas9_LacI.gb'
+    x = plasmid.read_genbank(fname)
+    assert True
+
 
     

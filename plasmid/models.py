@@ -13,7 +13,6 @@ class NeuralNetwork(torch.nn.Module):
         Load the data set
         '''
         fname = self.params['infile']
-        
 
     def model1(self, x):
         '''

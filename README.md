@@ -1,5 +1,5 @@
 # Plasmid: A python library for gene editing and annotation
-`Plasmid` is a python library for reading, annotating, and editing genbank records in Jupyter Notebooks or ipython shell. This project was inspired by [ApE](https://jorgensen.biology.utah.edu/wayned/ape/) and [pandas](https://pandas.pydata.org/). The goal of the project was address the lack of cross platform support provided by `ApE` and provide a more user friendly open source interface for manipulating genbank records in a programmable manner.
+`Plasmid` is a library for reading, annotating, and editing genbank records in Jupyter Notebooks or ipython shell. This project was inspired by [ApE](https://jorgensen.biology.utah.edu/wayned/ape/) and [pandas](https://pandas.pydata.org/). The goal of the project was address the lack of cross platform support provided by `ApE` and provide a more user friendly open source interface for manipulating genbank records in a programmable manner.
 
 The functionalities of this library are organized into the following modules
 

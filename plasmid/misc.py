@@ -184,6 +184,31 @@ def isDNA(seq):
 def isAA(seq):
     return set(seq).issubset(set(codons))
 
+def isBool(value):
+    '''
+    Check if list of a values are only booleans
+    '''
+    values = np.unique(value)
+    # splice based on boolean array
+    if len(values) < 3 and type(values[0])==np.bool_ and type(values[-1])==np.bool_:
+        return True
+    else:
+        return False
+
+def isStringArray(value):
+    '''
+    Check if list contains only strings
+    '''
+    x = [type(i)==str for i in value]
+    return sum(x) == len(value)
+
+def isIntArray(value):
+    '''
+    Check if list contains only integers
+    '''
+    x = [type(i)==int for i in value]
+    return sum(x) == len(value)
+
 def search_key(data, keyword, rev=False):
     '''
     Searches dictionary for first instance of keyword
@@ -291,6 +316,39 @@ def generate_biobricks(database, keyword, verbose=True):
         print(df)
     return output
 
+def load_annotation_database(filename, lib_format='csv'):
+    '''
+    Loads an annotation into a pandas dataframe, so it can be used to annotate sequences
+    lib_format = type of formatting the annotation database is stored as.
+                 valid options are csv or ApE
+    returns a pandas dataframe with columns [label, feature, color, start, end, strand, sequence]
+    '''
+    if lib_format=='csv':
+        df = pd.read_csv(filename)
+        if ('strand' in df.columns)==False:
+            print('Sequence orientation is not defined. Please add strand column to csv file')
+            return None
+        df['strand'] = df['strand'].astype(int)
+    elif lib_format=='ApE':
+        df = pd.read_csv('Default_Features.txt', delimiter='\t', header=None)
+        df = df.drop(columns=df.columns[4:])
+        df.columns = ['locus_tag','sequence','feature_type','color']
+        df['strand'] = 1
+    # do some safety checks on the dna sequences
+    data = []
+    for i in range(0,len(df)):
+        seq = format_to_dna(df.iloc[i]['sequence'])
+        # correct strand orientation to 5'->3'
+        if df.iloc[i]['strand'] < 0:
+            seq = revcomp(seq)
+        data.append(seq)
+    df['sequence'] = data    
+    df['length'] = [len(seq) for seq in df['sequence']]
+    df['start'] = None
+    df['end'] = None
+    df['strand'] = 1
+    return df
+
 def unpack_FeatureLocation(loc):
     '''
     Unpack locations nested in locations object
@@ -298,8 +356,84 @@ def unpack_FeatureLocation(loc):
     if 'parts' in loc.__dict__.keys():
         out = []
         for p in loc.parts:
-            out+= Plasmid.unpack_FeatureLocation(p)
+            out+= unpack_FeatureLocation(p)
         return out
     else:
         return [loc]
+
+def unwrap_FeatureLocation(loc, length):
+    '''
+    Get proper start and end locations of a genetic feature that wraps around the origin
+    loc = Bio.SeqFeature location
+    length = length of circular Plasmid
+    returns [start, end, strand]
+    '''
+    strand = loc.strand
+    start = loc.start%length
+    end = loc.end%length
+    if end==0:
+        end=length
+    return [start, end, strand]
+
+def wrap_FeatureLocation(start, end, strand, length):
+    '''
+    Create a CompoundLocation or FeatureLocation object that wrap the annotation around the origin of a circular Plasmid
+    start = start base position of the gene
+    end = end base position of the gene
+    strand = reading frame of the gene 5'->3' is +1
+    length = base pair length of the Plasmid
+    returns Bio.SeqFeature.CompoundLocation or Bio.SeqFeature.FeatureLocation object
+    '''
+    start = start%length
+    end = end%length
+    if end==0:
+        end = length
+
+    if end < start:
+        loc1 = Bio.SeqFeature.FeatureLocation(int(start), int(length), int(strand))
+        loc2 = Bio.SeqFeature.FeatureLocation(0, int(end), int(strand))
+        loc = Bio.SeqFeature.CompoundLocation([loc1,loc2])
+    else:
+        loc = Bio.SeqFeature.FeatureLocation(int(start), int(end), int(strand))
+    return loc
+
+def shift_CompoundLocation(loc, N, L, circular=True):
+    '''
+    Applies nucleotide shift to compound locs and merges adjacent FeatureLocations that arise after the shift
+    loc = Bio.SeqFeature.FeatureLocation or Bio.SeqFeature.CompoundLocation object
+    N = number of nucleotides to shift
+    L = length of the Plasmid sequence
+    circular = apply relevant corrections if the genome is circular
+    returns a Bio.SeqFeature.CompoundLocation or Bio.SeqFeature.FeatureLocation
+    '''
+    loc+=int(N)
+    if circular:
+        if 'parts' in loc.__dict__:
+            # correct the shift in each sub loc
+            out = []
+            for p in loc.__dict__['parts']:
+                x = shift_CompoundLocation(p, 0, L, circular=True)
+                # unwrap joint locations
+                if 'parts' in x.__dict__:
+                    out+= x.__dict__['parts']
+                else:
+                    out.append(x)
+            # merge adjacent locations
+            keep = []
+            start = -1
+            for i in range(0, len(out)):
+                # find the start
+                if start == -1:
+                    start = out[i].start
+                # record the new position when a discontinuity is found
+                if i+1 == len(out) or (out[i].end == out[i+1].start and out[i].strand == out[i+1].strand) == False:
+                    keep.append(Bio.SeqFeature.FeatureLocation(start, out[i].end, out[i].strand))
+                    start = -1
+            if len(keep) > 1:
+                loc = Bio.SeqFeature.CompoundLocation(keep)
+            elif len(keep) == 1:
+                loc = keep[0]
+        else:
+            loc = wrap_FeatureLocation(loc.start, loc.end, loc.strand, L)
+    return loc
 

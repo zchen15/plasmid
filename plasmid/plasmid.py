@@ -14,9 +14,19 @@ import Bio.SeqIO
 from .misc import search_key
 from .misc import format_to_dna
 from .misc import revcomp
+
 from .misc import isDNA
+from .misc import isAA
+from .misc import isBool
+from .misc import isStringArray
+from .misc import isIntArray
+
 from .misc import read_to_df
 from .misc import get_timestamp
+from .misc import unwrap_FeatureLocation
+from .misc import wrap_FeatureLocation
+from .misc import shift_CompoundLocation
+
 from .graphic import Graphic
 from .aligner import Aligner
 
@@ -65,7 +75,7 @@ def read_fasta(fname):
     # generate list of plasmids
     for name, seq in df[['name','sequence']].values: # todo test debug
         x = Plasmid(seq)
-        x = x.annotate(label=name, sequence=seq)
+        x = x.annotate(name=name, sequence=seq)
         out.append(x)
     return out
 
@@ -147,7 +157,7 @@ class Plasmid:
             gene.qualifiers['ApEinfo_fwdcolor'] = [color]
             gene.qualifiers['ApEinfo_revcolor'] = [color]
 
-    def set_column(self, key, value, col):
+    def set_column(self, key, col, value):
         '''
         Sets columns of Plasmid dataframe
         '''
@@ -175,11 +185,14 @@ class Plasmid:
                 self.SeqRecord.features[k].qualifiers['locus_tag'] = [val]
             elif col=='type':
                 self.SeqRecord.features[k].type = val
+            else:
+                sys.error()
         self.update(inplace=True)
 
     def unpack_key(self, key):
         '''
-        Unpack slice, range, bool array, int array, or list key values
+        Formats key into a list of values
+        key = slice, range, bool array, int array, or list
         Returns a list of values
         '''
         if type(key) == int:
@@ -192,9 +205,9 @@ class Plasmid:
             if stop==None:
                 stop = len(self.SeqRecord.features) 
             return list(range(start, stop))
-        elif self.isIntArray(key):
+        elif isIntArray(key):
             return [int(k) for k in key]
-        elif self.isBool(key):
+        elif isBool(key):
             key = np.arange(len(key))[key]
             return [int(k) for k in key]
         elif type(key) == list:
@@ -302,11 +315,11 @@ class Plasmid:
         '''
         genes = self.SeqRecord.features
         for i in range(0, len(genes)):
-            [s1, s2, strand] = Plasmid.unwrap_FeatureLocation(genes[i].location, len(self.SeqRecord.seq))
+            [s1, s2, strand] = unwrap_FeatureLocation(genes[i].location, len(self.SeqRecord.seq))
             for k in [s1, s2]:
                 good = True
                 for j in range(i, len(genes)):
-                    [start, end, strand] = Plasmid.unwrap_FeatureLocation(genes[j].location, len(self.SeqRecord.seq))
+                    [start, end, strand] = unwrap_FeatureLocation(genes[j].location, len(self.SeqRecord.seq))
                     # break out of loop if origin is not in good location
                     if (end > start and k > start and k < end) or (start > end and (k > start or k < end)):
                         good = False
@@ -579,16 +592,16 @@ class Plasmid:
             out.delete_sequence(range(0, start), disrupt=True, inplace=True)
         return out
 
-    def slice(self, exact=True, inplace=False):
+    def splice(self, inplace=False):
         '''
         Get a slice sequence from start of all features to end of all features
         '''
         gene = self.SeqRecord.features[0]
-        [start, end, strand] = Plasmid.unwrap_FeatureLocation(gene.location, len(self.SeqRecord.seq))
+        [start, end, strand] = unwrap_FeatureLocation(gene.location, len(self.SeqRecord.seq))
         # find starting index
         for i in range(1, len(self.SeqRecord.features)):
             gene = self.SeqRecord.features[i]
-            [s1, s2, strand] = Plasmid.unwrap_FeatureLocation(gene.location, len(self.SeqRecord.seq))
+            [s1, s2, strand] = unwrap_FeatureLocation(gene.location, len(self.SeqRecord.seq))
             c1 = s2 > s1
             c2 = end > start
             c3 = s2 > end
@@ -625,36 +638,37 @@ class Plasmid:
         elif type(key)==int:
             out.SeqRecord.features = [out.SeqRecord.features[key]]
         # returns column entries from pandas dataframe
-        elif type(key) == str or self.isStringArray(key):
+        elif type(key) == str or isStringArray(key):
             return self.to_dataframe()[key]
-        elif self.isIntArray(key):
+        elif isIntArray(key):
             out.SeqRecord.features = [out.SeqRecord.features[i] for i in key]
         # slice based on boolean array
-        elif self.isBool(key):
+        elif isBool(key):
             keep = np.arange(len(key))[key]
             out.SeqRecord.features = [out.SeqRecord.features[i] for i in keep]
         # work on output from pandas dataframe
         elif type(key) == pd.core.series.Series:
             return out[key.values]
         # return key and column
-        elif type(key)==tuple and type(key[1])==str:
-            return out[key[0]][key[1]]
-
+        elif type(key)==tuple:
+            for k in key:
+                out = out[k]
+            return out
         out.update(inplace=True) 
         return out
 
     def __setitem__(self, key, value):
         '''
         Sets a feature to something
-        key = index of genetic feature
+        key = 2D index of [<index>, <column>] or [<index>, <column>] or 1D [<index>] of features or sequences to replace
         value = slice of a Plasmid dataframe, which contains one sequence and features associated with this position
                 the sequence at the location of the feature will be replaced with the provided sequence
                 the SeqFeature at the index will be replaced with the new feature
                 all modifications are done in place
-        '''
+        '''       
         if type(key)==int: # debug if features may get overriden
-            [start, stop, strand] = Plasmid.unwrap_FeatureLocation(self.SeqRecord.features[key].location, len(self.SeqRecord.seq))
-            self.replace_sequence(range(start,stop), value, disrupt=True, inplace=True)
+            [start, stop, strand] = unwrap_FeatureLocation(self.SeqRecord.features[key].location, len(self.SeqRecord.seq))
+            self.replace_sequence(range(start, stop), value, disrupt=True, inplace=True)
         elif type(key)==range:
             self.replace_sequence(key, value, disrupt=True, inplace=True)
         elif type(key)==slice:
@@ -665,8 +679,13 @@ class Plasmid:
             if stop==None:
                 stop = len(out.SeqRecord.seq)
             self.replace_sequence(range(start, stop), value, disrupt=True, inplace=True)
-        elif type(key)==tuple and type(key[1])==str:
-            self.set_column(key[0], value, key[1])
+        elif type(key)==tuple:
+            if type(key[1])==str:
+                self.set_column(key[0], key[1], value)
+            elif type(key[0])==str:
+                self.set_column(key[1], key[0], value)
+        else:
+            sys.error()
 
     def __delitem__(self, key):
         '''
@@ -688,9 +707,11 @@ class Plasmid:
             if stop==None:
                 stop = len(out.SeqRecord.seq)
             self.delete_sequence(range(start, stop), inplace=True)
-        elif self.isBool(key):
+        elif isBool(key):
             keep = np.arange(len(key))[key==False]
             self.SeqRecord.features = [self.SeqRecord.features[i] for i in keep]
+        else:
+            sys.error()
 
     def translate(self, strand=None, frame=0, table='Standard'):
         '''
@@ -720,7 +741,7 @@ class Plasmid:
             label = gene.qualifiers['locus_tag'][0]
             feature = gene.type
             # figure out strand location
-            [start, end, strand] = Plasmid.unwrap_FeatureLocation(gene.location, len(self.SeqRecord.seq))
+            [start, end, strand] = unwrap_FeatureLocation(gene.location, len(self.SeqRecord.seq))
             if strand > 0:
                 color = gene.qualifiers['ApEinfo_fwdcolor'][0]
             else:
@@ -790,59 +811,54 @@ class Plasmid:
         table+= 'total length:'+str(len(self.__str__()))+'\n'
         return table
 
-    def annotate(self, file='', label='', sequence='', pos=[], feature='unknown', color=['cyan','dodgerblue'], circular=True, inplace=False):
+    def annotate(self, name, sequence, feature='unknown', color=None, circular=True, inplace=False):
         '''
         Adds annotations to a plasmid using a parts library
-        label = name of the gene
-        sequence = DNA sequence of the feature, which will be used for matching on the plasmid
-        pos = position of the genetic feature [start, end, strand]
+        name = name of the gene
+        sequence = DNA or amino acid sequence of the feature
         feature = type of genetic feature such as cds, mRNA, primer_bind
         color = [fwd_color, rev_color] to use
-        If sequence is not provided, start and end are used. Otherwise, sequence overrides start, end, and strand options.
         inplace = performs modifications inplace
         returns a modified plasmid dataframe
         '''
         out = self.inplace(inplace)
-        # annotate by dictionary
-        if file!='':
-            return self.annotate_by_reference(file, inplace=inplace)
         # remove gaps
         if type(sequence) == str:
             sequence = sequence.replace(' ','')
 
         # apply default colors if it is not provided
         if color==None:
-            color = search_key(self.params['colors']['locus_tag'], label, rev=True)
+            color = search_key(self.params['colors']['locus_tag'], name, rev=True)
         if color==None:
-            color = search_key(self.params['colors']['locus_tag'], feature, rev=True)
+            color = search_key(self.params['colors']['features'], feature, rev=True)
+
+        # apply default colors
+        if color==None:
+            color = self.params['colors']['features']['unknown']
+        
+        # format to list
         if type(color) == str:
             color = [color, color]
         color = [color[0], color[-1]]
  
-        new_features=[]
-        if sequence!='':
-            # search for DNA sequence
-            if isDNA(sequence):
-                # convert U to T for DNA sequence only
-                sequence = sequence.lower().replace('u','t')
-                pos = Aligner.search_DNA(sequence, str(out.SeqRecord.seq), exact=False, circular=circular)
-            # search for protein sequence
-            else:
-                pos = Aligner.search_protein(sequence, str(out.SeqRecord.seq), circular=circular)
-            # add the annotation
-            for [start, end, strand] in pos[['start','end','strand']].values:
-                # create compound location which can wrap around the origin
-                loc = Plasmid.wrap_FeatureLocation(start, end, strand, len(out.SeqRecord.seq))
-                qualifiers = {'locus_tag':[label], 'ApEinfo_fwdcolor':[color[0]], 'ApEinfo_revcolor':[color[1]]}
-                gene = Bio.SeqFeature.SeqFeature(type=feature, location=loc, qualifiers=qualifiers)
-                new_features.append(gene)
-        elif pos!=[]:
-                loc = Plasmid.wrap_FeatureLocation(pos[0], pos[1], pos[2], len(out.SeqRecord.seq))
-                qualifiers = {'locus_tag':[label], 'ApEinfo_fwdcolor':[color[0]], 'ApEinfo_revcolor':[color[1]]}
-                gene = Bio.SeqFeature.SeqFeature(type=feature, location=loc, qualifiers=qualifiers)
-                new_features.append(gene)
+        # search for DNA sequence
+        if isDNA(sequence):
+            # convert U to T for DNA sequence only
+            sequence = sequence.lower().replace('u','t')
+            pos = Aligner.search_DNA(sequence, str(out.SeqRecord.seq), exact=False, circular=circular)
+        # search for protein sequence
         else:
-            print('Invalid input provided for '+label)
+            pos = Aligner.search_protein(sequence, str(out.SeqRecord.seq), circular=circular)
+        
+        new_features=[]
+        # add the annotation
+        for [start, end, strand] in pos[['start','end','strand']].values:
+            # create compound location which can wrap around the origin
+            loc = wrap_FeatureLocation(start, end, strand, len(out.SeqRecord.seq))
+            qualifiers = {'locus_tag':[name], 'ApEinfo_fwdcolor':[color[0]], 'ApEinfo_revcolor':[color[1]]}
+            gene = Bio.SeqFeature.SeqFeature(type=feature, location=loc, qualifiers=qualifiers)
+            new_features.append(gene)
+
         # append to Plasmid and update
         out.SeqRecord.features+= new_features
         out.update(inplace=True)
@@ -857,68 +873,13 @@ class Plasmid:
         # check if color in the data column
         if ('color' in ref.columns)==False:
             ref['color'] = None
+            
         cols = ['label','sequence','feature_type','color']
+        if (cols in ref.columns)==False:
+            cols = ['name','sequence','feature_type','color']
         for label, seq, ftype, color in ref[cols].values:
-            out.annotate(label=label, sequence=seq, feature=ftype, color=color, inplace=True)
+            out.annotate(name=label, sequence=seq, feature=ftype, color=color, inplace=True)
         return out
-
-    def load_annotation_database(filename, lib_format='csv'):
-        '''
-        Loads an annotation into a pandas dataframe, so it can be used to annotate sequences
-        lib_format = type of formatting the annotation database is stored as.
-                     valid options are csv or ApE
-        returns a pandas dataframe with columns [label, feature, color, start, end, strand, sequence]
-        '''
-        if lib_format=='csv':
-            df = pd.read_csv(filename)
-            if ('strand' in df.columns)==False:
-                print('Sequence orientation is not defined. Please add strand column to csv file')
-                return None
-            df['strand'] = df['strand'].astype(int)
-        elif lib_format=='ApE':
-            df = pd.read_csv('Default_Features.txt', delimiter='\t', header=None)
-            df = df.drop(columns=df.columns[4:])
-            df.columns = ['locus_tag','sequence','feature_type','color']
-            df['strand'] = 1
-        # do some safety checks on the dna sequences
-        data = []
-        for i in range(0,len(df)):
-            seq = format_to_dna(df.iloc[i]['sequence'])
-            # correct strand orientation to 5'->3'
-            if df.iloc[i]['strand'] < 0:
-                seq = revcomp(seq)
-            data.append(seq)
-        df['sequence'] = data    
-        df['length'] = [len(seq) for seq in df['sequence']]
-        df['start'] = None
-        df['end'] = None
-        df['strand'] = 1
-        return df
-
-    def isBool(self, value):
-        '''
-        Check if list of a values are only booleans
-        '''
-        values = np.unique(value)
-        # splice based on boolean array
-        if len(values) < 3 and type(values[0])==np.bool_ and type(values[-1])==np.bool_:
-            return True
-        else:
-            return False
-
-    def isStringArray(self, value):
-        '''
-        Check if list contains only strings
-        '''
-        x = [type(i)==str for i in value]
-        return sum(x) == len(value)
-
-    def isIntArray(self, value):
-        '''
-        Check if list contains only integers
-        '''
-        x = [type(i)==int for i in value]
-        return sum(x) == len(value)
 
     def merge(self, value, how='left', inplace=False):
         '''
@@ -935,8 +896,8 @@ class Plasmid:
             if type(value).__name__=='Plasmid':
                 value = value.to_dataframe()
             for v in value[['locus_tag','type','sequence','color']].values:
-                out = out.annotate(label=v[0], feature=v[1], sequence=v[2], color=v[3])
-            return out 
+                out = out.annotate(name=v[0], feature=v[1], sequence=v[2], color=v[3])
+            return out
         elif how=='right':
             return value.merge(self, how='left', inplace=inplace)
         elif how=='and': # debug todo refinement
@@ -944,7 +905,7 @@ class Plasmid:
             if type(value).__name__=='Plasmid':
                 value = value.to_dataframe()
             for v in value[['locus_tag','type','sequence','color']].values:
-                out = out.annotate(label=v[0], feature=v[1], sequence=v[2], color=v[3])
+                out = out.annotate(name=v[0], feature=v[1], sequence=v[2], color=v[3])
             return out 
         elif how=='nand': # needs refinement debug
             keep = [True]*len(out.SeqRecord.features)
@@ -956,6 +917,8 @@ class Plasmid:
             x = np.arange(len(keep))
             out.SeqRecord.features = [out.SeqRecord.features[i] for i in x[keep]]
             return out
+        else:
+            sys.error()
 
     def drop_duplicates(self, inplace=False): 
         '''
@@ -1033,7 +996,7 @@ class Plasmid:
         new = []
         keep = []
         for gene in out.SeqRecord.features:
-            [start, end, strand] = Plasmid.unwrap_FeatureLocation(gene.location, len(out.SeqRecord.seq))
+            [start, end, strand] = unwrap_FeatureLocation(gene.location, len(out.SeqRecord.seq))
             # check if gene overlaps origin
             if start > end:
                 # partition the component locations
@@ -1070,81 +1033,6 @@ class Plasmid:
         out = self.inplace(inplace)
         seq_length = len(out.SeqRecord.seq)
         for gene in out.SeqRecord.features:
-            gene.location = Plasmid.shift_CompoundLocation(gene.location, N, seq_length, circular=circular)
+            gene.location = shift_CompoundLocation(gene.location, N, seq_length, circular=circular)
         return out
 
-    def unwrap_FeatureLocation(loc, length):
-        '''
-        Get proper start and end locations of a genetic feature that wraps around the origin
-        loc = Bio.SeqFeature location
-        length = length of circular Plasmid
-        returns [start, end, strand]
-        '''
-        strand = loc.strand
-        start = loc.start%length
-        end = loc.end%length
-        if end==0:
-            end=length
-        return [start, end, strand]
-
-    def wrap_FeatureLocation(start, end, strand, length):
-        '''
-        Create a CompoundLocation or FeatureLocation object that wrap the annotation around the origin of a circular Plasmid
-        start = start base position of the gene
-        end = end base position of the gene
-        strand = reading frame of the gene 5'->3' is +1
-        length = base pair length of the Plasmid
-        returns Bio.SeqFeature.CompoundLocation or Bio.SeqFeature.FeatureLocation object
-        '''
-        start = start%length
-        end = end%length
-        if end==0:
-            end = length
-
-        if end < start:
-            loc1 = Bio.SeqFeature.FeatureLocation(int(start), int(length), int(strand))
-            loc2 = Bio.SeqFeature.FeatureLocation(0, int(end), int(strand))
-            loc = Bio.SeqFeature.CompoundLocation([loc1,loc2])
-        else:
-            loc = Bio.SeqFeature.FeatureLocation(int(start), int(end), int(strand))
-        return loc
-
-    def shift_CompoundLocation(loc, N, L, circular=True):
-        '''
-        Applies nucleotide shift to compound locs and merges adjacent FeatureLocations that arise after the shift
-        loc = Bio.SeqFeature.FeatureLocation or Bio.SeqFeature.CompoundLocation object
-        N = number of nucleotides to shift
-        L = length of the Plasmid sequence
-        circular = apply relevant corrections if the genome is circular
-        returns a Bio.SeqFeature.CompoundLocation or Bio.SeqFeature.FeatureLocation
-        '''
-        loc+=int(N)
-        if circular:
-            if 'parts' in loc.__dict__:
-                # correct the shift in each sub loc
-                out = []
-                for p in loc.__dict__['parts']:
-                    x = Plasmid.shift_CompoundLocation(p, 0, L, circular=True)
-                    # unwrap joint locations
-                    if 'parts' in x.__dict__:
-                        out+= x.__dict__['parts']
-                    else:
-                        out.append(x)
-                # merge adjacent locations
-                keep = []
-                start = -1
-                for i in range(0, len(out)):
-                    # find the start
-                    if start == -1:
-                        start = out[i].start
-                    # record the new position when a discontinuity is found
-                    if i+1 == len(out) or (out[i].end == out[i+1].start and out[i].strand == out[i+1].strand) == False:
-                        keep.append(Bio.SeqFeature.FeatureLocation(start, out[i].end, out[i].strand))
-                        start = -1
-                if len(keep) > 1:
-                    loc = Bio.SeqFeature.CompoundLocation(keep)
-                elif len(keep) == 1:
-                    loc = keep[0]
-            else:
-                loc = Plasmid.wrap_FeatureLocation(loc.start, loc.end, loc.strand, L)
-        return loc

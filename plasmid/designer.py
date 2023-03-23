@@ -391,7 +391,7 @@ class Designer:
                 frags.append(['',f,''])
 
         # check if fully assembled construct has golden gate site
-        pLseq = pLseq.annotate(label='ggsite', sequence=self.params['goldengate']['ggsite']) 
+        pLseq = pLseq.annotate(name='ggsite', sequence=self.params['goldengate']['ggsite']) 
         ggloc = ['ggsite' in L for L in pLseq['locus_tag']]
         if np.sum(ggloc) > 0:
             print('Goldengate site found in assembled construct')
@@ -704,7 +704,7 @@ class Designer:
         '''
         primers = [[L, s.replace(' ','').replace(mask,'')] for L, s in primers[['locus_tag','sequence']].values]
         for label, sequence in primers:
-            seq = seq.annotate(label=label, sequence=sequence)
+            seq = seq.annotate(name=label, sequence=sequence)
         return seq
 
     def hairpin_primers(self):
