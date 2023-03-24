@@ -1,5 +1,5 @@
 # Plasmid: A python library for gene editing and annotation
-`Plasmid` is a library for reading, annotating, and editing genbank records in Jupyter Notebooks or ipython shell. This project was inspired by [ApE](https://jorgensen.biology.utah.edu/wayned/ape/) and [pandas](https://pandas.pydata.org/). The goal of the project was address the lack of cross platform support provided by `ApE` and provide a more user friendly open source interface for manipulating genbank records in a programmable manner.
+`Plasmid` is a library for reading, annotating, and editing genbank records in Jupyter Notebooks or ipython shell. This project was inspired by [ApE](https://jorgensen.biology.utah.edu/wayned/ape/) and [pandas](https://pandas.pydata.org/). The goal of the project was to address the lack of cross platform support provided by `ApE` and make the functionalities of `Biopython` more user friendly. This project is meant to serve as an open source interface for manipulating genbank records, querying genes, and manipulating NGS data in a programmable and user friendly manner that is cross compatible across all operating systems.
 
 The functionalities of this library are organized into the following modules
 
@@ -9,7 +9,9 @@ The functionalities of this library are organized into the following modules
 
 `Aligner` contains functions for sequence alignment and search
 
-`Designer` contains functions for generation of primers for extension PCR, Gibson Assembly, and Golden Gate Assembly
+`Designer` contains functions for generation of primers for extension PCR, Gibson Assembly, Golden Gate Assembly, and LAMP.
+
+More functionalities can be added if you ask nicely! You can reach me via the issues page.
 
 ## Installation
 Run the following commands to clone and install this library. This package will be published to pypi once testing is complete.
@@ -25,3 +27,5 @@ The `demos/` directory contains example jupyter notebooks that display some of f
 
 ## Issues
 If you experience any issues with the code, please post them on the issues section along with the log file. I will monitor this periodically and try to fix issues as they arise.
+
+
