@@ -11,9 +11,13 @@ import pandas as pd
 import Bio
 import Bio.SeqUtils
 import Bio.SeqUtils.MeltingTemp
+import parasail
 
 # system libraries
 import time
+
+from .misc import revcomp
+from .misc import json_pretty
 
 class Designer:
     '''
@@ -62,11 +66,12 @@ class Designer:
                       'stem':{'Tm':65, 'nM':500, 'len':[20,40], 'gap':[0,50]}}
     params['parasail'] = {'gap_penalty':[1,1]}
     params['method'] = 'differential_evolution'
-        
+    
     def __init__(self, args=None):
         if self.params['verbose']:
-            print(params['verbose'])
-        
+            out = json_pretty(self.params)
+            print(out)
+    
     def optimizer(self, cost_func, args, bounds, x0, discrete=False):
         cons = ()
         method = self.params['method']
@@ -115,12 +120,12 @@ class Designer:
             return df
         for i in range(len(df)-2,0,-2):
             seq = df.iloc[i]['sequence']
-            df.loc[i,'sequence'] = base.revcomp(seq)
+            df.loc[i,'sequence'] = revcomp(seq)
             df.loc[i,'strand']*=-1
             df.loc[i,'locus_tag']+='c'
         return df
 
-    def xtPCR(self, fL, seq, fR=None, padding=[2,2], niter=3, w=[10,100,1,1,2], verbose=False, get_cost=False):
+    def xtPCR(self, fL, seq, fR=None, padding=[2,2], niter=3, w=[10,100,1,1,2], get_cost=False):
         '''
         Find primers which can seed and extend a PCR fragment
         fL = flanking sequence on 5' end
@@ -132,10 +137,9 @@ class Designer:
         returns list of primers
         '''
         # handle alternative datatypes safely
-        if type(fL).__name__ == 'plasmid': fL = fL.seq()
-        if type(seq).__name__ == 'plasmid': seq = seq.seq()
-        if type(fR).__name__ == 'plasmid': fR = fR.seq()
-
+        fL = str(fL)
+        seq = str(seq)
+        
         if fR==None:
             if len(fL)==0:
                 padding[0] = 1
@@ -153,7 +157,7 @@ class Designer:
                 if best_res[2] > res.fun:
                     best_res = [N_left, res, res.fun]                    
                 # status output
-                if verbose:
+                if self.params['verbose']:
                     cost = self.xtPCR_cost(res.x, fL, seq, w, verbose=True)
                     print('N', N_left)
                     print('res.x:', res.x)
@@ -174,13 +178,13 @@ class Designer:
                 return [oligos, cost]
             return [oligos]
         else:
-            seqR = base.revcomp(fL+seq)
-            fR = base.revcomp(fR)
+            seqR = revcomp(fL+seq)
+            fR = revcomp(fR)
             print('running fwd')
-            df_F = self.xtPCR(fL, seq+fR, padding=padding, w=w, verbose=verbose, get_cost=get_cost)
+            df_F = self.xtPCR(fL, seq+fR, padding=padding, w=w, get_cost=get_cost)
             fwd = df_F[0]
             print('running rev')
-            df_R = self.xtPCR(fR, seqR, padding=padding[::-1], w=w, verbose=verbose, get_cost=get_cost)
+            df_R = self.xtPCR(fR, seqR, padding=padding[::-1], w=w, get_cost=get_cost)
             rev = df_R[0]
             fwd['locus_tag'] = [str(i)+'_F' for i in range(len(fwd)-1)] + ['fin_F']
             fwd['strand'] = 1
@@ -267,7 +271,7 @@ class Designer:
         Check cross reactivity of xtPCR primers
         '''
         g1, g2 = self.params['parasail']['gap_penalty']
-        seqR = base.revcomp(fL+seq)
+        seqR = revcomp(fL+seq)
         N = int(len(pos)/2)
         x1 = pos[:N].astype(int)
         x2 = pos[N:].astype(int)
@@ -301,7 +305,7 @@ class Designer:
         else:
             return -score
 
-    def iPCR(self, insert, seq, ggsite='', ggN=4, idx=None, w=[10,100,1,1,1,1], verbose=False):
+    def iPCR(self, insert, seq, ggsite='', ggN=4, idx=None, w=[10,100,1,1,1,1]):
         '''
         Designs iPCR primers that ligate via blunt or with golden gate
         insert = sequence to insert
@@ -310,46 +314,50 @@ class Designer:
         seq = linearized fragment where new sequences will be appended to ends
         w = weights to the cost function
         '''
-        if type(insert).__name__ == 'plasmid': insert = insert.seq()
-        if type(seq).__name__ == 'plasmid': seq = seq.seq()
+        if type(insert).__name__ == 'Plasmid': insert = str(insert)
+        if type(seq).__name__ == 'Plasmid': seq = str(seq)
         if len(insert)==0: idx=0
  
         if idx==None:
             # find best primers by iterating through all possibilities
             best_cost = np.inf
             for idx in range(len(insert)):
-                y = self.iPCR_cost(idx, insert, seq, ggsite, ggN, w, get_cost=False, verbose=verbose)
+                y = self.iPCR_cost(idx, insert, seq, ggsite, ggN, w, get_cost=False)
                 if y[1] < best_cost:
                     best_cost = y[1]
                     best_oligos = y[0]
                 print('processing index at', idx)
                 print('[best, current] = ', str([best_cost, y[1]]))
         else:
-            y = self.iPCR_cost(idx, insert, seq, ggsite, ggN, w, get_cost=False, verbose=verbose)
+            y = self.iPCR_cost(idx, insert, seq, ggsite, ggN, w, get_cost=False)
             best_oligos = y[0]
         return best_oligos
 
-    def iPCR_cost(self, idx, insert, seq, ggsite, ggN, w, get_cost=True, verbose=False):
+    def iPCR_cost(self, idx, insert, seq, ggsite, ggN, w, get_cost=True):
         '''
         Compute cost of iPCR
         '''
         # get primers for deletion
         if len(insert) == 0:
             insert = ' '
+        
         # add golden site
         if ggsite!='':
             if idx-ggN > -1:
                 fF = ggsite + insert[idx-ggN:]
-                fR = insert[:idx] + base.revcomp(ggsite)
+                fR = insert[:idx] + revcomp(ggsite)
             else:
                 fF = ggsite + seq[-ggN:] + insert
-                fR = base.revcomp(ggsite)
+                fR = revcomp(ggsite)
+        
         # blunt ligation
         else:
             fF = insert[idx:]
             fR = insert[:idx]
+        
         # run xtPCR
-        y = self.xtPCR(fF, seq, fR, w=w[:-1], get_cost=True, verbose=verbose)
+        y = self.xtPCR(fF, seq, fR, w=w[:-1], get_cost=True)
+        
         # weight evenness of split
         cost = [i for i in y[1]]
         cost+= [abs(len(insert)/2 - idx)]
@@ -365,7 +373,6 @@ class Designer:
         seqlist = list of sequences to assemble
         exclude = sites to exclude
         circular = assemble fragments into a circular construct
-        verbose = print out assembled construct and highlight plasmid locations
         returns list of primers
         '''
         # format input
@@ -374,17 +381,14 @@ class Designer:
         for i in range(len(seqlist)):
             f = seqlist[i]
             # convert from plasmid type
-            if type(f).__name__=='plasmid':
-                frags.append(['',f.seq(),''])
+            if type(f).__name__=='Plasmid':
+                frags.append(['',str(f),''])
                 pLseq = pLseq + f
             # is a list of [fL, seq, fR]
             elif type(f) == list:
                 x = []
                 for j in f:
-                    if type(j).__name__ == 'plasmid':
-                        x.append(j.seq())
-                    else:
-                        x.append(j)
+                    x.append(str(j))
                     pLseq = pLseq + j
                 frags.append(x)
             else:
@@ -396,7 +400,7 @@ class Designer:
         if np.sum(ggloc) > 0:
             print('Goldengate site found in assembled construct')
             print(pLseq[['locus_tag','location']][ggloc])
-
+        
         # generate paired frags
         overlaps = []
         L = self.params['goldengate']['window']
@@ -408,7 +412,7 @@ class Designer:
             f1 = ''.join(frags[-1])
             f2 = ''.join(frags[0])
             overlaps.append(f1[-L:]+f2[:L])
-      
+        
         # optimize overlaps
         start = time.time()
         Lb = [0]*len(overlaps)
@@ -416,7 +420,7 @@ class Designer:
         args = (overlaps, exclude, w, False)
         bounds = [(Lb[i], Ub[i]) for i in range(len(Lb))]
         x0 = Lb
-        res = self.optimizer(self.goldengate_cost, args, bounds, x0) 
+        res = self.optimizer(self.goldengate_cost, args, bounds, x0)
         
         # results of overlap opt
         print('res.x', res.x)
@@ -429,7 +433,7 @@ class Designer:
         
         # generate seed primers
         site = self.params['goldengate']['padding'] + self.params['goldengate']['ggsite']
-        siteR = base.revcomp(site)
+        siteR = revcomp(site)
         ggN = self.params['goldengate']['ggN']
         L = self.params['goldengate']['window']
         y = res.x.astype(int)
@@ -523,7 +527,7 @@ class Designer:
         Check if overlap sequences bind to each other
         '''
         g1, g2 = self.params['parasail']['gap_penalty']
-        seqR = [base.revcomp(i) for i in seq]
+        seqR = [revcomp(i) for i in seq]
         score = np.inf
         for i in range(len(seq)-1):
             res1 = parasail.sg_scan_16(seq[i], seq[i], g1, g2, parasail.nuc44)
@@ -568,8 +572,7 @@ class Designer:
         verbose = show optimization results
         '''
         # format input sequence
-        if type(seq).__name__ == 'plasmid':
-            seq = seq.seq()
+        seq = str(seq)
 
         # find best primer set
         start = time.time()                
@@ -591,12 +594,12 @@ class Designer:
         tTm = [self.params['LAMP']['outer']['Tm'],
                self.params['LAMP']['inner']['Tm'],
                self.params['LAMP']['stem']['Tm']]*2
-        args = (Lb, Ub, conc, tTm, seq, base.revcomp(seq), w, False)
+        args = (Lb, Ub, conc, tTm, seq, revcomp(seq), w, False)
         bounds = [(Lb[i], Ub[i]) for i in range(len(Lb))]
         x0 = Lb
         res = self.optimizer(self.LAMP_cost, args, bounds, x0)
         # status output
-        cost = self.LAMP_cost(res.x, Lb, Ub, conc, tTm, seq, base.revcomp(seq), w, verbose=True)
+        cost = self.LAMP_cost(res.x, Lb, Ub, conc, tTm, seq, revcomp(seq), w, verbose=True)
         if verbose:
             print('res.x:', res.x)
             print('res.fun', res.fun)
@@ -607,7 +610,7 @@ class Designer:
         fwd = self.LAMP_results(res.x[:6], seq, conc)
         fwd['locus_tag'] = [i+'_F' for i in fwd['locus_tag']]
         # get reverse primers
-        rev_seq = base.revcomp(seq)
+        rev_seq = revcomp(seq)
         rev = self.LAMP_results(res.x[6:], rev_seq, conc)
         rev['locus_tag'] = [i+'_R' for i in rev['locus_tag']]
         out = pd.concat([fwd, rev])
@@ -623,7 +626,7 @@ class Designer:
         out = pd.DataFrame()
         out['locus_tag'] = ['outer','inner','hairpin']
         # get stem
-        stem = base.revcomp(oligos[2])
+        stem = revcomp(oligos[2])
         # get hairpin sequence
         out['sequence'] = [oligos[0], stem+' '+oligos[1], stem+' '+oligos[3]+' '+oligos[2]]
         out['annealed'] = oligos[:-1]
@@ -681,7 +684,7 @@ class Designer:
         Check cross reactivity of LAMP primers
         '''
         g1, g2 = self.params['parasail']['gap_penalty']
-        seqR = [base.revcomp(i) for i in seq]
+        seqR = [revcomp(i) for i in seq]
         query = seq[:-2] + seqR[-2:]
         ref = seqR[:-2] + seq[-2:]
         score = np.inf

@@ -787,14 +787,13 @@ class Plasmid:
         '''
         return len(self.SeqRecord.features)
     
-    def print(self, width=0):
+    def get_colored(self, width=0):
         '''
         Print out colored representation of Plasmid
         width = number of characters per line
         '''
         rec = Graphic(data=self)
         out = rec.colorize_plasmid(width=width)
-        print(out)
         return out
  
     def get_table(self):
@@ -821,10 +820,11 @@ class Plasmid:
         inplace = performs modifications inplace
         returns a modified plasmid dataframe
         '''
-        out = self.inplace(inplace)
         # remove gaps
         if type(sequence) == str:
             sequence = sequence.replace(' ','')
+        if sequence=='':
+            return self
 
         # apply default colors if it is not provided
         if color==None:
@@ -840,7 +840,8 @@ class Plasmid:
         if type(color) == str:
             color = [color, color]
         color = [color[0], color[-1]]
- 
+        
+        out = self.inplace(inplace)
         # search for DNA sequence
         if isDNA(sequence):
             # convert U to T for DNA sequence only

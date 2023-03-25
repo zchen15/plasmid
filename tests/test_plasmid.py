@@ -26,7 +26,7 @@ def test_read_fasta():
 def test_plasmid_print():
     # Check printing
     assert type(df.__str__())==str
-    assert type(df.print())==str
+    assert type(df.get_colored())==str
     assert type(df.__repr__())==str
 
 def test_rotation():

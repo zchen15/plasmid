@@ -9,6 +9,7 @@ import pandas as pd
 import Bio
 import Bio.Seq
 import Bio.SeqIO
+import json
 
 # system imports
 import datetime
@@ -267,6 +268,9 @@ def get_rand_letters(N, method=0):
         key = out[-N_in:]
         out+= letters[key][j]
     return out
+
+def json_pretty(data):
+    return json.dumps(data, indent=4)
 
 def get_timestamp():
     return '._'+datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H_%M_%S')
