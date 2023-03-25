@@ -88,4 +88,3 @@ def test_GoldenGate():
     print(res.values)
     assert type(res).__name__ == 'DataFrame'
 
-
