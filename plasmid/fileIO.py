@@ -12,6 +12,7 @@ import tempfile
 
 # system and time
 import re
+import os
 import logging
 
 # custom lib
@@ -88,9 +89,8 @@ class fileIO:
 
     def decompress(fname):
         '''
-        Checks if file is bz2 or gzip compressed.
-        If file is compressed, decompress the file and return the filename of decompressed file
-        fname = name of compressed file
+        Opens a compressed file
+        fname = name of compressed file with .bz2 or .gz
         returns filehandle passed through the decompression 
         '''
         ftype = fname.split('.')
@@ -99,12 +99,11 @@ class fileIO:
         elif ftype[-1]=='gz':
             return gzip.open(fname, mode='rt')
         else:
-            return open(fname,'r') # to do, fix redundant copy or writing
+            return open(fname,'r')
 
     def compress(fname):
         '''
-        Checks if a filename is bz2 or gz compressed.
-        If compression is requested, then open a compressed file for writing.
+        Checks if a filename will be bz2 or gz compressed.
         fname = filename with .bz2 or .gz or no extension
         return a file handle
         '''
@@ -125,7 +124,6 @@ class fileIO:
                 Instead this function returns columns [filename, id, seek1, seek2, rlen]
                 Use add_seq function to add back sequence and quality to the dataframe
         returns list of names, sequence, quality
-        testing required to do
         '''
         data = []
         with tempfile.TemporaryFile(mode='w+', encoding='utf-8') as f:
@@ -349,7 +347,8 @@ class fileIO:
         data = []
 
         # information we are parsing
-        col1 = ['query_id','q_len','q_start','q_end','orientation','database_id','t_len','t_start','t_end','match','tot','mapq']
+        col1 = ['query_id','q_len','q_start','q_end','orientation',
+                'database_id','t_len','t_start','t_end','match','tot','mapq']
         col2 = ['tp','cm','s1','s2','NM','AS','ms','nn','rl','cg']
         key = {col2[i]:i for i in range(0,len(col2))}
         for line in text:
@@ -365,4 +364,3 @@ class fileIO:
         data = pd.DataFrame(data, columns=col1+col2)
         data = data.rename(columns={'cg':'CIGAR'})
         return data
-
