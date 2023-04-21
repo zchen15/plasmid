@@ -42,7 +42,7 @@ class fileIO:
         if 'sequence' in df.keys():
             return df
         # check if relevant columns are there
-        cols = ['filename','id','seek1','rlen']
+        cols = ['filename','name','seek1','rlen']
         for c in cols:
             if (c in df.keys())==False:
                 logging.warning('columns '+c+' not found in dataframe')
@@ -52,7 +52,7 @@ class fileIO:
         data = []
         if 'seek2' in df.keys():
             # work on fastq
-            x = df[['filename','id','seek1','seek2','rlen']].values
+            x = df[['filename','name','seek1','seek2','rlen']].values
             files = np.unique(x[:,0])
             for fname in files:
                 y = x[x[:,0]==fname]
@@ -70,7 +70,7 @@ class fileIO:
             df = df.drop(columns=cols)
         else:
             # work on fasta
-            x = df[['filename','id','seek1','rlen']].values
+            x = df[['filename','name','seek1','rlen']].values
             files = np.unique(x[:,0])
             for fname in files:
                 y = x[x[:,0]==fname]
@@ -128,10 +128,10 @@ class fileIO:
         testing required to do
         '''
         data = []
-        with tempfile.TemporaryFile() as f:
+        with tempfile.TemporaryFile(mode='w+', encoding='utf-8') as f:
             # decompress and dump contents into a temporary file
             with fileIO.decompress(fname) as f2:
-                out = f2.write()
+                out = f2.read()
                 fsize = len(out)
                 f.write(out)
             # go to beginning of file
@@ -149,7 +149,7 @@ class fileIO:
                 else:
                     data.append([seq, q, rid[1:]])
         # format the dataframe
-        col = ['sequence','quality','id','seek1', 'seek2', 'rlen']
+        col = ['sequence','quality','name','seek1', 'seek2', 'rlen']
         if low_mem:
             data = pd.DataFrame(data, columns=col[2:])
             data['filename'] = fname
@@ -169,7 +169,7 @@ class fileIO:
             logging.error('write_fastq: data for '+fname+' column count is wrong')
             sys.exit(1)
         elif type(data) == pd.core.frame.DataFrame:
-            data = data[['id','sequence','quality']].values
+            data = data[['name','sequence','quality']].values
         with fileIO.compress(fname) as f:
             for i in data:
                 text = '@' + str(i[0]) + '\n'
@@ -186,10 +186,10 @@ class fileIO:
         '''
         data = []
         
-        with tempfile.TemporaryFile() as f:
+        with tempfile.TemporaryFile(mode='w+', encoding='utf-8') as f:
             # decompress and dump contents into a temporary file
             with fileIO.decompress(fname) as f2:
-                out = f2.write()
+                out = f2.read()
                 fsize = len(out)
                 f.write(out)
             # go to beginning of file
@@ -218,11 +218,9 @@ class fileIO:
         # end of file reached, run last loop
         L = len(seq)
         seq = seq.replace('\n','')
-        # remove decompressed file
-        if fname!=fbuffer:
-            subprocess.run(['rm', fbuffer])
+
         # export the data
-        col = ['sequence','id','seek1','rlen']
+        col = ['sequence','name','seek1','rlen']
         if low_mem:
             data.append([rid, s1, L])
             data = pd.DataFrame(data, columns=col[1:])
@@ -243,12 +241,36 @@ class fileIO:
             logging.error('write_fasta: data for '+fname+' column count is wrong')
             sys.exit(1)
         elif type(data) == pd.core.frame.DataFrame:
-            data = data[['id','sequence']].values
+            data = data[['name','sequence']].values
         with fileIO.compress(fname) as f:
             for i in data:
                 text = '>' + str(i[0]) + '\n'
                 text+= str(i[1]) + '\n'
                 f.write(text)
+    
+    def write_fastx(prefix, data):
+        '''
+        Writes data to fasta or fastq
+        returns filename
+        '''
+        # write data to fastq file
+        try:
+            fname = prefix+'.fq'
+            fileIO.write_fastq(fname, data)
+            return fname
+        except:
+            logging.info('failed to write fastq')
+        
+        # write data to fasta file
+        try:
+            fname = prefix+'.fa'
+            fileIO.write_fasta(fname, data)
+            return fname
+        except:
+            logging.info('failed to write fasta')
+        
+        # throws an error to do
+        sys.exit(1)
 
     def parse_SAM(fname):
         '''

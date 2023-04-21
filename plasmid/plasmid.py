@@ -846,7 +846,7 @@ class Plasmid:
         if isDNA(sequence):
             # convert U to T for DNA sequence only
             sequence = sequence.lower().replace('u','t')
-            pos = Aligner.search_DNA(sequence, str(out.SeqRecord.seq), exact=False, circular=circular)
+            pos = Aligner.search_DNA(sequence, str(out.SeqRecord.seq), circular=circular)
         # search for protein sequence
         else:
             pos = Aligner.search_protein(sequence, str(out.SeqRecord.seq), circular=circular)

@@ -410,3 +410,27 @@ class Graphic:
             rev_color = palette[(i*2+1)%len(palette)]
             cmap[name[i]] = [fwd_color, rev_color]
         return cmap
+    
+    def print_msa(msa, width=100):
+        '''
+        Prints out a multi-sequence alignment array
+        msa = list of sequences
+        width = characters per line
+        '''
+        x = np.arange(0,len(msa[0]),width)
+        if x[-1] < len(msa[0]):
+            x = np.append(x,len(msa[0]))
+        output = ''
+        for i in range(len(x)-1):
+            for j in range(len(msa)):
+                output+= msa[j][x[i]:x[i+1]]+' '+str(x[i+1])+' seq'+str(j)+'\n'
+            # find mismatches
+            match = np.array([True]*(x[i+1]-x[i]))
+            for j in range(len(msa)-1):
+                seq1 = np.array([k for k in msa[j][x[i]:x[i+1]]])
+                seq2 = np.array([k for k in msa[j+1][x[i]:x[i+1]]])
+                match*= (seq1==seq2)
+            mchar = np.array([' ']*(x[i+1]-x[i]))
+            mchar[~match] = '.'
+            output+= ''.join(mchar)+'\n'
+            print(output)

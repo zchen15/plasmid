@@ -7,7 +7,6 @@ import pandas as pd
 
 # reading and writing genbank files
 import Bio
-import Bio.SeqIO
 import Bio.SeqUtils
 import spoa
 import parasail
@@ -15,10 +14,14 @@ import mappy
 
 # system and time
 import re
+import tempfile
+import subprocess
 
 # import custom libraries
 from .misc import read_to_df
 from .misc import revcomp
+from .misc import load_args
+from .fileIO import fileIO
 
 class Aligner:
     '''
@@ -29,18 +32,60 @@ class Aligner:
                           'g2':1,
                           'mat':parasail.nuc44,
                           'method':'sg_trace_scan_16'}
+
     params['minimap'] = {'k':7,
-                         'w':1}
-    params['bin'] = {'minimap':'minimap2',
-                     'bwa':'bwa',
-                     'bowtie2':'bowtie2'}
+                         'w':1,
+                         'cigar':True}
+
+    params['bwa'] = {'config':'mem -a'}
+    params['bowtie2'] = {'config':'-a --very-sensitive-local --threads 1 --quiet'}
+    
+    params['spoa'] = {'algorithm':0,
+                      'genmsa':True,
+                      'm':5,
+                      'n':-4,
+                      'g':-8,
+                      'e':-6,
+                      'q':-10,
+                      'c':-4}
+    
+    params['work_dir'] = None
+    params['binaries'] = {'minimap':'minimap2',
+                          'bwa':'bwa',
+                          'bowtie2':'bowtie2'}
 
     def __init__(self, args=None):
         if args!=None:
             self.params = load_args(args, self.params)
         if self.params['verbose']:
             print(self.params)
+        self.create_tempdir()
 
+    def __del__(self):
+        '''
+        Destructor class to clean up temporary files
+        '''
+        folder = self.params['work_dir']
+        folder.cleanup()
+    
+    def __enter__(self):
+        '''
+        Entry function for use in with statements
+        '''
+        return self
+    
+    def __exit__(self):
+        '''
+        Exit function for use in with statements
+        '''
+        del(self)
+    
+    def create_tempdir(self):
+        '''
+        Create a temporary working directory for aligners
+        '''
+        self.params['work_dir'] = tempfile.TemporaryDirectory(prefix='aligner_')
+        
     def run(self):
         qry = self.params['query']
         ref = self.params['reference']
@@ -53,13 +98,12 @@ class Aligner:
         df.to_csv(self.params['ofile'], index=False)
         return df
 
-    def search_DNA(qry, ref, fwd_only=False, exact=False, circular=False):
+    def search_DNA(qry, ref, fwd_only=False, circular=False):
         '''
         Find all instances of the query sequence in the reference.
         qry = DNA subsequence to find
         ref = DNA sequence containing the query subsequence
         fwd_only = search in forward orientation 5'->3' only. Defaults to searching forward and reverse complement
-        exact = if False, then allow matching to ambiguous bases
         circular = search circularly
         returns a dataframe with columns [start, end, strand]
         '''
@@ -74,23 +118,10 @@ class Aligner:
             if circular:
                 ref+=ref
             out = []
-            if exact:
-                # look for stuff in forward 5'->3'
-                x = ref.find(qry)
-                idx = 0
-                # look for every occurrence
-                while x > -1:
-                    s1 = x+idx
-                    s2 = s1 + len(qry)
-                    out.append([s1, s2, 1])
-                    # shift the search window
-                    idx = idx + x + 1
-                    x = ref[idx:].find(qry)
-            else:
-                # search with ambiguous bases
-                fwd = Bio.SeqUtils.nt_search(ref, qry)
-                for i in fwd[1:]:
-                    out.append([i, i+len(qry), 1])
+            # search with ambiguous bases
+            fwd = Bio.SeqUtils.nt_search(ref, qry)
+            for i in fwd[1:]:
+                out.append([i, i+len(qry), 1])
             if circular and len(out) > 0:
                 out = np.array(out)
                 out = out[out[:,0] < L]
@@ -98,9 +129,9 @@ class Aligner:
                 out[out[:,1]==0,1] = L
         else:
             # fwd and reverse search
-            fwd_out = Aligner.search_DNA(qry, ref, fwd_only=True, exact=exact, circular=circular)
+            fwd_out = Aligner.search_DNA(qry, ref, fwd_only=True, circular=circular)
             rev_ref = revcomp(ref)
-            rev_out = Aligner.search_DNA(qry, rev_ref, fwd_only=True, exact=exact, circular=circular)
+            rev_out = Aligner.search_DNA(qry, rev_ref, fwd_only=True, circular=circular)
             # correct reverse locations
             for i in range(len(rev_out)):
                 s1 = rev_out.iat[i,0]
@@ -138,7 +169,7 @@ class Aligner:
                     db = Bio.Seq.Seq(ref+ref)[i:].translate()
                 else:
                     db = Bio.Seq.Seq(ref)[i:].translate()
-                df = Aligner.search_DNA(qry, db, fwd_only=True, exact=True, circular=False)
+                df = Aligner.search_DNA(qry, db, fwd_only=True, circular=False)
                 for [start, end, strand] in df[['start','end','strand']].values:
                     # convert back to base pair location
                     start = start*3 + i
@@ -169,44 +200,15 @@ class Aligner:
 
     def search_ORF(self, sequence):
         '''
-        Search for open reading frames, todo
+        Search for open reading frames, to do
         '''
         return -1
 
     def blast(self, sequence):
         '''
-        Search sequence on NIH blast
+        Search sequence on NIH blast, to do
         '''
         return -1
-
-    def spoa(seq, verbose=True, width=100):
-        '''
-        Runs multi-sequence alignment on provided sequences with spoa
-        seq = list of sequences
-        verbose = print out results
-        width = characters per line
-        returns consensus, msa
-        '''
-        consensus, msa = spoa.poa(seq)
-        if verbose:
-            x = np.arange(0,len(msa[0]),width)
-            if x[-1] < len(msa[0]):
-                x = np.append(x,len(msa[0]))
-            output = ''
-            for i in range(len(x)-1):
-                for j in range(len(msa)):
-                    output+= msa[j][x[i]:x[i+1]]+' '+str(x[i+1])+' seq'+str(j)+'\n'
-                # find mismatches
-                match = np.array([True]*(x[i+1]-x[i]))
-                for j in range(len(msa)-1):
-                    seq1 = np.array([k for k in msa[j][x[i]:x[i+1]]])
-                    seq2 = np.array([k for k in msa[j+1][x[i]:x[i+1]]])
-                    match*= (seq1==seq2)
-                mchar = np.array([' ']*(x[i+1]-x[i]))
-                mchar[~match] = '.'
-                output+= ''.join(mchar)+'\n'
-            print(output) 
-        return consensus, msa
 
     def string_match(self, qry, ref):
         '''
@@ -235,6 +237,29 @@ class Aligner:
         '''
         return -1
     
+    def spoa(self, seq):
+        '''
+        Runs multi-sequence alignment on provided sequences with spoa
+        seq = list of sequences
+        returns dictionary containing {'consensus':sequence, 'msa':<list of sequences>}
+        '''
+        algo = self.params['spoa']['algorithm']
+        genmsa = self.params['spoa']['genmsa']
+        m = self.params['spoa']['m']
+        n = self.params['spoa']['n']
+        g = self.params['spoa']['g']
+        e = self.params['spoa']['e']
+        q = self.params['spoa']['q']
+        c = self.params['spoa']['c']
+        
+        consensus, msa = spoa.poa(sequences=seq, genmsa=genmsa, algorithm=algo, m=m, n=n, g=g, e=e, q=q, c=c)
+        out = {'consensus':consensus
+               'msa':msa,
+               'params':{}}
+        for k in self.params['spoa'].keys():
+            out['params'][k] = self.params['spoa'][k]
+        return out
+    
     def minimap2(self, qry, ref):
         '''
         Run minimap aligner
@@ -245,16 +270,15 @@ class Aligner:
         '''
         k = self.params['minimap']['k']
         w = self.params['minimap']['w']
-        qry = Aligner.str_to_df(qry, 'query')
-        ref = Aligner.str_to_df(ref, 'ref')
-
+        
         out = []
         for rname, rseq in ref[['name','sequence']].values:
-            a = mappy.aligner(seq=rseq)
+            a = mappy.Aligner(seq=rseq, k=k, w=w)
             for qname, qseq in qry[['name','sequence']].values:
                 for h in a.map(qseq):
-                    out.append([qname, len(qseq), h.q_st, h.q_en, rname, h.ctg_len, h.r_st, h.r_en, h.trans_strand, h.read_num,
-                                h.blen, h.mlen, h.mlen/h.blen, h.NM, h.mapq, h.is_primary, h.cigar_str])
+                    out.append([qname, len(qseq), h.q_st, h.q_en, rname, h.ctg_len, h.r_st, h.r_en, 
+                                h.trans_strand, h.read_num, h.blen, h.mlen, h.mlen/h.blen,
+                                h.NM, h.mapq, h.is_primary, h.cigar_str])
         col = ['query_id','q_len','q_start','q_end','ref_id','t_len','t_start','t_end','strand','read_num',
                'blen','mlen','match_score','NM','mapq','is_primary','cigar']
         return pd.DataFrame(out, columns=col)
@@ -269,10 +293,7 @@ class Aligner:
         g2 = self.params['parasail']['g2']
         mat = self.params['parasail']['mat']
         method = self.params['parasail']['method']
-
-        qry = Aligner.str_to_df(qry, 'query')
-        ref = Aligner.str_to_df(ref, 'ref')
-
+        
         out = []
         # select aligner function to use
         paligner = getattr(parasail, method)
@@ -291,6 +312,7 @@ class Aligner:
                 out.append([qname, len(qseq), rname, len(rseq), 1, res.score, sF[1]+sF[2], sF[0], sF[1], sF[2], cigarF])
                 out.append([qname, len(qseq), rname, len(rseq), -1, resR.score, sR[1]+sR[2], sR[0], sR[1], sR[2], cigarR])
         col = ['query_id','q_len','ref_id','t_len','strand','AS','NM','match','mismatch','indel','cigar']
+        # to do add query start and end on ref
         return pd.DataFrame(out, columns=col)
 
     def filter_idx(df, col, value='score', opt='idxmax'):
@@ -375,189 +397,240 @@ class Aligner:
                 i2+=span
         return [qa, ra, align]
 
-    def run_minimap2(query, database, workspace='./minimap2/', config='-x map-ont', cigar=True, build_index=False, use_index=False, cleanup=False):
+    def get_minimap2_index(self, database, filename='index.mmi'):
         '''
-        This is a wrapper for the minimap2 aligner. This aligner is better suited for long reads (>100bp)
+        This is a wrapper for the minimap2 to build the fn_index
+        This aligner is better suited for long reads (>100bp)
+        
+        database = database of sequences being search through
+        database must be in pandas dataframe format with columns:
+        [name, sequence] or [name, sequence, quality]
+        or a string defining the fasta or fastq file to index
+        
+        filename = defines the filename of the minimap index
+        
+        return filename of minimap2 index
+        '''
+        work_dir = self.params['work_dir']
+        if type(database) == str:
+            db_file = database
+        else:
+            db_file = work_dir.name + '/db'
+            db_file = fileIO.write_fastx(db_file, database)
+
+        # set the parameters
+        w = self.params['minimap']['w']
+        k = self.params['minimap']['k']
+        mm2bin = self.params['binaries']['minimap']
+        fn_index = work_dir.name + '/' + filename
+        
+        # execute the command
+        cmd = mm2bin +' -k '+str(k)+' -w '+str(w)+' -d '+fn_index+' '+db_file
+        subprocess.run(cmd.split(' '))
+        self.params['minimap']['index'] = fn_index
+        return fn_index
+    
+    def run_minimap2(self, query, query2=None, database=None):
+        '''
+        This is a wrapper for the minimap2 aligner.
+        This aligner is better suited for long reads (>100bp)
 
         query = list of sequences to search for in database
         query must be in pandas dataframe format with columns:
-        [id, sequence] or [id, sequence, quality]
-        [fwd_id, fwd_seq, rev_id, rev_seq] or
-        [fwd_id, fwd_seq, fwd_quality, rev_id, rev_seq, rev_quality]
-
+        [name, sequence] or [name, sequence, quality]
+        
+        query2 = reverse pair of paired end read
+        query must be in pandas dataframe format with columns:
+        [name, sequence] or [name, sequence, quality]
+        
         database = database of sequences being search through
         database must be in pandas dataframe format with columns:
-        [id, sequence] or [id, sequence, quality]
+        [name, sequence] or [name, sequence, quality]
+        or a string containing the filename of the fn_index
 
-        build_index = determines if a burrow-wheeler transform index should be build for the database
-        use_index = determines if index will be used or just read from database fasta file
-        workspace = defines where input and output files for bowtie2 resides
-        config = defines the config options to pass to bowtie2
+        returns a pandas dataframe of alignment results from the paf file
         '''
-        workspace = check_dir(workspace)
-        # load sequence incase low mem option is used 
-        query = add_seq(query) 
-        database = add_seq(database)
         # Define locations of input and output files
-        qfile = workspace+'read1.fq'
-        mfile = workspace+'read2.fq'
-        dbfile = workspace+'database.fq'
-        outfile = workspace+'results.paf'
-        btfile = workspace+'index.mmi'
-        # remove spaces from id and save the mapping
-        if 'fwd_id' in query.columns:
-            query, fmap = aligner_fix_name(query, col='fwd_id')
-            query, rmap = aligner_fix_name(query, col='rev_id')
+        work_dir = self.params['work_dir']
+        if type(query) == str:
+            qfile = query
         else:
-            query, qmap = aligner_fix_name(query, col='id')
-        database, dbmap = aligner_fix_name(database, col='id')
+            query, qmap = Aligner.aligner_fix_name(query, col='name')
+            qfile = work_dir.name + '/' + 'read1'
+            qfile = fileIO.write_fastx(qfile, query)
+        
+        if query2!=None:
+            if type(query2) == str:
+                mfile = query2
+            else:
+                query2, qmap2 = Aligner.aligner_fix_name(query2, col='name')
+                mfile = work_dir.name + '/' + 'read2'
+                mfile = fileIO.write_fastx(mfile, query2)
+        
+        if database==None:
+            dbfile = self.params['minimap2']['index']
+        elif type(database) == str:
+            dbfile = database
+        else:
+            database, dbmap = Aligner.aligner_fix_name(database, col='name')
+            dbfile = work_dir.name + '/' + 'database'
+            dbfile = fileIO.write_fastx(db_file, database)
+        
+        outfile = work_dir.name+'/results.paf'
+        
+        # set the parameters
+        w = self.params['minimap']['w']
+        k = self.params['minimap']['k']
+        mm2bin = self.params['binaries']['minimap']
+        
+        config = ''
+        if self.params['minimap']['cigar']: # adds flag to generate cigar string
+            config+= '-c'
+        config+= ' -k '+str(k)
+        config+= ' -w '+str(w)
 
-        # write aligner input 
-        paired = aligner_write_input(qfile, mfile, dbfile, query, database)
-        if cigar: # adds flag to generate cigar string
-            config = '-c '+config
-        # Only build index when we need to. Index building takes a lot of time
-        if build_index:
-            cmd = _minimap2+' '+config+' -d '+btfile+' '+dbfile
-            subprocess.run(cmd.split(' '))
-        # Switch to index if needed
-        if use_index:
-            dbfile = btfile
         # Do paired end search if needed
-        if paired:
-            cmd = _minimap2+' '+config+' '+dbfile+' '+qfile+' '+mfile+' -o '+outfile
+        if query2!=None:
+            cmd = mm2bin+' '+config+' '+dbfile+' '+qfile+' '+mfile+' -o '+outfile
         else:
-            cmd = _minimap2+' '+config+' '+dbfile+' '+qfile+' -o '+outfile
+            cmd = mm2bin+' '+config+' '+dbfile+' '+qfile+' -o '+outfile
         # call the aligner
         subprocess.run(cmd.split(' '))
         # extract the PAF file information
-        data = parse_PAF(outfile)
+
+        data = fileIO.parse_PAF(outfile)
         # add spaces back to the sequences
-        if 'fwd_id' in query.columns:
-            data = aligner_restore_name(data, fmap, col='query_id')
-            data = aligner_restore_name(data, rmap, col='query_id')
-        else:
-            data = aligner_restore_name(data, qmap, col='query_id')
-        data = aligner_restore_name(data, dbmap, col='database_id')
+        if query2!=None:
+            data = Aligner.aligner_restore_name(data, qmap2, col='query_id')
+        data = Aligner.aligner_restore_name(data, qmap, col='query_id')
+        data = Aligner.aligner_restore_name(data, dbmap, col='database_id')
 
         # Format the fields to integer
-        x = ['q_len','q_start','q_end','t_len','t_start','t_end','match','tot','mapq','cm','s1','s2','NM','AS','ms','nn','rl']
+        x = ['q_len','q_start','q_end','t_len','t_start','t_end',
+             'match','tot','mapq','cm','s1','s2','NM','AS','ms','nn','rl']
         for i in x:
             data[i] = data[i].astype(int)
         data['match_score'] = data['match']/data['tot']*1.0 # compute blast like score
+
         # compute similarity
-        data = aligner_get_similarity(data)
+        data = Aligner.get_similarity(data)
+        
         # drop cigar if it is not present
         if cigar == False:
             data.drop(columns = ['CIGAR'], inplace = True)
-        # remove work folder
-        if cleanup and ~use_index:
-            subprocess.run(['rm','-r',workspace])
         return data
 
-    def run_bowtie2(query, database, workspace='./bowtie2/', config='-a --very-sensitive-local --threads 1 --quiet', build_index=True, cleanup=False):
+    def aligner_fix_name(df, col):
         '''
-        This is a wrapper for the bowtie2 aligner.
-
-        query = list of sequences to search for in database
-        query must be in pandas dataframe format with columns:
-        [id, sequence] or [id, sequence, quality]
-
+        Removes spacing in the names that causes minimap2 to truncate read ids
+        df = dataframe column containing the old id
+        col = column with in the old id
+        returns fixed dataframe and id mapping between old and new names
+        '''
+        out = df.copy()
+        revmap = {str(i)+'_'+out.iloc[i][col].replace(' ','_'):out.iloc[i][col] for i in range(0,len(df))}
+        out[col] = list(revmap.keys())
+        return out, revmap
+    
+    def aligner_restore_name(df, revmap, col):
+        '''
+        Restore spaces in the names
+        df = dataframe with column containing the new id
+        revmap = dictionary containing mapping of new id to old id
+        col = column name containing the id restore
+        '''
+        df[col] = [revmap[df.iloc[i][col]] for i in range(0,len(df))]
+        return df
+    
+    def get_similarity(data):
+        '''
+        Add similarity metric to output dataframe from aligner
+        data = dataframe with columns [NM, q_len, t_len]
+        return dataframe with similarity added to columns
+        '''
+        v1 = np.min([data['q_len'].values, data['t_len'].values], axis = 0)
+        data['similarity'] = 1-data['NM']/v1
+        data.loc[data['similarity'] < 0, 'similarity'] = 0
+        return data
+    
+    def get_bwa_index(self, database)
+        '''
+        This is a wrapper for bwa to build the fn_index
         database = database of sequences being search through
         database must be in pandas dataframe format with columns:
-        [id, sequence] or [id, sequence, quality]
-        [fwd_id, fwd_seq, rev_id, rev_seq] or
-        [fwd_id, fwd_seq, fwd_quality, rev_id, rev_seq, rev_quality]
-
-        build_index = determines if a burrow-wheeler transform index should be build for the database
-        workspace = defines where input and output files for bowtie2 resides
-        config = defines the config options to pass to bowtie2
+        [name, sequence] or [name, sequence, quality]
+        or a string defining the fasta or fastq file to index
+        
+        filename = defines the filename of the bwa index
+        
+        return filename of bwa index
         '''
-        workspace = check_dir(workspace)
-        # load sequence incase low mem option is used 
-        query = add_seq(query) 
-        database = add_seq(database)
-        # Define locations of input and output files for bowtie
-        qfile = workspace+'read1.fa'
-        mfile = workspace+'read2.fa'
-        dbfile = workspace+'database.fa'
-        outfile = workspace+'results.sam'
-        btfile = workspace+'index'
-        # write aligner input
-        paired = aligner_write_input(qfile, mfile, dbfile, query, database)
-        # Only build index when we need to. Index building takes a lot of time
-        if build_index == True:
-            value = check_seqdf(database)
-            if value == 2:
-                cmd = _bowtie2+'-build --quiet -q '+dbfile+' '+btfile+' --threads 2'
-            elif value == 1:
-                cmd = _bowtie2+'-build --quiet -f '+dbfile+' '+btfile+' --threads 2'
-            subprocess.run(cmd.split(' '))
-        # call bowtie2
-        subprocess.run(cmd.split(' '))
-        data = parse_SAM(outfile)
-        # add q_len and t_len info
-        q_len = np.transpose([query['id'].values, [len(i) for i in query['sequence']]])
-        q_len = pd.DataFrame(q_len, columns = ['query_id','q_len'])
-        data = data.merge(q_len, on='query_id', how='left')
-        t_len = np.transpose([database['id'].values, [len(i) for i in database['sequence']]])
-        t_len = pd.DataFrame(t_len, columns = ['database_id','t_len'])
-        # debug
-        data = data.merge(t_len, on='database_id', how='left')
-        data = data.dropna() # drop shit that doesn't have sequence length
-        # Format the fields to integer
-        x = ['q_len','t_len','t_start','t_end','mapq','AS','XS','XN','XM','XO','XG','NM']
-        for i in x:
-            data[i] = data[i].astype(int)
-        # compute similarity
-        data = aligner_get_similarity(data)
-        # remove work folder
-        if cleanup:
-            subprocess.run(['rm', '-r', workspace])
-        return data
+        bwa = self.params['binaries']['bwa']
+        work_dir = self.params['work_dir']
 
-    def run_bwa(query, database, workspace='./bwa/', config=' mem -a ', build_index=True, cleanup=False):
+        # write input files
+        if type(database) == str:
+            dbfile = database
+        else:
+            dbfile = work_dir.name + '/db'
+            dbfile = fileIO.write_fasta(dbfile, database)
+            
+        cmd = bwa+' index '+dbfile
+        subprocess.run(cmd.split(' '))
+        self.params['bwa']['index'] = dbfile
+        return dbfile
+        
+    def run_bwa(self, query, query2=None, database=None):
         '''
         This is a wrapper for the bwa aligner.
 
         query = list of sequences to search for in database
         query must be in pandas dataframe format with columns:
-        [id, sequence] or [id, sequence, quality]
-        [fwd_id, fwd_seq, rev_id, rev_seq] or
-        [fwd_id, fwd_seq, fwd_quality, rev_id, rev_seq, rev_quality]
-
+        [name, sequence] or [name, sequence, quality]
+        
+        query2 = reverse pair of paired end read
+        query must be in pandas dataframe format with columns:
+        [name, sequence] or [name, sequence, quality]
+        
         database = database of sequences being search through
         database must be in pandas dataframe format with columns:
-        [id, sequence] or [id, sequence, quality]
-
-        build_index = determines if a burrow-wheeler transform index should be build for the database
-        workspace = defines where input and output files for bowtie2 resides
-        config = defines the config options to pass to bowtie2
+        [name, sequence] or [name, sequence, quality]
+        or a string containing the filename of the fn_index
+        
+        returns a pandas dataframe of alignment results from the sam file
         '''
-        workspace = check_dir(workspace)
-        # load sequence incase low mem option is used 
-        query = add_seq(query) 
-        database = add_seq(database)
-        # Define locations of input and output files for bowtie
-        qfile = workspace+'read1.fq'
-        mfile = workspace+'read2.fq'
-        dbfile = workspace+'database.fa'
-        outfile = workspace+'results.sam'
-        # write aligner input
-        paired = aligner_write_input(qfile, mfile, dbfile, query, database)
-        # Only build index when we need to. Index building takes a lot of time
-        if build_index:
-            cmd = _bwa+' index '+dbfile
-            subprocess.run(cmd.split(' '))
-        # do paired end search if needed
-        if paired:
-            cmd = _bwa+' '+config+' '+dbfile+' '+qfile+' '+mfile+' -o '+outfile
+        # Define locations of input and output files
+        work_dir = self.params['work_dir']
+        if type(query) == str:
+            qfile = query
         else:
-            cmd = _bwa+' '+config+' '+dbfile+' '+qfile+' -o '+outfile
-        # call the aligner
+            qfile = work_dir.name + '/' + 'read1'
+            qfile = fileIO.write_fastx(qfile, query)
+        
+        if query2!=None:
+            if type(query2) == str:
+                mfile = query2
+            else:
+                mfile = work_dir.name + '/' + 'read2'
+                mfile = fileIO.write_fastx(mfile, query2)
+        
+        if database!=None:
+            self.get_bwa_index(database)            
+        dbfile = self.params['bwa']['index']
+        outfile = work_dir.name+'/results.sam'
+        config = self.params['bwa']['config']
+        bwa = self.params['binaries']['bwa']
+        
+        # do paired end search if needed
+        if query2==None:
+            cmd = bwa+' '+config+' '+dbfile+' '+qfile+' -o '+outfile
+        else:
+            cmd = bwa+' '+config+' '+dbfile+' '+qfile+' '+mfile+' -o '+outfile
         subprocess.run(cmd.split(' '))
+        
         # extract the SAM file information
-        data = parse_SAM(outfile)
+        data = fileIO.parse_SAM(outfile)
+        
         # add q_len and t_len info
         q_len = np.transpose([query['id'].values, [len(i) for i in query['sequence']]])
         q_len = pd.DataFrame(q_len, columns = ['query_id','q_len'])
@@ -566,13 +639,117 @@ class Aligner:
         t_len = pd.DataFrame(t_len, columns = ['database_id','t_len'])
         data = data.merge(t_len, on='database_id', how='left')
         data = data.dropna() # drop shit that doesn't have sequence length
+        
         # Format the fields to integer
         x = ['q_len','t_len','t_start','t_end','mapq','AS','XS','XN','XM','XO','XG','NM']
         for i in x:
             data[i] = data[i].astype(int)
+        
         # compute similarity
-        data = aligner_get_similarity(data)
-        # remove work folder
-        if cleanup:
-            subprocess.run(['rm','-r',workspace])
+        data = Aligner.get_similarity(data)
+        
         return data
+
+    def get_bowtie2_index(self, database, filename='bt_index'):
+        '''
+        This is a wrapper for bowtie2 to build the fn_index
+        database = database of sequences being search through
+        database must be in pandas dataframe format with columns:
+        [name, sequence] or [name, sequence, quality]
+        or a string defining the fasta or fastq file to index
+        
+        filename = defines the filename of the bwa index
+        
+        return filename of bwa index
+        '''
+        bowtie2 = self.params['binaries']['bowtie2']
+        work_dir = self.params['work_dir']
+
+        # write input files
+        if type(database) == str:
+            dbfile = database
+        else:
+            dbfile = work_dir.name + '/db'
+            dbfile = fileIO.write_fastx(dbfile, database)
+
+        btfile = work_dir.name+'/'+filename    
+        if '.fq' in dbfile:
+            cmd = bowtie2+' -build --quiet -q '+dbfile+' '+btfile+' --threads 2'
+        elif '.fa' in dbfile:
+            cmd = bowtie2+' -build --quiet -f '+dbfile+' '+btfile+' --threads 2'
+        subprocess.run(cmd.split(' '))
+        self.params['bowtie2']['index'] = btfile
+        return btfile
+    
+    def run_bowtie2(database, query, query2=None, database=None, config=''):
+        '''
+        This is a wrapper for the bowtie2 aligner.
+
+        query = list of sequences to search for in database
+        query must be in pandas dataframe format with columns:
+        [name, sequence] or [name, sequence, quality]
+        
+        query2 = reverse pair of paired end read
+        query must be in pandas dataframe format with columns:
+        [name, sequence] or [name, sequence, quality]
+        
+        database = database of sequences being search through
+        database must be in pandas dataframe format with columns:
+        [name, sequence] or [name, sequence, quality]
+        or a string containing the filename of the fn_index
+        
+        returns a pandas dataframe of alignment results from the sam file
+        '''
+        # Define locations of input and output files
+        work_dir = self.params['work_dir']
+        if type(query) == str:
+            qfile = query
+        else:
+            qfile = work_dir.name + '/' + 'read1'
+            qfile = fileIO.write_fastx(qfile, query)
+        
+        if query2!=None:
+            if type(query2) == str:
+                mfile = query2
+            else:
+                mfile = work_dir.name + '/' + 'read2'
+                mfile = fileIO.write_fastx(mfile, query2)
+        
+        if database!=None:
+            self.get_bowtie2_index(database)
+        btfile = self.params['bowtie2']['index']
+        outfile = work_dir.name+'/results.sam'
+        config = self.params['bowtie2']['config']
+        bowtie2 = self.params['binaries']['bowtie2']
+        
+        if query2==None and '.fa' in qfile:
+            cmd = bowtie2+' '+config+' -x '+bt_file+' -q '+qfile+' -S '+outfile
+        elif query2==None and '.fq' in qfile:
+            cmd = bowtie2+' '+config+' -x '+bt_file+' -f '+qfile+' -S '+outfile
+        else:
+            cmd = bowtie2+' '+config+' -x '+bt_file+' -1 '+qfile+' -2 '+mfile+' -S '+outfile
+        # call bowtie2
+        subprocess.run(cmd.split(' '))
+        data = fileIO.parse_SAM(outfile)
+        
+        # add q_len and t_len info
+        q_len = np.transpose([query['id'].values, [len(i) for i in query['sequence']]])
+        q_len = pd.DataFrame(q_len, columns = ['query_id','q_len'])
+        data = data.merge(q_len, on='query_id', how='left')
+        t_len = np.transpose([database['id'].values, [len(i) for i in database['sequence']]])
+        t_len = pd.DataFrame(t_len, columns = ['database_id','t_len'])
+        
+        # debug to do
+        data = data.merge(t_len, on='database_id', how='left')
+        data = data.dropna() # drop shit that doesn't have sequence length
+
+        # Format the fields to integer
+        x = ['q_len','t_len','t_start','t_end','mapq','AS','XS','XN','XM','XO','XG','NM']
+        for i in x:
+            data[i] = data[i].astype(int)
+        
+        # compute similarity
+        data = Aligner.get_similarity(data)
+
+        return data
+
