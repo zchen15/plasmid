@@ -459,6 +459,7 @@ class Aligner:
             qfile = work_dir.name + '/' + 'read1'
             qfile = fileIO.write_fastx(qfile, query)
         
+        paired = False
         if type(query2).__name__!='NoneType':
             paired = True
             if type(query2) == str:
@@ -603,6 +604,7 @@ class Aligner:
             qfile = work_dir.name + '/' + 'read1'
             qfile = fileIO.write_fastx(qfile, query)
         
+        paired = False
         if type(query2).__name__!='NoneType':
             paired = True
             if type(query2) == str:
@@ -620,13 +622,29 @@ class Aligner:
         
         # do paired end search if needed
         if paired:
-            cmd = bwa+' '+config+' '+dbfile+' '+qfile+' -o '+outfile
-        else:
             cmd = bwa+' '+config+' '+dbfile+' '+qfile+' '+mfile+' -o '+outfile
+        else:
+            cmd = bwa+' '+config+' '+dbfile+' '+qfile+' -o '+outfile
         subprocess.run(cmd.split(' '))
         
         # extract the SAM file information
         data = fileIO.parse_SAM(outfile)
+        data = Aligner.bwa_format_SAM(query, query2, database, data)
+        return data
+
+    def bwa_format_SAM(query, query2, database, data):
+        '''
+        Add q_len and t_len information to sam output
+        query = str or pandas dataframe
+        query2 = str or pandas dataframe
+        database = str or pandas dataframe
+        data = pandas dataframe from parse_SAM
+
+        returns dataframe with q_len and t_len info
+        '''
+        paired = False
+        if type(query2).__name__!='NoneType':
+            paired = True
         
         if type(query)==str:
             query = fileIO.read_fastx(query)
@@ -656,10 +674,9 @@ class Aligner:
         
         # compute similarity
         data = Aligner.get_similarity(data)
-        
         return data
-
-    def bowtie2_get_index(self, database, filename='bt_index'):
+    
+    def bowtie2_get_index(self, database, filename='bowtie2_index'):
         '''
         This is a wrapper for bowtie2 to build the fn_index
         database = database of sequences being search through
@@ -676,30 +693,32 @@ class Aligner:
 
         # write input files
         if type(database) == str:
-            dbfile = database
+            if '.fq' in database or '.fastq' in database:
+                database = fileIO.read_fastq(database)
+                dbfile = work_dir.name + '/db'
+                fileIO.write_fasta(dbfile, database)
+            else:
+                dbfile = database
         else:
             dbfile = work_dir.name + '/db'
-            dbfile = fileIO.write_fastx(dbfile, database)
+            fileIO.write_fasta(dbfile, database)
 
-        btfile = work_dir.name+'/'+filename    
-        if '.fq' in dbfile:
-            cmd = bowtie2+' -build --quiet -q '+dbfile+' '+btfile+' --threads 2'
-        elif '.fa' in dbfile:
-            cmd = bowtie2+' -build --quiet -f '+dbfile+' '+btfile+' --threads 2'
+        btfile = work_dir.name+'/'+filename
+        # bowtie2 only builds indexes against fasta files
+        cmd = bowtie2+'-build --quiet -f '+dbfile+' '+btfile+' --threads 2'
         subprocess.run(cmd.split(' '))
+        
         self.params['bowtie2']['index'] = btfile
         return btfile
     
-    def bowtie2(query, query2=None, database=None):
+    def bowtie2(self, query, query2=None, database=None):
         '''
         This is a wrapper for the bowtie2 aligner.
 
         query = list of sequences to search for in database
-        query must be in pandas dataframe format with columns:
-        [name, sequence] or [name, sequence, quality]
-        
         query2 = reverse pair of paired end read
-        query must be in pandas dataframe format with columns:
+        
+        query and query2 must be in pandas dataframe format with columns:
         [name, sequence] or [name, sequence, quality]
         
         database = database of sequences being search through
@@ -717,48 +736,33 @@ class Aligner:
             qfile = work_dir.name + '/' + 'read1'
             qfile = fileIO.write_fastx(qfile, query)
         
-        if query2!=None:
+        paired = False
+        if type(query2).__name__!='NoneType':
+            paired = True
             if type(query2) == str:
                 mfile = query2
             else:
                 mfile = work_dir.name + '/' + 'read2'
                 mfile = fileIO.write_fastx(mfile, query2)
         
-        if database!=None:
+        if type(database).__name__!='NoneType':
             self.bowtie2_get_index(database)
         btfile = self.params['bowtie2']['index']
         outfile = work_dir.name+'/results.sam'
         config = self.params['bowtie2']['config']
         bowtie2 = self.params['binaries']['bowtie2']
         
-        if query2==None and '.fa' in qfile:
-            cmd = bowtie2+' '+config+' -x '+bt_file+' -q '+qfile+' -S '+outfile
-        elif query2==None and '.fq' in qfile:
-            cmd = bowtie2+' '+config+' -x '+bt_file+' -f '+qfile+' -S '+outfile
+        if paired:
+            cmd = bowtie2+' '+config+' -x '+btfile+' -1 '+qfile+' -2 '+mfile+' -S '+outfile            
         else:
-            cmd = bowtie2+' '+config+' -x '+bt_file+' -1 '+qfile+' -2 '+mfile+' -S '+outfile
+            if '.fq' in qfile:
+                cmd = bowtie2+' '+config+' -x '+btfile+' -q '+qfile+' -S '+outfile
+            elif '.fa' in qfile:
+                cmd = bowtie2+' '+config+' -x '+btfile+' -f '+qfile+' -S '+outfile
         # call bowtie2
         subprocess.run(cmd.split(' '))
+        
+        # extract the SAM file information
         data = fileIO.parse_SAM(outfile)
-        
-        # add q_len and t_len info
-        q_len = np.transpose([query['name'].values, [len(i) for i in query['sequence']]])
-        q_len = pd.DataFrame(q_len, columns = ['query_id','q_len'])
-        data = data.merge(q_len, on='query_id', how='left')
-        t_len = np.transpose([database['name'].values, [len(i) for i in database['sequence']]])
-        t_len = pd.DataFrame(t_len, columns = ['database_id','t_len'])
-        
-        # debug to do
-        data = data.merge(t_len, on='database_id', how='left')
-        data = data.dropna() # drop shit that doesn't have sequence length
-
-        # Format the fields to integer
-        x = ['q_len','t_len','t_start','t_end','mapq','AS','XS','XN','XM','XO','XG','NM']
-        for i in x:
-            data[i] = data[i].astype(int)
-        
-        # compute similarity
-        data = Aligner.get_similarity(data)
-
+        data = Aligner.bwa_format_SAM(query, query2, database, data)
         return data
-

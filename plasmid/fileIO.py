@@ -246,6 +246,25 @@ class fileIO:
                 text+= str(i[1]) + '\n'
                 f.write(text)
     
+    def read_fastx(fname):
+        '''
+        Reads data from fasta or fastq
+        returns filename
+        '''
+        # write data to fastq file
+        try:
+            return fileIO.read_fastq(fname)
+        except:
+            logging.info('failed to read '+fname+' as fastq')
+        
+        try:
+            return fileIO.read_fasta(fname)
+        except:
+            logging.info('failed to read '+fname+' as fasta')
+        
+        # throws an error to do
+        sys.exit(1)
+        
     def write_fastx(prefix, data):
         '''
         Writes data to fasta or fastq

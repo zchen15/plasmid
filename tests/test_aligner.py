@@ -96,3 +96,23 @@ def test_bwa():
     for c in col:
         assert (c in x.columns)
     return x
+
+def test_bowtie2():
+    f1 = 'data/COI/CO1_0.fq.bz2'
+    f2 = 'data/COI/CO1_0.fq.bz2'
+    f1 = plasmid.fileIO.read_fastq(f1)
+    f2 = plasmid.fileIO.read_fastq(f2)
+    f1 = f1.iloc[:10]
+    f2 = f2.iloc[:10]
+    
+    # test index building
+    aligner = plasmid.Aligner()
+    #fn_index = aligner.bwa_get_index(f2)
+    x = aligner.bowtie2(query=f1, database=f2)
+    
+    col1 = ['query_id','database_id','orientation','flag','t_start','t_end','mapq','CIGAR']
+    col2 = ['AS','XS','XN','XM','XO','XG','NM']
+    col = col1+col2
+    for c in col:
+        assert (c in x.columns)
+    return x
