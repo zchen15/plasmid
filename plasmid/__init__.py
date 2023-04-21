@@ -7,6 +7,7 @@ from .plasmid import read_genbank
 from .designer import Designer
 from .oligos import Oligos
 from .aligner import Aligner
+from .fileIO import fileIO
 from .graphic import Graphic
 
 __version__ = "2023.03.15"
