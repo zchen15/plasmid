@@ -11,6 +11,7 @@ import Bio.SeqUtils
 import spoa
 import parasail
 import mappy
+import sklearn
 
 # system and time
 import re
@@ -53,7 +54,9 @@ class Aligner:
     params['work_dir'] = None
     params['binaries'] = {'minimap':'minimap2',
                           'bwa':'bwa',
-                          'bowtie2':'bowtie2'}
+                          'bowtie2':'bowtie2',
+                          'mmseqs2':'mmseqs',
+                          'ngmerge':'./ngmerge'}
 
     def __init__(self, args=None):
         if args!=None:
@@ -226,18 +229,6 @@ class Aligner:
                 out.append(x)
         return pd.concat(out)
     
-    def fastqc(self, qry):
-        '''
-        Wrapper for fastqc
-        '''
-        return -1
-
-    def prodigal(self, qry):
-        '''
-        Wrapper for prodigal
-        '''
-        return -1
-    
     def spoa(self, seq):
         '''
         Runs multi-sequence alignment on provided sequences with spoa
@@ -281,9 +272,9 @@ class Aligner:
                                 h.trans_strand, h.read_num, h.blen, h.mlen, h.mlen/h.blen,
                                 h.NM, h.mapq, h.is_primary, h.cigar_str])
         col = ['query_id','q_len','q_start','q_end','ref_id','t_len','t_start','t_end','strand','read_num',
-               'blen','mlen','match_score','NM','mapq','is_primary','cigar']
+               'blen','mlen','match_score','NM','mapq','is_primary','CIGAR']
         return pd.DataFrame(out, columns=col)
-
+    
     def parasail(self, qry, ref):
         '''
         Run parasail aligner
@@ -308,14 +299,64 @@ class Aligner:
                 if 'trace' in method:
                     cigarF = res.cigar.decode.decode('UTF-8')
                     cigarR = resR.cigar.decode.decode('UTF-8')
-                sF = Aligner.cigar_to_stats(cigarF)
-                sR = Aligner.cigar_to_stats(cigarR)
-                out.append([qname, len(qseq), rname, len(rseq), 1, res.score, sF[1]+sF[2], sF[0], sF[1], sF[2], cigarF])
-                out.append([qname, len(qseq), rname, len(rseq), -1, resR.score, sR[1]+sR[2], sR[0], sR[1], sR[2], cigarR])
-        col = ['query_id','q_len','ref_id','t_len','strand','AS','NM','match','mismatch','indel','cigar']
-        # to do add query start and end on ref
-        return pd.DataFrame(out, columns=col)
+                sF = Aligner.cigar_to_stats(cigarF, qseq, rseq)
+                sF = [qname, rname, 1, res.score]+sF+[cigarF]
+                sR = Aligner.cigar_to_stats(cigarR, qseq, rseq)
+                sR = [qname, rname, -1, res.score]+sR+[cigarR]
+                out.append(sF)
+                out.append(sR)
+        col = ['query_id','ref_id','strand','AS',
+               'q_len','q_start','q_end',
+               't_len','t_start','t_end',
+               'match','mismatch','indel','CIGAR']
+        df = pd.DataFrame(out, columns=col)
+        df['NM'] = df['mismatch']+df['indel']
+        return df
+        
+    def cigar_to_stats(cig, qseq, rseq):
+        '''
+        Get alignment statistics associated with parasail output
+        '''
+        cig = Aligner.cigar_decode(cig)
+        
+        # compute match boundaries
+        q_start = 0
+        q_end = len(qseq)
+        q_len = len(qseq)
+        t_start = 0
+        t_end = len(rseq)
+        t_len = len(rseq)
+        if cig[0][1]=='I':
+            t_start = cig[0][0]
+        elif cig[0][1]=='D':
+            q_start = cig[0][0]
+        if cig[-1][1]=='I':
+            t_end-= cig[-1][0]
+        elif cig[-1][1]=='D':
+            q_end-= cig[-1][0]
+        
+        x = np.array([cig[i][0] for i in range(len(cig))])
+        y = np.array([cig[i][1] for i in range(len(cig))])
+        
+        # get number of matches
+        M = np.sum(x[y=='='])
+        M+= np.sum(x[y=='M'])
+        
+        # get number of mismatches
+        Xm = np.sum(x[y=='X'])
 
+        # get indel count
+        indel = np.sum(x[y=='I'])
+        indel+= np.sum(x[y=='D'])
+        return [q_len, q_start, q_end, t_len, t_start, t_end, M, Xm, indel]
+    
+    def cigar_decode(cigar, key='([0-9]*)([DIM=SX])'):
+        '''
+        Decode cigar strings
+        '''
+        pattern = re.compile(key)
+        return [[int(i),j] for i,j in pattern.findall(cigar)]
+    
     def filter_idx(df, col, value='score', opt='idxmax'):
         dfi = df.reset_index(drop=True)
         idx = df.groupby(by=col).agg({value:opt}).values[:,0]
@@ -334,26 +375,6 @@ class Aligner:
             x['name'] = [header+'_'+str(i) for i in range(len(x))]
         return x
 
-    def cigar_to_list(cigar):
-        pattern = re.compile('([0-9]*)([DIM=SX])')
-        return [[int(n), c] for n,c in pattern.findall(cigar)]
-
-    def cigar_to_stats(cigar):
-        '''
-        Return total [match, mismatch, indel] in cigar string
-        '''
-        m = 0
-        x = 0
-        indel = 0
-        for n,c in Aligner.cigar_to_list(cigar):
-            if c in ['M','=']:
-                m+=n
-            if c in ['X']:
-                x+=n
-            if c in ['D','I']:
-                indel+=n
-        return [m, x, indel]
-
     def cigar_to_alignment(query, ref, cigar):
         '''
         Converts cigar to alignment text
@@ -366,7 +387,7 @@ class Aligner:
         align = ''
         i1 = 0
         i2 = 0
-        for n, c in Aligner.cigar_to_list(cigar):
+        for n, c in Aligner.cigar_decode(cigar):
             span = int(n)
             if c == 'M' or c=='=':
                 qa+=query[i1:i1+span]
@@ -453,21 +474,20 @@ class Aligner:
         # Define locations of input and output files
         work_dir = self.params['work_dir']
         if type(query) == str:
-            qfile = query
-        else:
-            query, qmap = Aligner.aligner_fix_name(query, col='name')
-            qfile = work_dir.name + '/' + 'read1'
-            qfile = fileIO.write_fastx(qfile, query)
+            query = fileIO.read_fastx(query)
+        query, qmap = Aligner.aligner_fix_name(query, col='name')
+        qfile = work_dir.name + '/' + 'read1'
+        qfile = fileIO.write_fastx(qfile, query)
         
         paired = False
         if type(query2).__name__!='NoneType':
             paired = True
             if type(query2) == str:
-                mfile = query2
-            else:
-                query2, qmap2 = Aligner.aligner_fix_name(query2, col='name')
-                mfile = work_dir.name + '/' + 'read2'
-                mfile = fileIO.write_fastx(mfile, query2)
+                query2 = fileIO.read_fastx(query2)
+
+            query2, qmap2 = Aligner.aligner_fix_name(query2, col='name')
+            mfile = work_dir.name + '/' + 'read2'
+            mfile = fileIO.write_fastx(mfile, query2)
         
         if type(database).__name__=='NoneType':
             dbfile = self.params['minimap']['index']
@@ -765,4 +785,174 @@ class Aligner:
         # extract the SAM file information
         data = fileIO.parse_SAM(outfile)
         data = Aligner.bwa_format_SAM(query, query2, database, data)
+        return data
+
+    def merge_paired_end(self, read1, read2, outfile=None):
+        '''
+        Merge paired end reads using NGmerge
+        read1  = fastq reads fwd pair
+        read2 = fastq reads rev pair
+        
+        return filename of output fastq
+        '''
+        # do paired alignment
+        ngmerge = self.params['binaries']['ngmerge']
+        work_dir = self.params['work_dir']
+        if type(outfile)==type(None):
+            outfile = work_dir.name+'/results.fq.gz'
+        
+        # run the read merge tool
+        cmd = ngmerge+' -1 '+read1+' -2 '+read2+' -o '+outfile
+        subprocess.run(cmd.split(' '))
+        return outfile
+
+    def get_fastq_statistics(query):
+        '''
+        Compute quality statistics about each read
+        query and query2 must be in pandas dataframe format with columns:
+        [name, sequence] or [name, sequence, quality]
+        '''
+        out = []
+        for v in query['quality'].values:
+            v = Aligner.phred_to_int(v)
+            q = [0, 0.25, 0.5, 0.75, 1]
+            y = np.quantile(v, q)
+            out.append(y)
+
+        col = ['Q_min','Q_lower','Q_median','Q_upper','Q_max']
+        df = pd.DataFrame(out, columns=col)
+        for c in col:
+            query[c] = df[c]
+        return query
+
+    def phred_to_int(x):
+        '''
+        Translate phred ASCII to quality integers
+        '''
+        return [ord(i)-33 for i in x]
+
+    def mmseq2_get_database(self, database, outdir):
+        '''
+        Wrapper for mmseq2 fetching a database
+        database = database name options include
+        
+        UniRef100, Amino Acid db
+        UniProtKB, Amino Acid db
+        NR, Amino Acid Non-Redundant
+        NT, Nucleotide, Nucleotide Non-Redundant
+        GTDB, Genome Taxonomy Database
+        Pfam-A.full, Profile
+        SILVA, ribosomal RNA
+        
+        outdir = output directory
+        '''
+        mmseq = self.params['binaries']['mmseq2']
+        work_dir = self.params['work_dir']
+        # run clustering
+        cmd = mmseq +' database '+database+' '+outdir+' '+work_dir.name
+        subprocess.run(cmd.split(' '))
+
+    def mmseq2_cluster(self, query, config='easy-linclust'):
+        '''
+        Wrapper for mmseq2 clustering
+        '''
+        mmseq = self.params['binaries']['mmseq2']
+        work_dir = self.params['work_dir']
+        
+        if type(query) == str:
+            qfile = query
+        else:
+            qfile = work_dir.name + '/' + 'query'
+            qfile = fileIO.write_fastx(qfile, query)
+        
+        # run clustering
+        cmd = mmseq +' '+config+' '+qfile+' '+ofile+' '+work_dir.name
+        subprocess.run(cmd.split(' '))
+
+    def mmseq2_search(self, query, config='easy-linsearch'):
+        '''
+        Wrapper for mmseq2 search
+        '''
+        mmseq = self.params['binaries']['mmseq2']
+        
+        cmd = mmseq +' '+config
+        #mmseqs easy-cluster examples/DB.fasta clusterRes tmp --min-seq-id 0.5 -c 0.8 --cov-mode 1
+
+    def mmseq2_taxon(self, query, config='easy-taxonomy'):
+        '''
+        Wrapper for mmseq2 search
+        '''
+        mmseq = self.params['binaries']['mmseq2']
+        
+        cmd = mmseq +' '+config
+        #mmseqs easy-cluster examples/DB.fasta clusterRes tmp --min-seq-id 0.5 -c 0.8 --cov-mode 1
+
+    def prodigal(self, query):
+        '''
+        Wrapper for prodigal
+        '''
+        return -1
+
+    def pca(df, n_comp=2, recenter=False, ofile='', timestamp=True):
+        '''
+        Runs principle component analysis to compression dimensions 
+        df = pandas dataframe with columns [id, d_i, ..., d_n]
+        n_comps = components to reduce to
+        ofile = output file prefix to save pca data
+        timestamp = add timestamp to output file
+        '''
+
+        # initialize PCA settings
+        logging.info('running pca with n_comp = '+str(n_comp))
+
+        # get the vector
+        col = df.columns[df.columns!='id']
+        v = df[col].values
+
+        # center the feature vectors
+        if recenter:
+            vT = v.T
+            for i in range(0,len(vT)):
+                vT[i] = vT[i] - np.mean(vT[i])
+            v = vT.T
+
+        # do PCA
+        pca = sklearn.decomposition.SparsePCA(n_components = n_comp)
+        v = pca.fit_transform(v)
+
+        col = ['f_'+str(i) for i in range(0, n_comp)]
+        data = pd.DataFrame(v, columns = col)
+        data['id'] = df['id'].values
+
+        if ofile!='':
+            ts = ''
+            if timestamp:
+                ts = '_'+datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H_%M_%S')
+            fname = ofile+ts+'.csv.gz'
+            data.to_csv(fname, index = False, compression='infer')
+        return data
+
+    def tsne(df, n_comp=2, method='sklearn', metric='euclidean', perplexity=30, learning_rate=200, n_iter=1000,
+                 ofile='', timestamp=True, verbose=0):
+        '''
+        Run tsne on input data
+        df = pandas dataframe with columns [id, v_0, ..., v_i]
+        '''
+        logging.info('running sklearn tsne with n_comp = '+str(n_comp))
+        tsne = sklearn.manifold.TSNE(n_components=n_comp, perplexity=perplexity, metric=metric,
+                             early_exaggeration=12.0, learning_rate=learning_rate,
+                             n_iter=n_iter, n_iter_without_progress=300, verbose=verbose)
+        # get the vector
+        col = df.columns[df.columns!='id']
+        v = tsne.fit_transform(df[col].values)
+        cols = ['f_'+str(i) for i in range(0, n_comp)]
+        data = pd.DataFrame(v, columns = cols)
+        data['id'] = df['id'].values
+
+        if ofile!='':
+            ts = ''
+            if timestamp:
+                ts = '_'+datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H_%M_%S')
+            fname = ofile+ts+'.csv.gz'
+            data.to_csv(fname, index=False, compression='infer')
         return data

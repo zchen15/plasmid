@@ -17,7 +17,7 @@ def test_mappy():
     x = plasmid.Aligner().mappy(f1, f2)
     assert type(x).__name__ == 'DataFrame'
     col = ['query_id','q_len','q_start','q_end','ref_id','t_len','t_start','t_end','strand','read_num',
-           'blen','mlen','match_score','NM','mapq','is_primary','cigar']
+           'blen','mlen','match_score','NM','mapq','is_primary','CIGAR']
     for c in col:
         assert c in x.columns
     return x
@@ -32,7 +32,10 @@ def test_parasail():
     # perform cross alignment
     x = plasmid.Aligner().parasail(f1, f2)
     assert type(x).__name__ == 'DataFrame'
-    col = ['query_id','q_len','ref_id','t_len','strand','AS','NM','match','mismatch','indel','cigar']
+    col = ['query_id','ref_id','strand','AS',
+           'q_len','q_start','q_end',
+           't_len','t_start','t_end',
+           'match','mismatch','indel','CIGAR']
     for c in col:
         assert c in x.columns
     return x
@@ -113,6 +116,16 @@ def test_bowtie2():
     col1 = ['query_id','database_id','orientation','flag','t_start','t_end','mapq','CIGAR']
     col2 = ['AS','XS','XN','XM','XO','XG','NM']
     col = col1+col2
+    for c in col:
+        assert (c in x.columns)
+    return x
+
+def test_get_fastq_statistics():
+    f1 = 'data/COI/CO1_0.fq.bz2'
+    f1 = plasmid.fileIO.read_fastq(f1)
+    f1 = f1.iloc[:10]
+    x = Aligner.get_fastq_statistics(f1)
+    col = ['Q_min','Q_lower','Q_median','Q_upper','Q_max']
     for c in col:
         assert (c in x.columns)
     return x
