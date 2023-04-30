@@ -9,6 +9,8 @@ import pandas as pd
 import bz2
 import gzip
 import tempfile
+import Bio
+import Bio.SeqIO
 
 # system and time
 import re
@@ -116,59 +118,14 @@ class fileIO:
         else:
             return open(fname,'w')
 
-    def read_fastq(fname, low_mem=False):
-        '''
-        Reads list of sequences from a fastq file format.
-
-        fname = fname to read the information
-        low_mem = saves memory by not storing sequence and quality strings.
-                Instead this function returns columns [filename, id, seek1, seek2, rlen]
-                Use add_seq function to add back sequence and quality to the dataframe
-        returns list of names, sequence, quality
-        '''
-        data = []
-        with tempfile.TemporaryFile(mode='w+', encoding='utf-8') as f:
-            # decompress and dump contents into a temporary file
-            with fileIO.decompress(fname) as f2:
-                out = f2.read()
-                fsize = len(out)
-                f.write(out)
-            # go to beginning of file
-            f.seek(0)
-            while fsize > f.tell():
-                rid = f.readline()[:-1]
-                s1 = f.tell()
-                seq = f.readline()[:-1]
-                f.readline()
-                s2 = f.tell()
-                q = f.readline()[:-1]
-                L = len(seq)
-                if low_mem:
-                    data.append([rid[1:], s1, s2, L])
-                else:
-                    data.append([seq, q, rid[1:]])
-        # format the dataframe
-        col = ['sequence','quality','name','seek1', 'seek2', 'rlen']
-        if low_mem:
-            data = pd.DataFrame(data, columns=col[2:])
-            data['filename'] = fname
-        else:
-            data = pd.DataFrame(data, columns=col[:3])
-        return data
-
     def write_fastq(fname, data):
         '''
         Write list of sequences into a fastq file format
-        data = dataframe or numpy array with columns [id, sequence, quality]
+        data = dataframe with columns [name, sequence, quality]
         fname = file to write the information.
                 File extension can be .bz2 or .gz if compression is desired
         '''
-        # add some error handling in case dataframe is wrong
-        if type(data) == np.ndarray and data.shape[1]!=3:
-            logging.error('write_fastq: data for '+fname+' column count is wrong')
-            sys.exit(1)
-        elif type(data) == pd.core.frame.DataFrame:
-            data = data[['name','sequence','quality']].values
+        data = data[['name','sequence','quality']].values
         with fileIO.compress(fname) as f:
             for i in data:
                 text = '@' + str(i[0]) + '\n'
@@ -177,70 +134,59 @@ class fileIO:
                 text+= str(i[2]) + '\n'
                 f.write(text)
 
-    def read_fasta(fname, low_mem=False):
+    def read_fastq(fname):
+        '''
+        Reads list of sequences from a fastq file format.
+        fname = fname to read the information
+        
+        returns list of names, sequence, quality
+        '''
+        with fileIO.decompress(fname) as f2:
+            rec = Bio.SeqIO.parse(f2, 'fastq')
+            # iterate through the record
+            data = []
+            for i in rec:
+                x = i.format('fastq').split('\n')
+                data.append([i.description, str(i.seq), x[-2]])
+
+        # raise error if empty
+        if len(data) == 0:
+            raise ValueError('Failed to read '+fname)
+        
+        # format to pandas dataframe
+        col = ['name','sequence','quality']
+        data = pd.DataFrame(data, columns=col)
+        return data
+
+    def read_fasta(fname):
         '''
         Reads list of sequences from a fasta file format
         fname = file to read the information
         returns list of sequence and names
         '''
         data = []
-        
-        with tempfile.TemporaryFile(mode='w+', encoding='utf-8') as f:
-            # decompress and dump contents into a temporary file
-            with fileIO.decompress(fname) as f2:
-                out = f2.read()
-                fsize = len(out)
-                f.write(out)
-            # go to beginning of file
-            f.seek(0)
+        with fileIO.decompress(fname) as f2:
+            rec = Bio.SeqIO.parse(f2, 'fasta')
+            # iterate through the record
+            data = [[i.description, str(i.seq)] for i in rec]
 
-            seq = ''
-            rid = ''
-            while fsize > f.tell():
-                line = f.readline()
-                if line[0]=='>':
-                    # record it once new line is hit
-                    if seq!='' and rid!='':
-                        L = len(seq)
-                        if low_mem:
-                            data.append([rid, s1, L])
-                        else:
-                            seq = seq.replace('\n','')
-                            data.append([seq, rid])
-                    # start the new entry 
-                    rid = line[1:-1]
-                    s1 = f.tell()
-                    seq = ''
-                else:
-                    seq+= line
-        
-        # end of file reached, run last loop
-        L = len(seq)
-        seq = seq.replace('\n','')
-
-        # export the data
-        col = ['sequence','name','seek1','rlen']
-        if low_mem:
-            data.append([rid, s1, L])
-            data = pd.DataFrame(data, columns=col[1:])
-            data['filename'] = fname
-        else:
-            data.append([seq, rid])
-            data = pd.DataFrame(data, columns=col[:2])
+        # raise error if empty
+        if len(data) == 0:
+            raise ValueError('Failed to read '+fname)
+            
+        # format to pandas dataframe
+        col = ['name','sequence']
+        data = pd.DataFrame(data, columns=col)
         return data
 
     def write_fasta(fname, data):
         '''
         Write list of sequences into a fasta file format.
-        data =  dataframe or numpy array with columns [id, sequence]
+        data =  dataframe columns [name, sequence]
         fname = file to write the information
                 .bz2 and .gz extension can be added to filename if compression is desired
         '''
-        if type(data) == np.ndarray and data.shape[1]!=2:
-            logging.error('write_fasta: data for '+fname+' column count is wrong')
-            sys.exit(1)
-        elif type(data) == pd.core.frame.DataFrame:
-            data = data[['name','sequence']].values
+        data = data[['name','sequence']].values        
         with fileIO.compress(fname) as f:
             for i in data:
                 text = '>' + str(i[0]) + '\n'
@@ -262,7 +208,6 @@ class fileIO:
             return fileIO.read_fasta(fname)
         except:
             logging.info('failed to read '+fname+' as fasta')
-        
         # throws an error to do
         sys.exit(1)
         
