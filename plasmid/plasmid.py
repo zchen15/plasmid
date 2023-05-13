@@ -37,9 +37,18 @@ def read_genbank(fname):
     returns Plasmid object with data loaded
     '''
     # load data with SeqIO
-    print('reading ',fname,' as genbank file')
-    SeqRecord = Bio.SeqIO.read(fname, 'genbank')
-
+    try:
+        print('reading ',fname,' as genbank file')
+        SeqRecord = Bio.SeqIO.read(fname, 'genbank')
+    except:
+        print('failed to read',fname,' as genbank file')
+        try:
+            print('reading ',fname,' as snapgene file')
+            SeqRecord = Bio.SeqIO.read(fname, 'snapgene')
+        except:
+            print('failed to read',fname,' as snapgene file')
+    
+        
     # add some info to the genbank files
     for gene in SeqRecord.features:
         # find the label ordering is the label that takes precedance
@@ -186,7 +195,7 @@ class Plasmid:
             elif col=='type':
                 self.SeqRecord.features[k].type = val
             else:
-                sys.error()
+                raise ValueError(k,' is not in column')
         self.update(inplace=True)
 
     def unpack_key(self, key):

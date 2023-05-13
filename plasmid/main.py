@@ -53,4 +53,3 @@ def main():
     elif args.subcommand=='oligos' or args.subcommand=='genbank':
         opt = Oligos(args)
         opt.run()
-

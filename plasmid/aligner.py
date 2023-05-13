@@ -852,7 +852,7 @@ class Aligner:
         cmd = mmseq +' database '+database+' '+outdir+' '+work_dir.name
         subprocess.run(cmd.split(' '))
 
-    def mmseq2_cluster(self, query, config='easy-linclust'):
+    def mmseq2_cluster(self, query, config='easy-cluster'):
         '''
         Wrapper for mmseq2 clustering
         '''

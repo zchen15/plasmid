@@ -146,3 +146,23 @@ SapI,restriction,red,GCTCTTCN
 SfaNI,restriction,red,GCATCNNNNN
 HgaI,restriction,red,GACGCNNNNN
 BtgZI,restriction,red,GCGATGNNNNNNNNNN
+3'UTR polyA signal,protein_bind,pink,AATAAA
+3'UTR misc signal,protein_bind,pink,ACAAGTC
+3'UTR misc signal,protein_bind,pink,TGTGG
+3'UTR SRSF6 signal,protein_bind,pink,CTCAGG
+3'UTR QKI signal,protein_bind,pink,ACACTA
+3'UTR misc signal,protein_bind,pink,GGGCTG
+3'UTR RBMX signal,protein_bind,pink,ACCAAA
+3'UTR HNRNPA1 signal,protein_bind,pink,GGAGCC
+3'UTR misc signal,protein_bind,pink,ACTCTG
+3'UTR SRSF2 signal,protein_bind,pink,GGCCCCTG
+3'UTR misc signal,protein_bind,pink,ATGAGAC
+3'UTR misc signal,protein_bind,pink,TACTAAGA
+3'UTR ARE signal,protein_bind,pink,ATTTTTA
+3'UTR misc signal,protein_bind,pink,TATGCA
+3'UTR misc signal,protein_bind,pink,CAAACAGA
+3'UTR ARE signal,protein_bind,pink,TATTTAT
+3'UTR misc signal,protein_bind,pink,CCAAAG
+3'UTR PUM1 signal,protein_bind,pink,TGTAAATA
+3'UTR SRP14 signal,protein_bind,pink,CCTGTA
+3'UTR misc signal,protein_bind,pink,TTCTGAG
