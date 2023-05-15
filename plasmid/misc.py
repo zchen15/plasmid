@@ -147,6 +147,17 @@ def read_fasta(fname):
     else:
         sys.error()
 
+def translate(seq, frame=0, table='Standard'):
+    '''
+    Translates a nucleotide sequence into amino acids
+    seq = input nucleotide sequence
+    frame = reading frame
+    table = codon table to use
+    return amino acid sequence
+    '''
+    seq = Bio.Seq.Seq(seq)
+    return str(seq[frame:].translate(table=table))
+
 def revcomp(seq):
     '''
     Returns reverse complement of a nucleic acid string

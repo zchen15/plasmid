@@ -21,6 +21,7 @@ import subprocess
 # import custom libraries
 from .misc import read_to_df
 from .misc import revcomp
+from .misc import translate
 from .misc import load_args
 from .fileIO import fileIO
 
@@ -202,12 +203,63 @@ class Aligner:
                 rev_out.iat[i,2] = -1
             return pd.concat([fwd_out, rev_out])
 
-    def search_ORF(self, sequence):
+    def search_ORF(seq, table='Standard', fwd_only=False):
         '''
-        Search for open reading frames, to do
+        Generates a dataframe of open reading frames for a given sequence
+        seq = input sequence
+        table = codon table to use
+        return pandas Dataframe with columns
+            [name, start, stop, orientation, amino acid sequence]
         '''
-        return -1
-
+        # search in forward direction
+        out = []
+        for i in range(3):
+            # translate and get ORF
+            x = translate(seq, frame=0)
+            # convert to nt positions
+            df = Aligner.get_ORF(x)
+            df['start'] = df['start']*3+i 
+            df['stop'] = (df['stop']+1)*3+i
+            out.append(df)
+        df = pd.concat(out)
+        df['orientation'] = 1
+        if fwd_only:
+            return df
+        
+        # search in reverse direction
+        rev_seq = revcomp(seq)
+        df2 = Aligner.search_ORF(rev_seq, table=table, fwd_only=True)
+        df2['orientation'] = -1
+        df2['start'] = len(seq) - df2['start']
+        df2['stop'] = len(seq) - df2['stop']
+        return pd.concat([df,df2])
+    
+    def get_ORF(seq, start='M', stop='*'):
+        '''
+        Get list of ORF based on start and stop codons
+        return list of sequences
+        '''
+        idx = np.arange(len(seq))
+        seq = np.array([i for i in seq])
+        # get all positions of start and stop codons
+        start = idx[seq==start]
+        stop = idx[seq==stop]
+        
+        # generate ORF frags from start and stop positions
+        out = []
+        for i in range(len(start)):
+            s1 = start[i]
+            s2 = stop[stop > s1]
+            # get first stop codon
+            if len(s2) > 0:
+                s2 = s2[0]
+                out.append([s1, s2, seq[s1:s2]])
+            # exit loop if no more stop codons are present
+            else:
+                break
+        col = ['start','stop','sequence']
+        out = pd.DataFrame(out, columns=col)
+    
     def blast(self, sequence):
         '''
         Search sequence on NIH blast, to do
@@ -258,7 +310,7 @@ class Aligner:
         qry = dataframe of query sequences with columns [name, sequence]
         ref = dataframe of reference sequences with columns [name, sequence]
         k = kmer length
-        w = window size   
+        w = window size
         '''
         k = self.params['minimap']['k']
         w = self.params['minimap']['w']
