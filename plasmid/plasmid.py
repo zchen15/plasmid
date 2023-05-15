@@ -819,7 +819,7 @@ class Plasmid:
         table+= 'total length:'+str(len(self.__str__()))+'\n'
         return table
 
-    def annotate(self, name, sequence, feature='unknown', color=None, circular=True, isAA=False, inplace=False):
+    def annotate(self, name, sequence, feature='unknown', color=None, circular=True, inplace=False):
         '''
         Adds annotations to a plasmid using a parts library
         name = name of the gene
@@ -854,7 +854,7 @@ class Plasmid:
         
         out = self.inplace(inplace)
         # search for DNA sequence
-        if isDNA(sequence) and isAA==False:
+        if isDNA(sequence):
             # convert U to T for DNA sequence only
             sequence = sequence.lower().replace('u','t')
             pos = Aligner.search_DNA(sequence, str(out.SeqRecord.seq), circular=circular)

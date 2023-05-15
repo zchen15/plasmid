@@ -229,7 +229,7 @@ def substring_search(ref, qry):
     Searches for all occurrences of the given substrings in a string
     ref = string to search
     qry = substring to locate
-    return a list with columns [start, end]
+    return a list with start locations
     """
     out = []
     x = ref
