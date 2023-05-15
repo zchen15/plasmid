@@ -22,6 +22,8 @@ import subprocess
 from .misc import read_to_df
 from .misc import revcomp
 from .misc import translate
+from .misc import substring_search
+from .misc import isDNA
 from .misc import load_args
 from .fileIO import fileIO
 
@@ -103,13 +105,14 @@ class Aligner:
         df.to_csv(self.params['ofile'], index=False)
         return df
 
-    def search_DNA(qry, ref, fwd_only=False, circular=False):
+    def search_DNA(qry, ref, fwd_only=False, circular=False, exact=False):
         '''
         Find all instances of the query sequence in the reference.
         qry = DNA subsequence to find
         ref = DNA sequence containing the query subsequence
         fwd_only = search in forward orientation 5'->3' only. Defaults to searching forward and reverse complement
         circular = search circularly
+        exact = use exact substring search
         returns a dataframe with columns [start, end, strand]
         '''
         # make it case in sensitive
@@ -123,10 +126,17 @@ class Aligner:
             if circular:
                 ref+=ref
             out = []
-            # search with ambiguous bases
-            fwd = Bio.SeqUtils.nt_search(ref, qry)
-            for i in fwd[1:]:
-                out.append([i, i+len(qry), 1])
+            if isDNA(qry) and exact==False:
+                # search with ambiguous bases
+                fwd = Bio.SeqUtils.nt_search(ref, qry)
+                for i in fwd[1:]:
+                    out.append([i, i+len(qry), 1])
+            else:
+                # use exact string search
+                fwd = substring_search(ref, qry)
+                for i in fwd:
+                    out.append([i, i+len(qry), 1])
+
             if circular and len(out) > 0:
                 out = np.array(out)
                 out = out[out[:,0] < L]
@@ -134,9 +144,9 @@ class Aligner:
                 out[out[:,1]==0,1] = L
         else:
             # fwd and reverse search
-            fwd_out = Aligner.search_DNA(qry, ref, fwd_only=True, circular=circular)
+            fwd_out = Aligner.search_DNA(qry, ref, fwd_only=True, circular=circular, exact=exact)
             rev_ref = revcomp(ref)
-            rev_out = Aligner.search_DNA(qry, rev_ref, fwd_only=True, circular=circular)
+            rev_out = Aligner.search_DNA(qry, rev_ref, fwd_only=True, circular=circular, exact=exact)
             # correct reverse locations
             for i in range(len(rev_out)):
                 s1 = rev_out.iat[i,0]

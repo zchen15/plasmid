@@ -819,13 +819,15 @@ class Plasmid:
         table+= 'total length:'+str(len(self.__str__()))+'\n'
         return table
 
-    def annotate(self, name, sequence, feature='unknown', color=None, circular=True, inplace=False):
+    def annotate(self, name, sequence, feature='unknown', color=None, circular=True, isAA=False, inplace=False):
         '''
         Adds annotations to a plasmid using a parts library
         name = name of the gene
         sequence = DNA or amino acid sequence of the feature
         feature = type of genetic feature such as cds, mRNA, primer_bind
         color = [fwd_color, rev_color] to use
+        circular = search as though sequence is a circular construct
+        isAA = search for amino acids
         inplace = performs modifications inplace
         returns a modified plasmid dataframe
         '''
@@ -852,7 +854,7 @@ class Plasmid:
         
         out = self.inplace(inplace)
         # search for DNA sequence
-        if isDNA(sequence):
+        if isDNA(sequence) and isAA==False:
             # convert U to T for DNA sequence only
             sequence = sequence.lower().replace('u','t')
             pos = Aligner.search_DNA(sequence, str(out.SeqRecord.seq), circular=circular)

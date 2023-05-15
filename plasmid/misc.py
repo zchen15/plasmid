@@ -224,6 +224,26 @@ def isIntArray(value):
     x = [type(i)==int for i in value]
     return sum(x) == len(value)
 
+def substring_search(ref, qry):
+    """
+    Searches for all occurrences of the given substrings in a string
+    ref = string to search
+    qry = substring to locate
+    return a list with columns [start, end]
+    """
+    out = []
+    x = ref
+    offset = 0
+    while len(x) > 0:
+        idx = x.find(qry)
+        if idx == -1:
+            break
+        else:
+            out.append(idx+offset)
+            x = x[idx+1:]
+            offset+= idx+1
+    return out
+
 def search_key(data, keyword, rev=False):
     '''
     Searches dictionary for first instance of keyword
