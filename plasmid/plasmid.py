@@ -877,6 +877,8 @@ class Plasmid:
     def annotate_by_reference(self, file, inplace=False):
         '''
         Annotate using a reference library of sequences
+        file = csv with columns [name, sequence, feature_type, color]
+        return annotated plasmid
         '''
         out = self.inplace(inplace)
         ref = pd.read_csv(file)
@@ -884,9 +886,7 @@ class Plasmid:
         if ('color' in ref.columns)==False:
             ref['color'] = None
             
-        cols = ['label','sequence','feature_type','color']
-        if (cols in ref.columns)==False:
-            cols = ['name','sequence','feature_type','color']
+        cols = ['name','sequence','feature_type','color']
         for label, seq, ftype, color in ref[cols].values:
             out.annotate(name=label, sequence=seq, feature=ftype, color=color, inplace=True)
         return out
