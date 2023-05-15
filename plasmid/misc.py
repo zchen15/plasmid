@@ -47,7 +47,8 @@ def get_codons():
     codons['X'] = xcodon
     return codons
 
-codons = get_codons()
+def get_IUPAC_nt():
+    return 'ATGCRYSWKMBDHVN'
 
 def get_AAlib(AAseq):
     '''
@@ -164,7 +165,7 @@ def format_to_dna(sequence):
     sequence = string to change to IUPAC only codes
     return the cleaned string
     '''
-    allowed = 'ATGCRYSWKMBDHVN'
+    allowed = get_IUPAC_nt()
     out = str(sequence).upper()
     # convert U to T
     out = out.replace('U','T')
@@ -180,9 +181,11 @@ def format_to_dna(sequence):
     return out
 
 def isDNA(seq):
-    return set(seq.upper()).issubset(set('ATGCU'))
+    dna = get_IUPAC_nt()
+    return set(seq.upper()).issubset(set(dna))
 
 def isAA(seq):
+    codons = get_codons()
     return set(seq).issubset(set(codons))
 
 def isBool(value):
