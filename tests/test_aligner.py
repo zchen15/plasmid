@@ -124,8 +124,42 @@ def test_get_fastq_statistics():
     f1 = 'data/COI/CO1_0.fq.bz2'
     f1 = plasmid.fileIO.read_fastq(f1)
     f1 = f1.iloc[:10]
-    x = Aligner.get_fastq_statistics(f1)
+    x = plasmid.Aligner.get_fastq_statistics(f1)
     col = ['Q_min','Q_lower','Q_median','Q_upper','Q_max']
     for c in col:
         assert (c in x.columns)
     return x
+
+def test_search_ORF():
+    x = 'ATGGGAACCATGGGATAA'
+    seq = ''+x
+    seq+= 'A'+x
+    seq+= 'A'+x
+    
+    # check in fwd direction
+    df = plasmid.Aligner.search_ORF(seq)
+    check_ORF(df, seq)
+    
+    # check reverse direction
+    rev_seq = plasmid.misc.revcomp(seq)
+    df = plasmid.Aligner.search_ORF(rev_seq)
+    check_ORF(df, rev_seq)
+    
+def check_ORF(df, seq):
+    # print debugging output
+    print(df)
+    for i in range(3):
+        print('frame',i,plasmid.misc.translate(seq[i:]))
+    print(seq)
+    
+    for s1, s2, AA, strand in df[['start','stop','sequence','orientation']].values:
+        y = seq[s1:s2]
+        print('sequence=',y)
+        if strand==1:
+            y = plasmid.misc.translate(y)
+        else:
+            y_rev = plasmid.misc.revcomp(y)
+            y = plasmid.misc.translate(y_rev)
+        print('AA seq_true',y)
+        print('AA seq',AA)
+        assert y == AA

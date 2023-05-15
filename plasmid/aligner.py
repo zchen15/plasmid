@@ -215,11 +215,11 @@ class Aligner:
         out = []
         for i in range(3):
             # translate and get ORF
-            x = translate(seq, frame=0)
+            x = translate(seq, frame=i)
             # convert to nt positions
             df = Aligner.get_ORF(x)
             df['start'] = df['start']*3+i 
-            df['stop'] = (df['stop']+1)*3+i
+            df['stop'] = (df['stop'])*3+i
             out.append(df)
         df = pd.concat(out)
         df['orientation'] = 1
@@ -230,8 +230,9 @@ class Aligner:
         rev_seq = revcomp(seq)
         df2 = Aligner.search_ORF(rev_seq, table=table, fwd_only=True)
         df2['orientation'] = -1
-        df2['start'] = len(seq) - df2['start']
-        df2['stop'] = len(seq) - df2['stop']
+        stop = df2.stop.values
+        df2['stop'] = len(seq) - df2['start']
+        df2['start'] = len(seq) - stop
         return pd.concat([df,df2])
     
     def get_ORF(seq, start='M', stop='*'):
@@ -240,10 +241,10 @@ class Aligner:
         return list of sequences
         '''
         idx = np.arange(len(seq))
-        seq = np.array([i for i in seq])
+        seq_arr = np.array([i for i in seq])
         # get all positions of start and stop codons
-        start = idx[seq==start]
-        stop = idx[seq==stop]
+        start = idx[seq_arr==start]
+        stop = idx[seq_arr==stop]
         
         # generate ORF frags from start and stop positions
         out = []
@@ -253,12 +254,13 @@ class Aligner:
             # get first stop codon
             if len(s2) > 0:
                 s2 = s2[0]
-                out.append([s1, s2, seq[s1:s2]])
+                out.append([s1, s2+1, seq[s1:s2+1]])
             # exit loop if no more stop codons are present
             else:
                 break
         col = ['start','stop','sequence']
         out = pd.DataFrame(out, columns=col)
+        return out
     
     def blast(self, sequence):
         '''
