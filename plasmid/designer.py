@@ -18,6 +18,9 @@ import time
 
 from .misc import revcomp
 from .misc import json_pretty
+from .misc import codon_table
+from .misc import translate
+from .misc import synonymous_codon_table
 
 class Designer:
     '''
@@ -710,3 +713,76 @@ class Designer:
             seq = seq.annotate(name=label, sequence=sequence)
         return seq
 
+    def domesticate_CDS(seq, enzymes, max_opt=100):
+        '''
+        Change codons to remove restriction enzyme sites from a 
+        coding gene while preserving the amino acid sequence
+        seq = plasmid dataframe
+        enzymes = list of restriction enzyme sequences
+        max_opt = number of times to try optimization
+        return plasmid dataframe without restriction enzymes
+        '''
+        # check which orientation it is
+        strand = 1
+        z = seq[seq['type']=='CDS']['strand'].values
+        if len(z) > 0 and z[0]==-1:
+            strand = z[0]
+            seq = seq.reverse_complement()
+        
+        while max_opt > 0:
+            print('max_opt=',max_opt)
+            df = seq.copy()
+            # mark restriction sites
+            for eseq in enzymes:
+                df = df.annotate('enzyme', eseq)
+
+            # iterate through enzyme sites
+            out = seq.copy()
+            df = df[df['locus_tag']=='enzyme']
+            for s1, s2 in df[['start','end']].values:
+                s1 = int(np.floor(s1/3)*3)
+                s2 = int(np.ceil(s2/3)*3)
+                x = df.__str__()[s1:s2]
+                mut = Designer.mutate_codon(x)
+
+                # make the mutation
+                s1 = mut['start']+s1
+                s2 = s1+3
+                key = range(s1,s2)
+                val = mut['sequence']
+                out.replace_sequence(key, val, disrupt=False, inplace=True)
+                name = 'domesticate_CDS'
+                out.annotate_by_location(name, s1, s2, 1, inplace=True)
+
+            # check if enzyme sites are still there
+            for eseq in enzymes:
+                out = out.annotate('enzyme', eseq)
+            if sum(out['locus_tag']=='enzyme') == 0:
+                # restore original orientation if necessary
+                if strand==-1:
+                    out = out.reverse_complement()
+                return out
+            
+            # repeat if optimization not successful up to max_opt
+            max_opt-=1
+        raise ValueError('Failed to domesticate CDS sequence')
+        
+    def mutate_codon(seq):
+        '''
+        Change codons for given amino acid sequence
+        seq = input nucleotide sequence
+        return 
+        '''
+        # select a codon at random from the sequence
+        idx = np.random.randint(int(len(seq)/3))
+        s1 = idx*3
+        x = seq[s1:s1+3]
+        
+        # look up codon in synonymous codon table
+        y = synonymous_codon_table[x]
+        idx = np.random.randint(len(y))
+        mut = y[idx]
+        out = {'start':s1,
+               'stop':s1+3,
+               'sequence':mut}
+        return out

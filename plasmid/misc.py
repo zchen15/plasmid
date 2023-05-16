@@ -47,6 +47,25 @@ def get_codons():
     codons['X'] = xcodon
     return codons
 
+codon_table = get_codons()
+
+def get_codon_synonymous():
+    # generate table of synonymous codons
+    codons = get_codons()
+    out = {}
+    for k in codons.keys():
+        if k!='X':
+            x = codons[k]
+            if len(x) > 1:
+                x = np.array(x)
+                for i in x:
+                    out[i] = [str(j) for j in x[x!=i]]
+            else:
+                out[x[0]] = [x[0]]
+    return out
+
+synonymous_codon_table = get_codon_synonymous()
+
 def get_IUPAC_nt():
     return 'ATGCRYSWKMBDHVN'
 

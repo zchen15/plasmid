@@ -88,3 +88,14 @@ def test_GoldenGate():
     print(res.values)
     assert type(res).__name__ == 'DataFrame'
 
+def test_domesticate_CDS():
+    seq = 'ATG GTC TCC TAA'
+    enz = ['GGTCTC']
+    x = pge.Plasmid(seq.replace(' ',''))
+    out = pge.Designer.domesticate_CDS(x, enz)
+    print(out.__repr__())
+    print(out.get_colored())
+    print(x)
+    for i in enz:
+        out = out.annotate('enz',i)
+    assert sum(out['locus_tag']=='enz')==0

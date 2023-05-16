@@ -389,11 +389,13 @@ class Plasmid:
             out = self
         else:
             out = self.copy()
+        
         # wrap location 
         if index < 0:
             index = len(out.SeqRecord.seq) - index
         elif index > len(out.SeqRecord.seq):
             index = index - len(out.SeqRecord.seq)
+        
         # format the values
         if type(seq)==str:
             sequence = seq
@@ -402,8 +404,8 @@ class Plasmid:
             sequence = str(seq.SeqRecord.seq)
             insert_features = seq.shift_features(index, inplace=False).copy().SeqRecord.features
         else:
-            print('insert_sequence: no sequence provided')
-            return out
+            raise ValueError('insert_sequence: no sequence provided')
+        
         # modify the sequence
         out.SeqRecord.seq = Bio.Seq.Seq(str(out.SeqRecord.seq[:index]) + sequence + str(out.SeqRecord.seq[index:]))
         # shift features around
@@ -821,13 +823,12 @@ class Plasmid:
 
     def annotate(self, name, sequence, feature='unknown', color=None, circular=True, inplace=False):
         '''
-        Adds annotations to a plasmid using a parts library
+        Adds annotations to a plasmid using sequence information
         name = name of the gene
         sequence = DNA or amino acid sequence of the feature
         feature = type of genetic feature such as cds, mRNA, primer_bind
         color = [fwd_color, rev_color] to use
         circular = search as though sequence is a circular construct
-        isAA = search for amino acids
         inplace = performs modifications inplace
         returns a modified plasmid dataframe
         '''
@@ -838,19 +839,7 @@ class Plasmid:
             return self
 
         # apply default colors if it is not provided
-        if color==None:
-            color = search_key(self.params['colors']['locus_tag'], name, rev=True)
-        if color==None:
-            color = search_key(self.params['colors']['features'], feature, rev=True)
-
-        # apply default colors
-        if color==None:
-            color = self.params['colors']['features']['unknown']
-        
-        # format to list
-        if type(color) == str:
-            color = [color, color]
-        color = [color[0], color[-1]]
+        color = self.get_default_annotation_color(name, feature, color)
         
         out = self.inplace(inplace)
         # search for DNA sequence
@@ -876,14 +865,58 @@ class Plasmid:
         out.update(inplace=True)
         return out
 
-    def annotate_by_reference(self, file, inplace=False):
+    def get_default_annotation_color(self, name, feature, color):
+        '''
+        Look up default annotation colors for a given name and feature
+        '''
+        # apply default colors if it is not provided
+        if color==None:
+            color = search_key(self.params['colors']['locus_tag'], name, rev=True)
+        if color==None:
+            color = search_key(self.params['colors']['features'], feature, rev=True)
+
+        # apply default colors
+        if color==None:
+            color = self.params['colors']['features']['unknown']
+        
+        # format to list
+        if type(color) == str:
+            color = [color, color]
+        color = [color[0], color[-1]]
+        return color
+    
+    def annotate_by_location(self, name, start, stop, strand, feature='unknown', color=None, inplace=False):
+        '''
+        Adds annotations to a plasmid using location information
+        name = name of the gene
+        start = start location of feature
+        stop = stop location of feature
+        strand = orientation of feature
+        feature = type of genetic feature such as cds, mRNA, primer_bind
+        color = [fwd_color, rev_color] to use
+        inplace = performs modifications inplace
+        returns a modified plasmid dataframe
+        '''
+        out = self.inplace(inplace)
+        
+        color = self.get_default_annotation_color(name, feature, color)
+        # create compound location which can wrap around the origin
+        loc = wrap_FeatureLocation(start, stop, strand, len(out.SeqRecord.seq))
+        qualifiers = {'locus_tag':[name], 'ApEinfo_fwdcolor':[color[0]], 'ApEinfo_revcolor':[color[1]]}
+        gene = Bio.SeqFeature.SeqFeature(type=feature, location=loc, qualifiers=qualifiers)
+        # append to Plasmid and update
+        out.SeqRecord.features+= [gene]
+        out.update(inplace=True)
+        return out
+    
+    def annotate_by_reference(self, ref, inplace=False):
         '''
         Annotate using a reference library of sequences
-        file = csv with columns [name, sequence, feature_type, color]
+        ref = dataframe with columns
+            [name, sequence, feature_type, color]
         return annotated plasmid
         '''
         out = self.inplace(inplace)
-        ref = pd.read_csv(file)
         # check if color in the data column
         if ('color' in ref.columns)==False:
             ref['color'] = None
