@@ -9,7 +9,6 @@ __pycache__/
 
 # output files
 *.o
-*.txt
 
 # C extensions
 *.so

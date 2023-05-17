@@ -90,7 +90,7 @@ def test_GoldenGate():
 
 def test_domesticate_CDS():
     seq = 'ATG GTC TCC TAA'
-    enz = ['GGTCTC']
+    enz = ['GGTCTCNN']
     x = pge.Plasmid(seq.replace(' ',''))
     out = pge.Designer.domesticate_CDS(x, enz)
     print(out.__repr__())
@@ -99,3 +99,8 @@ def test_domesticate_CDS():
     for i in enz:
         out = out.annotate('enz',i)
     assert sum(out['locus_tag']=='enz')==0
+    x = x.annotate('enz',enz[0])
+    print(x.__repr__())
+    print(x.get_colored)
+    assert False
+
