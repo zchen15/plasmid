@@ -1,0 +1,11 @@
+biopython
+matplotlib
+bokeh
+sty
+numpy
+scipy
+pandas
+scikit-learn
+parasail
+mappy
+pyspoa
