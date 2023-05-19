@@ -215,8 +215,7 @@ def isDNA(seq):
     return set(seq.upper()).issubset(set(dna))
 
 def isAA(seq):
-    codons = get_codons()
-    return set(seq).issubset(set(codons))
+    return set(seq).issubset(set(codon_table))
 
 def isBool(value):
     '''

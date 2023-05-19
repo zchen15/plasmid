@@ -412,17 +412,19 @@ class Plasmid:
         for j in range(0,len(out.SeqRecord.features)):
             # handle compound locations
             if 'parts' in out.SeqRecord.features[j].location.__dict__:
+                loc = out.SeqRecord.features[j].location
+                out.SeqRecord.features[j].location = shift_CompoundLocation(loc, 0, orig_len)
                 f = out.SeqRecord.features[j].location.__dict__['parts']
-                for i in range(0,len(f)):
+                for i in range(len(f)):
                     start = f[i].start
                     end = f[i].end
                     strand = f[i].strand
-                    if start > index:
+                    if start >= index:
                         start+=len(sequence)
                     if end > index:
                         end+=len(sequence)
-                    # special condition for genes which wrap around the origin
-                    c2 = i+1 < len(f) and (end == len(out.SeqRecord.seq)-len(sequence) and f[i+1].start == 0)
+                    # special condition for genes which wrap around the origin debug
+                    c2 = i+1 < len(f) and end == len(out.SeqRecord.seq)-len(sequence) and f[i+1].start == 0
                     if c2:
                         end+=len(sequence)
                     out.SeqRecord.features[j].location.__dict__['parts'][i] = Bio.SeqFeature.FeatureLocation(start, end, strand)
@@ -452,11 +454,10 @@ class Plasmid:
                         end = f[i].end
                         strand = f[i].strand
                         # split the subsequences, detect that genes wrapping around origin were disrupted
-                        c1 = (start <= index) and (end > index + len(sequence))
-                        c2 = (start < index) and (end >= index + len(sequence))
-                        if c1 or c2:
+                        c3 = (start <= index) and (end >= index + len(sequence))
+                        if c3:
                             isDisrupted = True
-                            if index > start: # special logic 
+                            if start < index: # special logic 
                                 new.append(Bio.SeqFeature.FeatureLocation(start, index, strand))
                             if end > index + len(sequence):
                                 new.append(Bio.SeqFeature.FeatureLocation(index + len(sequence), end, strand))
@@ -464,7 +465,8 @@ class Plasmid:
                             new.append(f[i])
                     # flag that the gene was split
                     out.SeqRecord.features[j].location.__dict__['parts'] = new
-                    if isDisrupted: out.SeqRecord.features[j].qualifiers['locus_tag'][0]+=' disrupted'
+                    if isDisrupted:
+                        out.SeqRecord.features[j].qualifiers['locus_tag'][0]+=' disrupted'
                 # handle single locations
                 else:
                     start = out.SeqRecord.features[j].location.start
@@ -492,42 +494,32 @@ class Plasmid:
         d1 = key.start
         d2 = key.stop
         dlen = d2-d1
+        orig_len = len(out.SeqRecord.seq)
         if dlen < 0:
             out.delete_sequence(range(d1, len(out.SeqRecord.seq)), disrupt=disrupt, inplace=True)
             out.delete_sequence(range(0, d2), disrupt=disrupt, inplace=True)
         elif dlen > 0:
             out.SeqRecord.seq = Bio.Seq.Seq(str(out.SeqRecord.seq[:d1]) + str(out.SeqRecord.seq[d2:]))
             # shift locations around
-            for j in range(0,len(out.SeqRecord.features)):
+            for j in range(len(out.SeqRecord.features)):
                 isDisrupted = False
                 # handle compound location
                 if 'parts' in out.SeqRecord.features[j].location.__dict__:
+                    # unwrap parts
+                    loc = out.SeqRecord.features[j].location
+                    out.SeqRecord.features[j].location = shift_CompoundLocation(loc, 0, orig_len)
                     f = out.SeqRecord.features[j].location.__dict__['parts']
-                    remove = []
-                    for i in range(0,len(f)):
-                        s1 = f[i].start
-                        s2 = f[i].end
-                        strand = f[i].strand
-                        # genes above the area need to shift location
-                        if (s1 >= d2 and s2 > d2)  :
-                            f[i] = Bio.SeqFeature.FeatureLocation(s1 - dlen, s2 - dlen, strand)
-                        # genes caught in the rear half are truncated
-                        elif (s1 < d1 and s2 > d1  and s2 < d2):
-                            f[i] = Bio.SeqFeature.FeatureLocation(s1, d1, strand)
-                            isDisrupted = True
-                        # genes caught in front half are truncated
-                        elif (s1 < d2 and s1 > d1  and s2 > d2):
-                            f[i] = Bio.SeqFeature.FeatureLocation(d1, s2 - dlen, strand)
-                            isDisrupted = True
-                        # gene overlapping the deletion area truncated in middle
-                        elif (s1 < d1 and s2 > d2):
-                            isDisrupted = True
-                            f[i] = Bio.SeqFeature.FeatureLocation(s1, s2 - dlen, strand)
+                    # process each sublocation
+                    keep = []
+                    for loc in f:
+                        loc, dis = Plasmid.delete_location(loc, d1, d2)
                         # genes caught in the deletion area are deleted
-                        elif s1 >= d1 and s2 <= d2:
+                        if loc==None:
                             isDisrupted = True
-                            remove.append(i)
-                    keep = [f[i] for i in set(range(0,len(f))) - set(remove)]
+                        else:
+                            isDisrupted |= dis
+                            keep.append(loc)
+                    # generate new location object
                     if len(keep) > 1:
                         out.SeqRecord.features[j].location = Bio.SeqFeature.CompoundLocation(keep)
                     elif len(keep) == 1:
@@ -536,28 +528,10 @@ class Plasmid:
                         out.SeqRecord.features[j].location = None
                 # handle single locations
                 else:
-                    s1 = out.SeqRecord.features[j].location.start
-                    s2 = out.SeqRecord.features[j].location.end
-                    strand = out.SeqRecord.features[j].location.strand
-                    # genes above the area need to shift location
-                    if (s1 >= d2 and s2 > d2):
-                        out.SeqRecord.features[j].location = Bio.SeqFeature.FeatureLocation(s1 - dlen, s2 - dlen, strand)
-                    # genes caught in the rear half are truncated
-                    elif (s1 < d1 and s2 > d1  and s2 <= d2):
-                        out.SeqRecord.features[j].location = Bio.SeqFeature.FeatureLocation(s1, d1, strand)
-                        isDisrupted = True
-                    # genes caught in front half are truncated
-                    elif (s1 < d2 and s1 >= d1  and s2 > d2):
-                        out.SeqRecord.features[j].location = Bio.SeqFeature.FeatureLocation(d1, s2 - dlen, strand)
-                        isDisrupted = True
-                    # gene overlapping the deletion area truncated in middle
-                    elif (s1 < d1 and s2 > d2):
-                        isDisrupted = True
-                        out.SeqRecord.features[j].location = Bio.SeqFeature.FeatureLocation(s1, s2 - dlen, strand)
-                    # genes caught in the deletion area are deleted
-                    elif s1 >= d1 and s2 <= d2:
-                        isDisrupted = True
-                        out.SeqRecord.features[j].location = None
+                    loc = out.SeqRecord.features[j].location
+                    loc, dis = Plasmid.delete_location(loc, d1, d2)
+                    out.SeqRecord.features[j].location = loc
+                    isDisrupted |= dis
                 if isDisrupted and disrupt:
                     out.SeqRecord.features[j].qualifiers['locus_tag'][0]+=' subsequence'
             # purge genes without valid locations
@@ -570,6 +544,40 @@ class Plasmid:
             out.update(inplace=True)
         return out
 
+    def delete_location(loc, start, stop):
+        '''
+        Checks if feature location should be deleted or shifted
+        loc = Bio.SeqFeature.FeatureLocation object to be analyzed
+        start = start position of deletion
+        stop = end position of deletion
+        
+        returns loc, isDisrupted
+        loc = updated FeatureLocation object
+        isDisrupted = bool indicating features were disrupted or not
+        '''
+        dlen = stop - start
+        s1 = loc.start
+        s2 = loc.end
+        strand = loc.strand
+        isDisrupted = True
+        # genes above the area need to shift location
+        if s1 >= stop and s2 > stop:
+            loc = Bio.SeqFeature.FeatureLocation(s1 - dlen, s2 - dlen, strand)
+            isDisrupted = False
+        # genes caught in the rear half are truncated
+        elif s1 < start and s2 > start  and s2 <= stop:
+            loc = Bio.SeqFeature.FeatureLocation(s1, start, strand)
+        # genes caught in front half are truncated
+        elif s1 < stop and s1 >= start  and s2 > stop:
+            loc = Bio.SeqFeature.FeatureLocation(start, s2 - dlen, strand)
+        # gene overlapping the deletion area truncated in middle
+        elif s1 < start and s2 > stop:
+            loc = Bio.SeqFeature.FeatureLocation(s1, s2 - dlen, strand)
+        # genes caught in the deletion area are deleted
+        elif s1 >= start and s2 <= stop:
+            loc = None
+        return loc, isDisrupted
+
     def replace_sequence(self, key, value, disrupt=True, inplace=False):
         '''
         Replace a sequence at a given location with a new sequence
@@ -578,11 +586,13 @@ class Plasmid:
         disrupt = disrupt existing genetic features. Meaning if a gene is caught in the deletion zone, it will be truncated.
         inplace = perform modifications inplace
         '''
-        out = self.inplace(inplace)        
+        out = self.inplace(inplace)
+        # insert the new sequence
+        start = key.start
+        stop = key.stop
+        out.insert_sequence(key.stop, value, disrupt=disrupt, inplace=True)
         # delete the sequence
         out.delete_sequence(key, disrupt=disrupt, inplace=True)
-        # insert the new sequence
-        out.insert_sequence(key.start, value, disrupt=disrupt, inplace=True)
         return out
 
     def splice_sequence(self, key, inplace=False):
@@ -1080,4 +1090,6 @@ class Plasmid:
         for gene in out.SeqRecord.features:
             gene.location = shift_CompoundLocation(gene.location, N, seq_length, circular=circular)
         return out
+
+
 
