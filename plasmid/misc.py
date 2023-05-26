@@ -445,7 +445,7 @@ def wrap_FeatureLocation(start, end, strand, length):
     if end==0:
         end = length
 
-    if end < start:
+    if end <= start:
         loc1 = Bio.SeqFeature.FeatureLocation(int(start), int(length), int(strand))
         loc2 = Bio.SeqFeature.FeatureLocation(0, int(end), int(strand))
         loc = Bio.SeqFeature.CompoundLocation([loc1,loc2])
