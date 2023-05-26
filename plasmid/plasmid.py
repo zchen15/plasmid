@@ -409,7 +409,7 @@ class Plasmid:
         # modify the sequence
         out.SeqRecord.seq = Bio.Seq.Seq(str(out.SeqRecord.seq[:index]) + sequence + str(out.SeqRecord.seq[index:]))
         # shift features around
-        for j in range(0,len(out.SeqRecord.features)):
+        for j in range(len(out.SeqRecord.features)):
             # handle compound locations
             if 'parts' in out.SeqRecord.features[j].location.__dict__:
                 loc = out.SeqRecord.features[j].location
@@ -424,8 +424,7 @@ class Plasmid:
                     if end > index:
                         end+=len(sequence)
                     # special condition for genes which wrap around the origin debug
-                    c2 = i+1 < len(f) and end == len(out.SeqRecord.seq)-len(sequence) and f[i+1].start == 0
-                    if c2:
+                    elif i+1 < len(f) and end == len(out.SeqRecord.seq)-len(sequence) and f[i+1].start == 0
                         end+=len(sequence)
                     out.SeqRecord.features[j].location.__dict__['parts'][i] = Bio.SeqFeature.FeatureLocation(start, end, strand)
             # handle single locations
@@ -447,17 +446,17 @@ class Plasmid:
                 if 'parts' in out.SeqRecord.features[j].location.__dict__:
                     f = out.SeqRecord.features[j].location.__dict__['parts']
                     # partition sublocation to before or after the insert
-                    isDisrupted = False
                     new = []
                     for i in range(0,len(f)):
                         start = f[i].start
                         end = f[i].end
                         strand = f[i].strand
                         # split the subsequences, detect that genes wrapping around origin were disrupted
-                        c1 = (start <= index) and (end > index + len(sequence))
-                        c2 = (start < index) and (end >= index + len(sequence))
-                        if c1 or c2:
-                            isDisrupted = True
+                        #c1 = (start <= index) and (end > index + len(sequence))
+                        #c2 = (start < index) and (end >= index + len(sequence))
+                        c3 = (start >= index + len(sequence)) or (end <= index)
+                        isDisrupted = (c3==False)
+                        if isDisrupted: 
                             if start < index: # special logic 
                                 new.append(Bio.SeqFeature.FeatureLocation(start, index, strand))
                             if end > index + len(sequence):
