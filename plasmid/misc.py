@@ -493,3 +493,61 @@ def shift_CompoundLocation(loc, N, L, circular=True):
             loc = wrap_FeatureLocation(loc.start, loc.end, loc.strand, L)
     return loc
 
+def simulate_reads(df, N, error):
+    '''
+    Generate library of errored reads
+    df = dataframe with columns [name, sequence]
+    N = number of sequences to generate
+    error = mean error for poisson distribution of errors
+    '''
+    out = []
+    df['mutations'] = 0
+    for name, seq in df[['name','sequence']].values:
+        mut = np.random.poisson(error, N)
+        x = [[name, m, get_mutations(seq, m)] for m in mut]
+        col = ['name','mutations','sequence']
+        x = pd.DataFrame(x, columns=col)
+        out.append(x)
+    return pd.concat(out)
+
+def get_mutations(seq, N):
+    '''
+    Adds mutations to the sequence
+    seq = sequence to mutate
+    N = number of base pairs to mutate
+    '''
+    # choose positions to mutate
+    idx = np.random.permutation(L)[:N]
+    seq = '-' + seq + '-'
+    idx+=1
+    offset = 0
+    for i in idx:
+        i+= offset
+        let = seq[i]
+        mut = choose_mutation(let)
+        seq = seq[:i] + mut + seq[i+1:]
+        offset+= len(mut)-1
+    seq = seq.replace('-','')
+    return seq
+
+def choose_mutation(let):
+    '''
+    Choose type of mutation
+    let = letters
+    '''
+    # choose between insert or deletion
+    z = ['A','T','G','C']
+    
+    # perform deletion
+    x = np.random.randint(0,3)
+    if x==0:
+        return '-'
+    # perform insertion
+    elif x==1:
+        idx = np.random.randint(0,len(z))
+        return let+z[idx]
+    # perform replacement
+    else:
+        idx = np.random.randint(0,len(z))
+        return z[idx]
+
