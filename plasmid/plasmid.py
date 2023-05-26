@@ -424,7 +424,7 @@ class Plasmid:
                     if end > index:
                         end+=len(sequence)
                     # special condition for genes which wrap around the origin debug
-                    elif i+1 < len(f) and end == len(out.SeqRecord.seq)-len(sequence) and f[i+1].start == 0
+                    elif i+1 < len(f) and end == len(out.SeqRecord.seq)-len(sequence) and f[i+1].start == 0:
                         end+=len(sequence)
                     out.SeqRecord.features[j].location.__dict__['parts'][i] = Bio.SeqFeature.FeatureLocation(start, end, strand)
             # handle single locations
