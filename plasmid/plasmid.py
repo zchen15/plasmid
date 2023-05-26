@@ -454,8 +454,9 @@ class Plasmid:
                         end = f[i].end
                         strand = f[i].strand
                         # split the subsequences, detect that genes wrapping around origin were disrupted
-                        c3 = (start <= index) and (end >= index + len(sequence))
-                        if c3:
+                        c1 = (start <= index) and (end > index + len(sequence))
+                        c2 = (start < index) and (end >= index + len(sequence))
+                        if c1 or c2:
                             isDisrupted = True
                             if start < index: # special logic 
                                 new.append(Bio.SeqFeature.FeatureLocation(start, index, strand))
