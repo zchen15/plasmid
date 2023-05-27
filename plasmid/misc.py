@@ -517,6 +517,7 @@ def get_mutations(seq, N):
     N = number of base pairs to mutate
     '''
     # choose positions to mutate
+    L = len(seq)
     idx = np.random.permutation(L)[:N]
     seq = '-' + seq + '-'
     idx+=1
@@ -535,19 +536,20 @@ def choose_mutation(let):
     Choose type of mutation
     let = letters
     '''
-    # choose between insert or deletion
-    z = ['A','T','G','C']
-    
+    mut = {'A':'TGC','T':'AGC','G':'ATC','C':'ATG'}
+    nuc = 'ATGC'
     # perform deletion
     x = np.random.randint(0,3)
     if x==0:
         return '-'
     # perform insertion
     elif x==1:
-        idx = np.random.randint(0,len(z))
-        return let+z[idx]
+        idx = np.random.randint(0,len(nuc))
+        return let+nuc[idx]
     # perform replacement
     else:
-        idx = np.random.randint(0,len(z))
-        return z[idx]
+        nuc = mut[let] 
+        idx = np.random.randint(0,len(nuc))
+        return nuc[idx]
+
 
