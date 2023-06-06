@@ -1020,3 +1020,6 @@ class Aligner:
             fname = ofile+ts+'.csv.gz'
             data.to_csv(fname, index=False, compression='infer')
         return data
+
+    
+    
