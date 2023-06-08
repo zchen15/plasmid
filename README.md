@@ -25,6 +25,8 @@ pip3 install .
 ## Usage 
 The `demos/` directory contains example jupyter notebooks that display some of functionality provided by `Plasmid`. More detailed documentation will be provided later.
 
+Here is an example [demo](https://zchen15.github.io/pages/misc/plasmid.html) notebook showing manipulation of genbank files and primer design via genetic optimization.
+
 ## Issues
 If you experience any issues with the code, please post them on the issues section along with the log file. I will monitor this periodically and try to fix issues as they arise.
 

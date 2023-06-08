@@ -182,7 +182,7 @@ class Clust(Aligner):
         df = df.merge(qry, on='name', how='left')
         return df
     
-    def optics(self, x, metric='euclidean'):
+    def optics(self, x, metric='precomputed'):
         '''
         Function to perform optics clustering on sequences
         x = adjacency matrix
@@ -327,3 +327,4 @@ class Clust(Aligner):
             labels[s1:s2] = k
             k+=1
         return labels
+
