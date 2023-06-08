@@ -422,10 +422,16 @@ class Aligner:
         return [[int(i),j] for i,j in pattern.findall(cigar)]
     
     def filter_idx(df, col, value='score', opt='idxmax'):
+        '''
+        Get max values organized by a certain column in a pandas dataframe
+        col = column to group by
+        value = column to sort
+        opt = idxmax or idxmin
+        '''
         dfi = df.reset_index(drop=True)
         idx = df.groupby(by=col).agg({value:opt}).values[:,0]
         return df.iloc[idx]
-
+    
     def str_to_df(x, header='seq'):
         '''
         Format query and ref to dataframe if not already        
@@ -632,7 +638,7 @@ class Aligner:
         return dataframe with similarity added to columns
         '''
         v1 = np.min([data['q_len'].values, data['t_len'].values], axis = 0)
-        data['similarity'] = 1-data['NM']/v1
+        data['similarity'] = 1 - data['NM']/v1
         data.loc[data['similarity'] < 0, 'similarity'] = 0
         return data
 

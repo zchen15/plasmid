@@ -100,10 +100,10 @@ def test_domesticate_CDS():
         out = out.annotate('enz',i)
     assert sum(out['locus_tag']=='enz')==0
     
-
     x = x.annotate('enz',enz[0],color='red')
     print(x.__repr__())
     print(x.get_colored())
     print(enz)
-    assert False
+
+
 
