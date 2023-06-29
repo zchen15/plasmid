@@ -27,6 +27,7 @@ from .misc import isDNA
 from .misc import load_args
 from .fileIO import fileIO
 from .graphic import Graphic
+from .graphic import colormaps
 
 class Aligner:
     '''
@@ -343,20 +344,18 @@ class Aligner:
             output+= ''.join(mchar)+'\n'
         return output
     
-    def colorize_msa(msa, width=100):
+    def colorize_msa(msa, width=100, cmap=None):
         '''
         Returns a multi-sequence alignment formatted 
         to a certain width
         msa = list of sequences
         width = characters per line
+        cmap = colormap from characters to colors
         returns a string output
         '''
-        # default colors
-        cmap = {'A':'green',
-                'T':'blue',
-                'U':'cyan',
-                'C':'red',
-                'G':'orange'}
+        # use default nucleic acid colors
+        if cmap==None:
+            cmap = colormaps['nucleic']
         
         # initialize coloring engine
         gr = Graphic()

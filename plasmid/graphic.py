@@ -14,11 +14,20 @@ import sty
 
 from .misc import unpack_FeatureLocation
 
+colormaps = {'nucleic':{'A':'green',
+                        'T':'blue',
+                        'U':'cyan',
+                        'C':'red',
+                        'G':'orange'
+                        '-':'white'}}
+
 class Graphic:
     '''
     The class contains functions for drawing plasmids and plotting things
     '''
-    params = {'colorlib':[mpl._color_data.XKCD_COLORS, mpl._color_data.BASE_COLORS, mpl._color_data.CSS4_COLORS],
+    params = {'colorlib':[mpl._color_data.XKCD_COLORS,
+                          mpl._color_data.BASE_COLORS,
+                          mpl._color_data.CSS4_COLORS],
               'plots':{'R':1000,
                        'W_ratio':4,
                        'x':0,
