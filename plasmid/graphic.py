@@ -236,6 +236,7 @@ class Graphic:
         Plot features using matplotlib
         p = matplotlib figure handle
         '''
+        
 
     def __repr__(self):
         loc = str(type(self))+' at '+hex(id(self))+'\n'
@@ -306,7 +307,7 @@ class Graphic:
         if len(bgarr)==0:
             bgarr = np.zeros(len(text))
         out = ''
-        cuts = self.split_carr(fgarr, bgarr)
+        cuts = Graphic.split_carr(fgarr, bgarr)
         for start, stop in cuts:
             fg = None
             bg = None
@@ -314,10 +315,13 @@ class Graphic:
                 fg = colordict[fgarr[start]]
             if bgarr[start] in colordict.keys():
                 bg = colordict[bgarr[start]]
-            out+= self.get_colored_text(text[start:stop], fg, bg)
+            if fg==None and bg==None:
+                out+= text[start:stop]
+            else:
+                out+= self.get_colored_text(text[start:stop], fg, bg)
         return out
     
-    def split_carr(self, fgarr, bgarr):
+    def split_carr(fgarr, bgarr):
         '''
         Split up blocks of text by their coloring scheme
         '''
@@ -411,26 +415,4 @@ class Graphic:
             cmap[name[i]] = [fwd_color, rev_color]
         return cmap
     
-    def print_msa(msa, width=100):
-        '''
-        Prints out a multi-sequence alignment array
-        msa = list of sequences
-        width = characters per line
-        '''
-        x = np.arange(0,len(msa[0]),width)
-        if x[-1] < len(msa[0]):
-            x = np.append(x,len(msa[0]))
-        output = ''
-        for i in range(len(x)-1):
-            for j in range(len(msa)):
-                output+= msa[j][x[i]:x[i+1]]+' '+str(x[i+1])+' seq'+str(j)+'\n'
-            # find mismatches
-            match = np.array([True]*(x[i+1]-x[i]))
-            for j in range(len(msa)-1):
-                seq1 = np.array([k for k in msa[j][x[i]:x[i+1]]])
-                seq2 = np.array([k for k in msa[j+1][x[i]:x[i+1]]])
-                match*= (seq1==seq2)
-            mchar = np.array([' ']*(x[i+1]-x[i]))
-            mchar[~match] = '.'
-            output+= ''.join(mchar)+'\n'
-            print(output)
+    

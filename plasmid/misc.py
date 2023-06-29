@@ -536,7 +536,7 @@ def choose_mutation(let):
     Choose type of mutation
     let = letters
     '''
-    mut = {'A':'TGC','T':'AGC','G':'ATC','C':'ATG'}
+    mut = {'A':'TGC','T':'AGC','G':'ATC','C':'ATG','-':'ATGC'}
     nuc = 'ATGC'
     # perform deletion
     x = np.random.randint(0,3)
@@ -551,5 +551,3 @@ def choose_mutation(let):
         nuc = mut[let] 
         idx = np.random.randint(0,len(nuc))
         return nuc[idx]
-
-

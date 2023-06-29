@@ -26,6 +26,7 @@ from .misc import substring_search
 from .misc import isDNA
 from .misc import load_args
 from .fileIO import fileIO
+from .graphic import Graphic
 
 class Aligner:
     '''
@@ -314,6 +315,105 @@ class Aligner:
                'params':{}}
         for k in self.params['spoa'].keys():
             out['params'][k] = self.params['spoa'][k]
+        return out
+    
+    def format_msa(msa, width=100):
+        '''
+        Returns a multi-sequence alignment formatted 
+        to a certain width
+        msa = list of sequences
+        width = characters per line
+        returns a string output
+        '''
+        x = np.arange(0,len(msa[0]),width)
+        if x[-1] < len(msa[0]):
+            x = np.append(x,len(msa[0]))
+        output = ''
+        for i in range(len(x)-1):
+            for j in range(len(msa)):
+                output+= msa[j][x[i]:x[i+1]]+' '+str(x[i+1])+' seq'+str(j)+'\n'
+            # find mismatches
+            match = np.array([True]*(x[i+1]-x[i]))
+            for j in range(len(msa)-1):
+                seq1 = np.array([k for k in msa[j][x[i]:x[i+1]]])
+                seq2 = np.array([k for k in msa[j+1][x[i]:x[i+1]]])
+                match*= (seq1==seq2)
+            mchar = np.array([' ']*(x[i+1]-x[i]))
+            mchar[~match] = '.'
+            output+= ''.join(mchar)+'\n'
+        return output
+    
+    def colorize_msa(msa, width=100):
+        '''
+        Returns a multi-sequence alignment formatted 
+        to a certain width
+        msa = list of sequences
+        width = characters per line
+        returns a string output
+        '''
+        # default colors
+        cmap = {'A':'green',
+                'T':'blue',
+                'U':'cyan',
+                'C':'red',
+                'G':'orange'}
+        
+        # initialize coloring engine
+        gr = Graphic()
+        
+        # get character frequencies
+        stats = Aligner.get_msa_stats(msa)
+        
+        # colorize characters in the minor population
+        seq = np.array([[i for i in m] for m in msa])
+        dim = seq.shape
+        carr = np.array([['']*dim[1]]*dim[0])
+        
+        for i in range(len(msa[0])):
+            chars = stats[i][0]
+            freq = stats[i][1]
+            b = 1
+            # catch cases where at least two characters are frequent
+            if len(chars) > 1 and freq[0] == freq[1]:
+                b = 0
+            for j in range(b,len(chars)):
+                c = seq[:,i]==chars[j]
+                carr[c,i] = chars[j]
+
+        # format lines
+        x = np.arange(0,len(msa[0]),width)
+        if x[-1] < len(msa[0]):
+            x = np.append(x,len(msa[0]))
+            
+        # format to colors
+        output = ''
+        for i in range(len(x)-1):
+            for j in range(len(msa)):
+                start = x[i]
+                stop = x[i+1]
+                text = msa[j][start:stop]
+                fgarr = carr[j, start:stop]
+                text = gr.color_by_array(text, cmap, bgarr=fgarr)
+                output+= text+' '+str(x[i+1])+' seq'+str(j)+'\n'
+        return output
+    
+    def get_msa_stats(msa):
+        '''
+        Compute counts for each character in the multi-alignment
+        msa = list of sequences
+        return list of [characters, frequency]
+        '''
+        seq = np.array([[i for i in m] for m in msa])
+        seq = seq.T
+        hist = [np.unique(s, return_counts=True) for s in seq]
+        # sort the characters by frequency
+        out = []
+        for i in range(len(hist)):
+            freq = hist[i][1]
+            chars = hist[i][0]
+            s = np.argsort(freq)
+            s = s[::-1]
+            out.append([chars[s], freq[s]])
         return out
     
     def mappy(self, qry, ref):
@@ -963,69 +1063,6 @@ class Aligner:
         '''
         return -1
 
-    def pca(df, n_comp=2, recenter=False, ofile='', timestamp=True):
-        '''
-        Runs principle component analysis to compression dimensions 
-        df = pandas dataframe with columns [id, d_i, ..., d_n]
-        n_comps = components to reduce to
-        ofile = output file prefix to save pca data
-        timestamp = add timestamp to output file
-        '''
-
-        # initialize PCA settings
-        logging.info('running pca with n_comp = '+str(n_comp))
-
-        # get the vector
-        col = df.columns[df.columns!='id']
-        v = df[col].values
-
-        # center the feature vectors
-        if recenter:
-            vT = v.T
-            for i in range(0,len(vT)):
-                vT[i] = vT[i] - np.mean(vT[i])
-            v = vT.T
-
-        # do PCA
-        pca = sklearn.decomposition.SparsePCA(n_components = n_comp)
-        v = pca.fit_transform(v)
-
-        col = ['f_'+str(i) for i in range(0, n_comp)]
-        data = pd.DataFrame(v, columns = col)
-        data['id'] = df['id'].values
-
-        if ofile!='':
-            ts = ''
-            if timestamp:
-                ts = '_'+datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H_%M_%S')
-            fname = ofile+ts+'.csv.gz'
-            data.to_csv(fname, index = False, compression='infer')
-        return data
-
-    def tsne(df, n_comp=2, method='sklearn', metric='euclidean', perplexity=30, learning_rate=200, n_iter=1000,
-                 ofile='', timestamp=True, verbose=0):
-        '''
-        Run tsne on input data
-        df = pandas dataframe with columns [id, v_0, ..., v_i]
-        '''
-        logging.info('running sklearn tsne with n_comp = '+str(n_comp))
-        tsne = sklearn.manifold.TSNE(n_components=n_comp, perplexity=perplexity, metric=metric,
-                             early_exaggeration=12.0, learning_rate=learning_rate,
-                             n_iter=n_iter, n_iter_without_progress=300, verbose=verbose)
-        # get the vector
-        col = df.columns[df.columns!='id']
-        v = tsne.fit_transform(df[col].values)
-        cols = ['f_'+str(i) for i in range(0, n_comp)]
-        data = pd.DataFrame(v, columns = cols)
-        data['id'] = df['id'].values
-
-        if ofile!='':
-            ts = ''
-            if timestamp:
-                ts = '_'+datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H_%M_%S')
-            fname = ofile+ts+'.csv.gz'
-            data.to_csv(fname, index=False, compression='infer')
-        return data
 
     
     

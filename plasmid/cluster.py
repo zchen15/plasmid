@@ -4,9 +4,11 @@
 # computing libraries
 import numpy as np
 import pandas as pd
+import scipy as sp
 
 # reading and writing genbank files
 import sklearn
+import sklearn.cluster
 
 # system and time
 import re
@@ -24,26 +26,25 @@ class Clust(Aligner):
     '''
     This class holds functions pertaining to sequence clustering
     '''
-    params = {'verbose':False}
-    params['tsne'] = {'metric':'euclidean',
-                      'perplexity':30,
-                      'lr':200,
-                      'n_iter':1000}
-    
-    params['optics'] = {'min_samples':None,
-                        'min_cluster_size':None,
-                        'xi':0.05,
-                        'max_eps':None,
-                        'cluster_method':'dbscan',
-                        'n_jobs':None,
-                        'alt_label':False}
-    
     def __init__(self, args=None):
         if args!=None:
             self.params = load_args(args, self.params)
         if self.params['verbose']:
             print(self.params)
         self.create_tempdir()
+        
+        self.params['tsne'] = {'metric':'euclidean',
+                          'perplexity':30,
+                          'lr':200,
+                          'n_iter':1000}
+
+        self.params['optics'] = {'min_samples':None,
+                            'min_cluster_size':None,
+                            'xi':0.05,
+                            'max_eps':None,
+                            'cluster_method':'dbscan',
+                            'n_jobs':None,
+                            'alt_label':False}
     
     def create_tempdir(self):
         '''
@@ -62,7 +63,7 @@ class Clust(Aligner):
         cols = np.unique(cols)
         
         key = {cols[i]:i for i in range(len(cols))}
-        dist = np.zeros(len(cols), len(cols))
+        dist = np.zeros([len(cols), len(cols)])
         
         for qry, db, val in x:
             i = key[qry]
@@ -91,6 +92,18 @@ class Clust(Aligner):
         out = {'matrix':dist,
                'columns':cols}
         return out
+        
+    def get_closest_points(self, df, N):
+        '''
+        Get the N set of closest points
+        '''
+        
+        
+    def interpolate_distance(self, df, N):
+        '''
+        interpolate distances using nearest neighboring points
+        '''
+        
         
     def get_distance_matrix(self, query, database):
         '''
@@ -139,7 +152,7 @@ class Clust(Aligner):
         v = pca.fit_transform(x)
         return v
 
-    def tsne(df, n_comp=2, columns):
+    def tsne(df, n_comp=2):
         '''
         Run tsne on input data
         x = adjacency matrix
@@ -169,7 +182,7 @@ class Clust(Aligner):
         # run the aligner
         print('cluster_compute: computing pairwise distance matrix')
         config = '-D --dual=no --for-only'
-        self.params['minimap2']['config'] = config
+        self.params['minimap']['config'] = config
         x = self.get_distance_matrix(qry, qry)
         mat = x['matrix']
 
@@ -190,7 +203,8 @@ class Clust(Aligner):
         min_samples = self.params['optics']['min_samples']
         xi = self.params['optics']['xi']
         max_eps = self.params['optics']['max_eps']
-        cluster_method = self.params['optics']['dbscan']
+        cluster_method = self.params['optics']['cluster_method']
+        min_cluster_size = self.params['optics']['min_cluster_size']
         n_jobs = self.params['optics']['n_jobs']
         alt_label = self.params['optics']['alt_label']
         
@@ -232,7 +246,7 @@ class Clust(Aligner):
             # check labels for cluster number and coverage
             nout = np.sum(clust.labels_ == -1)
             nclust = np.max(clust.labels_)+1
-            logging.info('clust_OPTICS: clusters='+str(nclust)+' outliers='+str(nout)+' delta='+str(delta))
+            print('clust_OPTICS: clusters='+str(nclust)+' outliers='+str(nout)+' delta='+str(delta))
             # always keep the change if we get more clusters
             if nclust > prev_nclust or (nclust == prev_nclust and nout <= prev_nout):
                 tmp = min_samples
@@ -271,8 +285,8 @@ class Clust(Aligner):
         if np.min(reach) >= 0:
             # using custom relabeling on the reachability plot
             if alt_label and len(reach) > 5:
-                logging.info('using alt labeling')
-                labels = reachability_alt_label(reach)
+                print('using alt labeling')
+                labels = Clust.reachability_alt_label(reach)
             print('n_clusters='+str(np.max(labels)+1)+' n_unclustered='+str(np.sum(labels==-1))+' N='+str(len(x)))
         else:
             print('clust_OPTICS: reachability < 0, please change the min_samples parameter you are using')

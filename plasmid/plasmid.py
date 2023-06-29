@@ -47,7 +47,6 @@ def read_genbank(fname):
             SeqRecord = Bio.SeqIO.read(fname, 'snapgene')
         except:
             print('failed to read',fname,' as snapgene file')
-    
         
     # add some info to the genbank files
     for gene in SeqRecord.features:
