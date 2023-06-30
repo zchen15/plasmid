@@ -9,9 +9,9 @@ The functionalities of this library are organized into the following modules
 
 `Aligner` contains functions for sequence alignment and search
 
-`Designer` contains functions for generation of primers for extension PCR, Gibson Assembly, Golden Gate Assembly, and LAMP.
+`Clust` contains functions for clustering sequences
 
-More functionalities can be added if you ask nicely! You can reach me via the issues page.
+`Designer` contains functions for generation of primers for extension PCR, Gibson Assembly, and Golden Gate Assembly.
 
 ## Installation
 Run the following commands to clone and install this library. This package will be published to pypi once testing is complete.
@@ -23,9 +23,15 @@ pip3 install .
 ```
 
 ## Usage 
-The `demos/` directory contains example jupyter notebooks that display some of functionality provided by `Plasmid`. More detailed documentation will be provided later.
+The `notebooks/` directory contains example jupyter notebooks that display some of functionality provided by `Plasmid`.
 
-Here is an example [demo](https://zchen15.github.io/pages/misc/plasmid.html) notebook showing manipulation of genbank files and primer design via genetic optimization.
+[genbank_editing.ipynb](https://zchen15.github.io/pages/misc/genbank_editing.html) shows how the `plasmid` module can be used to view genbank records, search for genes, and add new gene annotations.
+
+[primer_design.ipynb](https://zchen15.github.io/pages/misc/primer_design.html) shows how the `designer` module can be used to generate primers for extension PCR, gibson assembly, and golden gate assembly.
+
+[clustering.ipynb](https://zchen15.github.io/pages/misc/clustering.html) shows how the `aligner` and `cluster` modules can be used to align NGS reads, perform sequence clustering, multi-alignment, and database searches.
+
+More detailed documentation will be provided later.
 
 ## Issues
 If you experience any issues with the code, please post them on the issues section along with the log file. I will monitor this periodically and try to fix issues as they arise.

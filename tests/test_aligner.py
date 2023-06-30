@@ -2,6 +2,7 @@
 # tests for fileIO.py
 
 import plasmid
+import pandas as pd
 import glob
 import os
 
@@ -163,3 +164,16 @@ def check_ORF(df, seq):
         print('AA seq_true',y)
         print('AA seq',AA)
         assert y == AA
+
+def test_filter_idx():
+    x = [['HAP01','HAP02',1],
+         ['HAP01','HAP01',2],
+         ['HAP02','HAP01',3],
+         ['HAP02','HAP02',4]]
+    col = ['q','d','val']
+    x = pd.DataFrame(x, columns=col)
+    y = plasmid.Aligner.filter_idx(x, ['q'], 'val', 'idxmax')
+    print('x',x)
+    print('y',y)
+    c = y['q']!=y['d']
+    assert sum(c)==0

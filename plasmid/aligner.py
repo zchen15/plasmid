@@ -527,9 +527,9 @@ class Aligner:
         value = column to sort
         opt = idxmax or idxmin
         '''
-        dfi = df.reset_index(drop=True)
-        idx = df.groupby(by=col).agg({value:opt}).values[:,0]
-        return df.iloc[idx]
+        df=df.reset_index(drop=True)
+        idx = df.groupby(by=col).agg({value:opt}).reset_index()
+        return df.iloc[idx[value].values].reset_index()
     
     def str_to_df(x, header='seq'):
         '''
