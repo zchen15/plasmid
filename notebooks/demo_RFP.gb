@@ -8,8 +8,10 @@ SOURCE      .
             .
 FEATURES             Location/Qualifiers
      promoter        1..38
-                     /locus_tag="pLacO2, single operon pLac ZC082818"
-                     /ApEinfo_label="pLacO2, single operon pLac ZC082818"
+                     /locus_tag="pLacO2, single operon pLac ZC082818
+                     subsequence"
+                     /ApEinfo_label="pLacO2, single operon pLac ZC082818
+                     subsequence"
                      /ApEinfo_fwdcolor="#008080"
                      /ApEinfo_revcolor="#008080"
      protein_bind    complement(39..44)
@@ -18,8 +20,8 @@ FEATURES             Location/Qualifiers
                      /ApEinfo_revcolor="orange"
                      /ApEinfo_label="BsaI"
      RBS             45..56
-                     /locus_tag="RBS 1.00 strength, BBa_B0034"
-                     /ApEinfo_label="RBS 1.00 strength, BBa_B0034"
+                     /locus_tag="RBS 1.00 strength, BBa_B0034 subsequence"
+                     /ApEinfo_label="RBS 1.00 strength, BBa_B0034 subsequence"
                      /ApEinfo_fwdcolor="cyan"
                      /ApEinfo_revcolor="cyan"
      protein_bind    57..62
@@ -28,8 +30,9 @@ FEATURES             Location/Qualifiers
                      /ApEinfo_revcolor="orange"
                      /ApEinfo_label="BsaI"
      CDS             63..740
-                     /locus_tag="mRFP, uniprot drFP583, pdb 2H5O"
-                     /ApEinfo_label="mRFP, uniprot drFP583, pdb 2H5O"
+                     /locus_tag="mRFP, uniprot drFP583, pdb 2H5O subsequence"
+                     /ApEinfo_label="mRFP, uniprot drFP583, pdb 2H5O
+                     subsequence"
                      /ApEinfo_fwdcolor="#800040"
                      /ApEinfo_revcolor="#800040"
 ORIGIN

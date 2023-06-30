@@ -18,7 +18,7 @@ colormaps = {'nucleic':{'A':'green',
                         'T':'blue',
                         'U':'cyan',
                         'C':'red',
-                        'G':'orange'
+                        'G':'orange',
                         '-':'white'}}
 
 class Graphic:
