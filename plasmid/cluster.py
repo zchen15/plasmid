@@ -209,7 +209,7 @@ class Clust(Aligner):
         alt_label = self.params['optics']['alt_label']
         
         # running the clustering
-        print('Running clust_OPTICS')
+        print('Running clust.OPTICS')
 
         # Safety check on number of samples given
         if len(x) < 3:
@@ -239,14 +239,14 @@ class Clust(Aligner):
         delta = min_samples/2
         for i in range(0, max_iter):
             min_samples = int(min_samples)
-            print('clust_OPTICS: iter='+str(i)+' using min_samples='+str(min_samples))
+            print('clust.OPTICS: iter='+str(i)+' using min_samples='+str(min_samples))
             clust = sklearn.cluster.OPTICS(min_samples=min_samples, min_cluster_size=min_cluster_size, xi=xi,
                                 max_eps=max_eps, cluster_method=cluster_method, metric=metric, n_jobs=n_jobs)
             clust.fit(x)
             # check labels for cluster number and coverage
             nout = np.sum(clust.labels_ == -1)
             nclust = np.max(clust.labels_)+1
-            print('clust_OPTICS: clusters='+str(nclust)+' outliers='+str(nout)+' delta='+str(delta))
+            print('clust.OPTICS: clusters='+str(nclust)+' outliers='+str(nout)+' delta='+str(delta))
             # always keep the change if we get more clusters
             if nclust > prev_nclust or (nclust == prev_nclust and nout <= prev_nout):
                 tmp = min_samples
@@ -289,7 +289,7 @@ class Clust(Aligner):
                 labels = Clust.reachability_alt_label(reach)
             print('n_clusters='+str(np.max(labels)+1)+' n_unclustered='+str(np.sum(labels==-1))+' N='+str(len(x)))
         else:
-            print('clust_OPTICS: reachability < 0, please change the min_samples parameter you are using')
+            print('clust.OPTICS: reachability < 0, please change the min_samples parameter you are using')
 
         # format and return the data        
         s = np.argsort(r_id)

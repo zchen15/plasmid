@@ -513,19 +513,83 @@ class Aligner:
         indel+= np.sum(x[y=='D'])
         return [q_len, q_start, q_end, t_len, t_start, t_end, M, Xm, indel]
     
-    def cigar_decode(cigar, key='([0-9]*)([DIM=SX])'):
+    def cigar_decode(cigar: str, key: str='([0-9]*)([DIM=SX])') -> list:
         '''
-        Decode cigar strings
+        Decode cigar strings into counts of indels and mismatches
+
+        Args:
+            cigar = cigar string
+            key = key used to decrypt the cigar string
+            
+        Returns:
+            list containing [[key value, counts],...]
         '''
         pattern = re.compile(key)
         return [[int(i),j] for i,j in pattern.findall(cigar)]
+
+    def cigar_to_alignment(query: str, ref: str, cigar: str) -> list:
+        '''
+        Function to align query and reference strings based on CIGAR string
+
+        Args:
+            query = query sequence --> this must be relative to how it was used in aligner
+            ref = reference sequence
+            cigar = CIGAR string from aligner
+        
+        Returns:
+            return [aligned query, aligned reference, alignment ticks]
+        '''
+        pattern = re.compile('([0-9]*)([DIMSX])')
+        query = query.upper()
+        ref = ref.upper()
+        q_aligned = ''
+        ref_aligned = ''
+        align = ''
+        i1 = 0
+        i2 = 0
+        for n, c in pattern.findall(cigar):
+            span = int(n)
+            if c == 'M':
+                q_aligned+=query[i1:i1+span]
+                ref_aligned+=ref[i2:i2+span]
+                align+=''.join(['|']*span)
+                i1+=span
+                i2+=span
+            elif c=='X':
+                q_aligned+=query[i1:i1+span]
+                ref_aligned+=ref[i2:i2+span]
+                align+=''.join([' ']*span)
+                i1+=span
+                i2+=span
+            elif c=='S' or c=='H':
+                q_aligned+=query[i1:i1+span].lower() # query contains soft clipped sequence
+                ref_aligned+=ref[i2:i2+span]
+                align+=''.join([' ']*span)
+                i1+=span
+                i2+=span
+            elif c=='I':
+                q_aligned+=query[i1:i1+span] # query contains an insert
+                ref_aligned+=''.join(['-']*span) # adds gap to reference
+                align+=''.join([' ']*span)
+                i1+=span
+            elif c=='D':
+                q_aligned+=''.join(['-']*span) # query contains a deletion --> add a gap
+                ref_aligned+=ref[i2:i2+span]
+                align+=''.join([' ']*span)
+                i2+=span
+        return [q_aligned, ref_aligned, align]
     
-    def filter_idx(df, col, value='score', opt='idxmax'):
+    def filter_idx(df: pd.DataFrame, col: list, value: str='score', opt: str='idxmax') -> pd.DataFrame:
         '''
         Get max values organized by a certain column in a pandas dataframe
-        col = column to group by
-        value = column to sort
-        opt = idxmax or idxmin
+
+        Args:
+            col = column to group by
+            value = column to sort
+            opt = idxmax or idxmin
+
+        Return:
+            pandas dataframe
         '''
         df=df.reset_index(drop=True)
         idx = df.groupby(by=col).agg({value:opt}).reset_index()
@@ -543,51 +607,7 @@ class Aligner:
             x = pd.DataFrame(x, columns=['sequence'])
             x['name'] = [header+'_'+str(i) for i in range(len(x))]
         return x
-
-    def cigar_to_alignment(query, ref, cigar):
-        '''
-        Converts cigar to alignment text
-        query = query sequence string
-        ref = reference sequence string
-        cigar = cigar string
-        '''
-        qa = ''
-        ra = ''
-        align = ''
-        i1 = 0
-        i2 = 0
-        for n, c in Aligner.cigar_decode(cigar):
-            span = int(n)
-            if c == 'M' or c=='=':
-                qa+=query[i1:i1+span]
-                ra+=ref[i2:i2+span]
-                align+=''.join(['|']*span)
-                i1+=span
-                i2+=span
-            elif c=='X':
-                qa+=query[i1:i1+span]
-                ra+=ref[i2:i2+span]
-                align+=''.join([' ']*span)
-                i1+=span
-                i2+=span
-            elif c=='S' or c=='H':
-                qa+=query[i1:i1+span]
-                ra+=ref[i2:i2+span]
-                align+=''.join([' ']*span)
-                i1+=span
-                i2+=span
-            elif c=='I':
-                qa+=query[i1:i1+span] # contains insertion
-                ra+=''.join(['-']*span) # adds gap
-                align+=''.join([' ']*span)
-                i1+=span
-            elif c=='D':
-                qa+=''.join(['-']*span) # contains deletion --> add a gap
-                ra+=ref[i2:i2+span]
-                align+=''.join([' ']*span)
-                i2+=span
-        return [qa, ra, align]
-
+    
     def minimap2_get_index(self, database, filename='index.mmi'):
         '''
         This is a wrapper for the minimap2 to build the fn_index
