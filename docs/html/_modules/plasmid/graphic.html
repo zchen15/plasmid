@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>plasmid.graphic &mdash; Plasmid: A python library for gene editing 2023.06.29 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Plasmid: A python library for gene editing
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Plasmid: A python library for gene editing</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">plasmid.graphic</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for plasmid.graphic</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># Class functions related to plotting</span>
+
+<span class="c1"># computing libraries</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="c1"># plotting libraries</span>
+<span class="kn">import</span> <span class="nn">matplotlib</span> <span class="k">as</span> <span class="nn">mpl</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">bokeh</span>
+<span class="kn">import</span> <span class="nn">bokeh.plotting</span>
+<span class="kn">import</span> <span class="nn">bokeh.palettes</span>
+<span class="kn">import</span> <span class="nn">sty</span>
+
+<span class="kn">from</span> <span class="nn">.misc</span> <span class="kn">import</span> <span class="n">unpack_FeatureLocation</span>
+
+<span class="n">colormaps</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;nucleic&#39;</span><span class="p">:{</span><span class="s1">&#39;A&#39;</span><span class="p">:</span><span class="s1">&#39;green&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;T&#39;</span><span class="p">:</span><span class="s1">&#39;blue&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;U&#39;</span><span class="p">:</span><span class="s1">&#39;cyan&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;C&#39;</span><span class="p">:</span><span class="s1">&#39;red&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;G&#39;</span><span class="p">:</span><span class="s1">&#39;orange&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;-&#39;</span><span class="p">:</span><span class="s1">&#39;white&#39;</span><span class="p">}}</span>
+
+<div class="viewcode-block" id="Graphic"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic">[docs]</a><span class="k">class</span> <span class="nc">Graphic</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    The class contains functions for drawing plasmids and plotting things</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;colorlib&#39;</span><span class="p">:[</span><span class="n">mpl</span><span class="o">.</span><span class="n">_color_data</span><span class="o">.</span><span class="n">XKCD_COLORS</span><span class="p">,</span>
+                          <span class="n">mpl</span><span class="o">.</span><span class="n">_color_data</span><span class="o">.</span><span class="n">BASE_COLORS</span><span class="p">,</span>
+                          <span class="n">mpl</span><span class="o">.</span><span class="n">_color_data</span><span class="o">.</span><span class="n">CSS4_COLORS</span><span class="p">],</span>
+              <span class="s1">&#39;plots&#39;</span><span class="p">:{</span><span class="s1">&#39;R&#39;</span><span class="p">:</span><span class="mi">1000</span><span class="p">,</span>
+                       <span class="s1">&#39;W_ratio&#39;</span><span class="p">:</span><span class="mi">4</span><span class="p">,</span>
+                       <span class="s1">&#39;x&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span>
+                       <span class="s1">&#39;y&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span>
+                       <span class="s1">&#39;res&#39;</span><span class="p">:</span><span class="mi">100</span><span class="p">,</span>
+                       <span class="s1">&#39;level&#39;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span>
+                       <span class="s1">&#39;alpha&#39;</span><span class="p">:</span><span class="mf">0.5</span><span class="p">,</span>
+                       <span class="s1">&#39;add_index&#39;</span><span class="p">:</span><span class="kc">False</span><span class="p">}}</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Initializes graphic object</span>
+<span class="sd">        data = plasmid dataframe containing sequence and features</span>
+<span class="sd">        R = Radius of the plasmid. Default none</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">!=</span><span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Plasmid</span> <span class="o">=</span> <span class="n">data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">features</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">(</span><span class="n">str_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;nt&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="fm">__str__</span><span class="p">())</span>  <span class="c1"># total length of the plasmid</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;plots&#39;</span><span class="p">][</span><span class="s1">&#39;R&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;nt&#39;</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">auto_level</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Graphic.auto_level"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.auto_level">[docs]</a>    <span class="k">def</span> <span class="nf">auto_level</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Auto feature level sort and assign by overlap</span>
+<span class="sd">        # debug preserve feature order</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="p">)</span>
+        <span class="c1"># go in order of largest features</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="p">[</span><span class="s1">&#39;len&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="p">[</span><span class="s1">&#39;location&#39;</span><span class="p">]]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">features</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;len&#39;</span><span class="p">],</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">level</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">N</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+            <span class="n">loc1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;location&#39;</span><span class="p">]</span>
+            <span class="n">lvl1</span> <span class="o">=</span> <span class="n">level</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="n">N</span><span class="p">):</span>
+                <span class="n">loc2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="s1">&#39;location&#39;</span><span class="p">]</span>
+                <span class="n">lvl2</span> <span class="o">=</span> <span class="n">level</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">Graphic</span><span class="o">.</span><span class="n">isOverlapping</span><span class="p">(</span><span class="n">loc1</span><span class="p">,</span> <span class="n">loc2</span><span class="p">)</span> <span class="ow">and</span> <span class="n">level</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">level</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                    <span class="n">level</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">level</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="p">[</span><span class="s1">&#39;level&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">level</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">features</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;start&#39;</span><span class="p">,</span><span class="s1">&#39;level&#39;</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="Graphic.get_bp_overlap"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.get_bp_overlap">[docs]</a>    <span class="k">def</span> <span class="nf">get_bp_overlap</span><span class="p">(</span><span class="n">loc1</span><span class="p">,</span> <span class="n">loc2</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Get bp overlap between two features</span>
+<span class="sd">        loc1 = feature location of feature1</span>
+<span class="sd">        loc2 = feature location of feature2</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">loc1</span> <span class="o">=</span> <span class="n">unpack_FeatureLocation</span><span class="p">(</span><span class="n">loc1</span><span class="p">)</span>
+        <span class="n">loc2</span> <span class="o">=</span> <span class="n">unpack_FeatureLocation</span><span class="p">(</span><span class="n">loc2</span><span class="p">)</span>
+        <span class="n">bp</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">loc1</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">loc2</span><span class="p">:</span>
+                <span class="n">c1</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">start</span><span class="p">,</span><span class="n">b</span><span class="o">.</span><span class="n">start</span><span class="p">)</span>
+                <span class="n">c2</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">end</span><span class="p">,</span><span class="n">b</span><span class="o">.</span><span class="n">end</span><span class="p">)</span>
+                <span class="n">L</span> <span class="o">=</span> <span class="n">c2</span> <span class="o">-</span> <span class="n">c1</span>
+                <span class="k">if</span> <span class="n">L</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">bp</span><span class="o">+=</span><span class="n">L</span>
+        <span class="k">return</span> <span class="n">bp</span></div>
+
+<div class="viewcode-block" id="Graphic.isOverlapping"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.isOverlapping">[docs]</a>    <span class="k">def</span> <span class="nf">isOverlapping</span><span class="p">(</span><span class="n">loc1</span><span class="p">,</span> <span class="n">loc2</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Check if features are overlapping</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">loc2</span> <span class="o">=</span> <span class="n">unpack_FeatureLocation</span><span class="p">(</span><span class="n">loc2</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">L</span> <span class="ow">in</span> <span class="n">loc2</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">loc1</span><span class="o">.</span><span class="fm">__contains__</span><span class="p">(</span><span class="n">L</span><span class="o">.</span><span class="n">start</span><span class="p">)</span> <span class="ow">or</span> <span class="n">loc1</span><span class="o">.</span><span class="fm">__contains__</span><span class="p">(</span><span class="n">L</span><span class="o">.</span><span class="n">end</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="Graphic.arc_x"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.arc_x">[docs]</a>    <span class="k">def</span> <span class="nf">arc_x</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">t</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">nt</span><span class="o">*</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="Graphic.arc_y"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.arc_y">[docs]</a>    <span class="k">def</span> <span class="nf">arc_y</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">t</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">nt</span><span class="o">*</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graphic.arc_xy"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.arc_xy">[docs]</a>    <span class="k">def</span> <span class="nf">arc_xy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">arc_x</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">arc_y</span><span class="p">(</span><span class="n">t</span><span class="p">)])</span></div>
+
+<div class="viewcode-block" id="Graphic.arc_arrow"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.arc_arrow">[docs]</a>    <span class="k">def</span> <span class="nf">arc_arrow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">strand</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Compute arc arrow polygons</span>
+<span class="sd">        R = distance from center to draw the arc</span>
+<span class="sd">        W = width of arc</span>
+<span class="sd">        L = length of the arc in nucleotides</span>
+<span class="sd">        strand = direction of arrow</span>
+<span class="sd">        start = starting nucleotide position</span>
+<span class="sd">        end = end nucleotide position</span>
+<span class="sd">        return set of points defining arc arrow polygon</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="c1"># handle coordinates that wrap around the origin</span>
+        <span class="k">if</span> <span class="n">end</span> <span class="o">&lt;</span> <span class="n">start</span><span class="p">:</span>
+            <span class="n">end</span><span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nt</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">res</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nt</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">res</span><span class="p">)</span>
+        <span class="c1"># compute start and end lines</span>
+        <span class="n">D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nt</span><span class="o">*</span><span class="n">W</span><span class="o">/</span><span class="mi">2</span><span class="o">/</span><span class="p">(</span><span class="n">R</span><span class="o">+</span><span class="n">W</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+        <span class="k">if</span> <span class="n">strand</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span> 
+            <span class="k">if</span> <span class="n">end</span> <span class="o">-</span> <span class="n">D</span> <span class="o">&lt;</span> <span class="n">start</span><span class="p">:</span>
+                <span class="n">D</span> <span class="o">=</span> <span class="n">end</span> <span class="o">-</span> <span class="n">start</span>
+            <span class="n">p_start</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">R</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">arc_xy</span><span class="p">(</span><span class="n">start</span><span class="p">),</span> <span class="p">(</span><span class="n">R</span><span class="o">+</span><span class="n">W</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">arc_xy</span><span class="p">(</span><span class="n">start</span><span class="p">)])</span>
+            <span class="n">p_end</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([(</span><span class="n">R</span><span class="o">+</span><span class="n">W</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">arc_xy</span><span class="p">(</span><span class="n">end</span><span class="o">-</span><span class="n">D</span><span class="p">),</span> <span class="p">(</span><span class="n">R</span><span class="o">+</span><span class="n">W</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">arc_xy</span><span class="p">(</span><span class="n">end</span><span class="p">),</span> <span class="n">R</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">arc_xy</span><span class="p">(</span><span class="n">end</span><span class="o">-</span><span class="n">D</span><span class="p">)])</span>
+        <span class="c1"># compute for reverse direction</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">start</span><span class="o">+</span><span class="n">D</span> <span class="o">&gt;</span> <span class="n">end</span><span class="p">:</span>
+                <span class="n">D</span> <span class="o">=</span> <span class="n">end</span> <span class="o">-</span> <span class="n">start</span>
+            <span class="n">p_end</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([(</span><span class="n">R</span><span class="o">+</span><span class="n">W</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">arc_xy</span><span class="p">(</span><span class="n">end</span><span class="p">),</span> <span class="n">R</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">arc_xy</span><span class="p">(</span><span class="n">end</span><span class="p">)])</span>
+            <span class="n">p_start</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">((</span><span class="n">R</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">arc_xy</span><span class="p">(</span><span class="n">start</span><span class="o">+</span><span class="n">D</span><span class="p">),</span> <span class="p">(</span><span class="n">R</span><span class="o">+</span><span class="n">W</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">arc_xy</span><span class="p">(</span><span class="n">start</span><span class="p">),</span> <span class="p">(</span><span class="n">R</span><span class="o">+</span><span class="n">W</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">arc_xy</span><span class="p">(</span><span class="n">start</span><span class="o">+</span><span class="n">D</span><span class="p">)))</span>
+        <span class="c1"># get inner and out arcs</span>
+        <span class="k">if</span> <span class="n">strand</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">t</span><span class="p">[(</span><span class="n">t</span> <span class="o">&gt;</span> <span class="n">start</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">t</span> <span class="o">&lt;</span> <span class="n">end</span><span class="o">-</span><span class="n">D</span><span class="p">)]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">t</span><span class="p">[(</span><span class="n">t</span> <span class="o">&gt;</span> <span class="n">start</span><span class="o">+</span><span class="n">D</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">t</span> <span class="o">&lt;</span> <span class="n">end</span><span class="p">)]</span>
+        <span class="n">p_outer</span> <span class="o">=</span> <span class="p">(</span><span class="n">R</span><span class="o">+</span><span class="n">W</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">arc_xy</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">p_inner</span> <span class="o">=</span> <span class="n">R</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">arc_xy</span><span class="p">(</span><span class="n">t</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="c1"># return the arc arrow polygon</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="p">[</span><span class="n">p_start</span><span class="p">,</span> <span class="n">p_outer</span><span class="p">,</span> <span class="n">p_end</span><span class="p">,</span> <span class="n">p_inner</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graphic.add_arc_arrow"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.add_arc_arrow">[docs]</a>    <span class="k">def</span> <span class="nf">add_arc_arrow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Adds arc arrow glyph to current plot</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span>
+        <span class="n">xs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">ys</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">strand</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">W</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[[</span><span class="s1">&#39;start&#39;</span><span class="p">,</span><span class="s1">&#39;end&#39;</span><span class="p">,</span><span class="s1">&#39;strand&#39;</span><span class="p">,</span><span class="s1">&#39;R&#39;</span><span class="p">,</span><span class="s1">&#39;W&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
+            <span class="c1"># compute arch</span>
+            <span class="n">xy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">arc_arrow</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">strand</span><span class="p">)</span>
+            <span class="n">xs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">xy</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">ys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">xy</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
+        <span class="n">data</span><span class="p">[</span><span class="s1">&#39;xs&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xs</span>
+        <span class="n">data</span><span class="p">[</span><span class="s1">&#39;ys&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ys</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">bokeh</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">ColumnDataSource</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="c1"># add glyph</span>
+        <span class="n">glyph</span> <span class="o">=</span> <span class="n">bokeh</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Patches</span><span class="p">(</span><span class="n">xs</span><span class="o">=</span><span class="s1">&#39;xs&#39;</span><span class="p">,</span> <span class="n">ys</span><span class="o">=</span><span class="s1">&#39;ys&#39;</span><span class="p">,</span> <span class="n">fill_color</span><span class="o">=</span><span class="s1">&#39;color&#39;</span><span class="p">,</span> <span class="n">fill_alpha</span><span class="o">=</span><span class="s1">&#39;alpha&#39;</span><span class="p">)</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">add_glyph</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">glyph</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">p</span></div>
+    
+<div class="viewcode-block" id="Graphic.add_ticks"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.add_ticks">[docs]</a>    <span class="k">def</span> <span class="nf">add_ticks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Add tick marks</span>
+<span class="sd">        &#39;&#39;&#39;</span></div>
+    
+<div class="viewcode-block" id="Graphic.annotate"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.annotate">[docs]</a>    <span class="k">def</span> <span class="nf">annotate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        annotate features</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span>
+        <span class="n">xs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">ys</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">xy</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">ts</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">level</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[[</span><span class="s1">&#39;start&#39;</span><span class="p">,</span><span class="s1">&#39;end&#39;</span><span class="p">,</span><span class="s1">&#39;R&#39;</span><span class="p">,</span><span class="s1">&#39;W&#39;</span><span class="p">,</span><span class="s1">&#39;level&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
+            <span class="c1"># compute the line</span>
+            <span class="k">if</span> <span class="n">end</span> <span class="o">&lt;</span> <span class="n">start</span><span class="p">:</span>
+                <span class="n">end</span><span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nt</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">end</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span>
+            <span class="n">pos1</span> <span class="o">=</span> <span class="p">(</span><span class="n">R</span><span class="o">+</span><span class="n">W</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">arc_xy</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+            <span class="n">pos2</span> <span class="o">=</span> <span class="p">(</span><span class="n">R</span><span class="o">+</span><span class="n">level</span><span class="o">*</span><span class="n">W</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">arc_xy</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+            <span class="n">xy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pos2</span><span class="p">)</span>
+            <span class="n">xs</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">pos1</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">pos2</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+            <span class="n">ys</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">pos1</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">pos2</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>
+            <span class="n">ts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">xy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">xy</span><span class="p">)</span>
+        <span class="n">data</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xy</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span>
+        <span class="n">data</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xy</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span>
+        <span class="n">data</span><span class="p">[</span><span class="s1">&#39;xs&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xs</span>
+        <span class="n">data</span><span class="p">[</span><span class="s1">&#39;ys&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ys</span>
+        <span class="n">data</span><span class="p">[</span><span class="s1">&#39;ts&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ts</span>
+        <span class="c1"># add the line</span>
+        <span class="n">glyph</span> <span class="o">=</span> <span class="n">bokeh</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">MultiLine</span><span class="p">(</span><span class="n">xs</span><span class="o">=</span><span class="s1">&#39;xs&#39;</span><span class="p">,</span> <span class="n">ys</span><span class="o">=</span><span class="s1">&#39;ys&#39;</span><span class="p">,</span> <span class="n">line_color</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">line_width</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">line_alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># add index to labels </span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_index</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)):</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="s1">&#39;locus_tag&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="n">data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;locus_tag&#39;</span><span class="p">]</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">bokeh</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">ColumnDataSource</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">add_glyph</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">glyph</span><span class="p">)</span>
+        <span class="c1"># add text</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;ts&#39;</span><span class="p">]</span><span class="o">%</span><span class="bp">self</span><span class="o">.</span><span class="n">nt</span><span class="p">)</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">nt</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="p">(</span><span class="n">t</span> <span class="o">&gt;</span> <span class="mf">0.25</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">t</span> <span class="o">&lt;</span> <span class="mf">0.75</span><span class="p">)</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">bokeh</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">ColumnDataSource</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="o">~</span><span class="n">c</span><span class="p">])</span>
+        <span class="n">glyph</span> <span class="o">=</span> <span class="n">bokeh</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Text</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;locus_tag&#39;</span><span class="p">,</span> <span class="n">angle</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">text_color</span><span class="o">=</span><span class="s1">&#39;color&#39;</span><span class="p">,</span>
+                            <span class="n">text_align</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">text_baseline</span><span class="o">=</span><span class="s1">&#39;middle&#39;</span><span class="p">)</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">add_glyph</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">glyph</span><span class="p">)</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">bokeh</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">ColumnDataSource</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">c</span><span class="p">])</span>
+        <span class="n">glyph</span> <span class="o">=</span> <span class="n">bokeh</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">Text</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;locus_tag&#39;</span><span class="p">,</span> <span class="n">angle</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">text_color</span><span class="o">=</span><span class="s1">&#39;color&#39;</span><span class="p">,</span>
+                            <span class="n">text_align</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="n">text_baseline</span><span class="o">=</span><span class="s1">&#39;middle&#39;</span><span class="p">)</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">add_glyph</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">glyph</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graphic.bokeh_plot"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.bokeh_plot">[docs]</a>    <span class="k">def</span> <span class="nf">bokeh_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">350</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Plot features using bokeh</span>
+<span class="sd">        p = bokeh plot reference</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">tooltips</span> <span class="o">=</span> <span class="p">[(</span><span class="s1">&#39;locus_tag&#39;</span><span class="p">,</span> <span class="s1">&#39;@label&#39;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="s1">&#39;@type&#39;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s1">&#39;location&#39;</span><span class="p">,</span> <span class="s1">&#39;@location&#39;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s1">&#39;length&#39;</span><span class="p">,</span><span class="s1">&#39;@length&#39;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s1">&#39;color&#39;</span><span class="p">,</span><span class="s1">&#39;@color&#39;</span><span class="p">)]</span>
+
+        <span class="c1"># create figure object if it does not exist</span>
+        <span class="k">if</span> <span class="n">p</span><span class="o">==</span><span class="kc">None</span><span class="p">:</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">bokeh</span><span class="o">.</span><span class="n">plotting</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">tooltips</span><span class="o">=</span><span class="n">tooltips</span><span class="p">)</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">plot_width</span> <span class="o">=</span> <span class="n">width</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">plot_height</span> <span class="o">=</span> <span class="n">height</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_arc_arrow</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">p</span> </div>
+
+<div class="viewcode-block" id="Graphic.plot"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.plot">[docs]</a>    <span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Plot features using matplotlib</span>
+<span class="sd">        p = matplotlib figure handle</span>
+<span class="sd">        &#39;&#39;&#39;</span></div>
+        
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">loc</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span><span class="o">+</span><span class="s1">&#39; at &#39;</span><span class="o">+</span><span class="nb">hex</span><span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span><span class="o">+</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="n">loc</span><span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">loc</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Format graphic record text as string</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="s1">&#39;Colorized Plasmid </span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="n">out</span><span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">colorize_plasmid</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">out</span>
+
+<div class="viewcode-block" id="Graphic.colorize_plasmid"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.colorize_plasmid">[docs]</a>    <span class="k">def</span> <span class="nf">colorize_plasmid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Return text denoting colored plasmid</span>
+<span class="sd">        width = chars per line</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">carr</span><span class="p">,</span> <span class="n">cdict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_color_array</span><span class="p">()</span>
+        <span class="n">seq</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Plasmid</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">width</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">color_by_array</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">cdict</span><span class="p">,</span> <span class="n">carr</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">),</span> <span class="n">width</span><span class="p">)</span>
+            <span class="n">stop</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">width</span>
+            <span class="n">stop</span><span class="p">[</span><span class="n">stop</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+        <span class="c1"># print out plasmid</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">start</span><span class="p">)):</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">seq</span><span class="p">[</span><span class="n">start</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span><span class="n">stop</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
+            <span class="n">fgarr</span> <span class="o">=</span> <span class="n">carr</span><span class="p">[</span><span class="n">start</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span><span class="n">stop</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
+            <span class="n">out</span><span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">color_by_array</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">cdict</span><span class="p">,</span> <span class="n">fgarr</span><span class="p">)</span>
+            <span class="n">out</span><span class="o">+=</span> <span class="s1">&#39;   &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">stop</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="k">return</span> <span class="n">out</span></div>
+
+<div class="viewcode-block" id="Graphic.get_color_array"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.get_color_array">[docs]</a>    <span class="k">def</span> <span class="nf">get_color_array</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns integer array and dictionary mapping integer to color values</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;level&#39;</span><span class="p">,</span><span class="s1">&#39;start&#39;</span><span class="p">])</span>
+        <span class="n">cdict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">idict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">seq</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Plasmid</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
+        <span class="n">carr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">loc</span><span class="p">,</span> <span class="n">color</span> <span class="ow">in</span> <span class="n">df</span><span class="p">[[</span><span class="s1">&#39;location&#39;</span><span class="p">,</span><span class="s1">&#39;color&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">color</span> <span class="ow">in</span> <span class="n">idict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="o">==</span><span class="kc">False</span><span class="p">:</span>
+                <span class="n">cdict</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">color</span>
+                <span class="n">idict</span><span class="p">[</span><span class="n">color</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span>
+                <span class="n">j</span><span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">idict</span><span class="p">[</span><span class="n">color</span><span class="p">]</span>
+            <span class="n">loc</span> <span class="o">=</span> <span class="n">unpack_FeatureLocation</span><span class="p">(</span><span class="n">loc</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">L</span> <span class="ow">in</span> <span class="n">loc</span><span class="p">:</span>
+                <span class="n">carr</span><span class="p">[</span><span class="n">L</span><span class="o">.</span><span class="n">start</span><span class="p">:</span><span class="n">L</span><span class="o">.</span><span class="n">end</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
+        <span class="k">return</span> <span class="n">carr</span><span class="p">,</span> <span class="n">cdict</span></div>
+
+<div class="viewcode-block" id="Graphic.color_by_array"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.color_by_array">[docs]</a>    <span class="k">def</span> <span class="nf">color_by_array</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">colordict</span><span class="p">,</span> <span class="n">fgarr</span><span class="o">=</span><span class="p">[],</span> <span class="n">bgarr</span><span class="o">=</span><span class="p">[]):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Plot color text marked by an array</span>
+<span class="sd">        text = text to be colorized</span>
+<span class="sd">        colordict = dictionary mapping integers to colors</span>
+<span class="sd">        fgarr = integer array of text color</span>
+<span class="sd">        bgarr = integer array of text background color</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fgarr</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+            <span class="n">fgarr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bgarr</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+            <span class="n">bgarr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">))</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="n">cuts</span> <span class="o">=</span> <span class="n">Graphic</span><span class="o">.</span><span class="n">split_carr</span><span class="p">(</span><span class="n">fgarr</span><span class="p">,</span> <span class="n">bgarr</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span> <span class="ow">in</span> <span class="n">cuts</span><span class="p">:</span>
+            <span class="n">fg</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">bg</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="n">fgarr</span><span class="p">[</span><span class="n">start</span><span class="p">]</span> <span class="ow">in</span> <span class="n">colordict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">fg</span> <span class="o">=</span> <span class="n">colordict</span><span class="p">[</span><span class="n">fgarr</span><span class="p">[</span><span class="n">start</span><span class="p">]]</span>
+            <span class="k">if</span> <span class="n">bgarr</span><span class="p">[</span><span class="n">start</span><span class="p">]</span> <span class="ow">in</span> <span class="n">colordict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">bg</span> <span class="o">=</span> <span class="n">colordict</span><span class="p">[</span><span class="n">bgarr</span><span class="p">[</span><span class="n">start</span><span class="p">]]</span>
+            <span class="k">if</span> <span class="n">fg</span><span class="o">==</span><span class="kc">None</span> <span class="ow">and</span> <span class="n">bg</span><span class="o">==</span><span class="kc">None</span><span class="p">:</span>
+                <span class="n">out</span><span class="o">+=</span> <span class="n">text</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">out</span><span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_colored_text</span><span class="p">(</span><span class="n">text</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">],</span> <span class="n">fg</span><span class="p">,</span> <span class="n">bg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span></div>
+    
+<div class="viewcode-block" id="Graphic.split_carr"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.split_carr">[docs]</a>    <span class="k">def</span> <span class="nf">split_carr</span><span class="p">(</span><span class="n">fgarr</span><span class="p">,</span> <span class="n">bgarr</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Split up blocks of text by their coloring scheme</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="p">(</span><span class="n">fgarr</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">!=</span><span class="n">fgarr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">|</span> <span class="p">(</span><span class="n">bgarr</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">!=</span><span class="n">bgarr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="p">))[</span><span class="n">val</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">cuts</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="p">)):</span>
+            <span class="n">cuts</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">start</span><span class="p">,</span> <span class="n">val</span><span class="p">[</span><span class="n">i</span><span class="p">]])</span> 
+            <span class="n">start</span> <span class="o">=</span> <span class="n">val</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">cuts</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">start</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">fgarr</span><span class="p">)])</span>
+        <span class="k">return</span> <span class="n">cuts</span></div>
+
+<div class="viewcode-block" id="Graphic.get_colored_text"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.get_colored_text">[docs]</a>    <span class="k">def</span> <span class="nf">get_colored_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bg</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Format string into colored text</span>
+<span class="sd">        fg = text color</span>
+<span class="sd">        bg = background color</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">sfg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_sty_fg</span><span class="p">(</span><span class="n">fg</span><span class="p">)</span>
+        <span class="n">sbg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_sty_bg</span><span class="p">(</span><span class="n">bg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">sfg</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">sbg</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">text</span> <span class="o">+</span> <span class="n">sfg</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">sbg</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span></div>
+    
+<div class="viewcode-block" id="Graphic.get_sty_fg"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.get_sty_fg">[docs]</a>    <span class="k">def</span> <span class="nf">get_sty_fg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cname</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Get sty fg markup</span>
+<span class="sd">        cname = name of color</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">color_to_int</span><span class="p">(</span><span class="n">cname</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">x</span><span class="o">==</span><span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">sty</span><span class="o">.</span><span class="n">fg</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span> <span class="n">sty</span><span class="o">.</span><span class="n">fg</span><span class="o">.</span><span class="n">rs</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Graphic.get_sty_bg"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.get_sty_bg">[docs]</a>    <span class="k">def</span> <span class="nf">get_sty_bg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cname</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Get sty bg markup</span>
+<span class="sd">        cname = name of color</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">color_to_int</span><span class="p">(</span><span class="n">cname</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">x</span><span class="o">==</span><span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">sty</span><span class="o">.</span><span class="n">bg</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span> <span class="n">sty</span><span class="o">.</span><span class="n">bg</span><span class="o">.</span><span class="n">rs</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Graphic.color_to_int"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.color_to_int">[docs]</a>    <span class="k">def</span> <span class="nf">color_to_int</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cname</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Get color name to 24 bit values</span>
+<span class="sd">        cname = name of color</span>
+<span class="sd">        return integer array</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">cname</span><span class="p">)</span><span class="o">!=</span><span class="nb">str</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">cname</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">!=</span><span class="s1">&#39;#&#39;</span><span class="p">:</span>
+            <span class="n">cname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">color_to_hex</span><span class="p">(</span><span class="n">cname</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">hex_to_int</span><span class="p">(</span><span class="n">cname</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graphic.color_to_hex"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.color_to_hex">[docs]</a>    <span class="k">def</span> <span class="nf">color_to_hex</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cname</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Get hex color from color name</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">colorlib</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;colorlib&#39;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">clib</span> <span class="ow">in</span> <span class="n">colorlib</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">cname</span> <span class="ow">in</span> <span class="n">clib</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">return</span> <span class="n">clib</span><span class="p">[</span><span class="n">cname</span><span class="p">]</span> </div>
+
+<div class="viewcode-block" id="Graphic.hex_to_int"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.hex_to_int">[docs]</a>    <span class="k">def</span> <span class="nf">hex_to_int</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cnum</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Convert hex color number to integers</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">cnum</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">cnum</span><span class="p">[</span><span class="mi">3</span><span class="p">:</span><span class="mi">5</span><span class="p">]</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">cnum</span><span class="p">[</span><span class="mi">5</span><span class="p">:</span><span class="mi">7</span><span class="p">]</span>
+        <span class="k">return</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="mi">16</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">,</span><span class="n">c</span><span class="p">]]</span></div>
+   
+<div class="viewcode-block" id="Graphic.get_colormap"><a class="viewcode-back" href="../../plasmid.html#plasmid.graphic.Graphic.get_colormap">[docs]</a>    <span class="k">def</span> <span class="nf">get_colormap</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">palette</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Generates a colormap for a set of dna features using colors from a palette</span>
+<span class="sd">        name = list of names of the features</span>
+<span class="sd">        palette = list of colors</span>
+<span class="sd">        return dictionary of {name:color}</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">palette</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">:</span>
+            <span class="n">palette</span> <span class="o">=</span> <span class="n">bokeh</span><span class="o">.</span><span class="n">palettes</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">palette</span><span class="p">]</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">palette</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span>
+        <span class="n">cmap</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">name</span><span class="p">)):</span>
+            <span class="n">fwd_color</span> <span class="o">=</span> <span class="n">palette</span><span class="p">[(</span><span class="n">i</span><span class="o">*</span><span class="mi">2</span><span class="p">)</span><span class="o">%</span><span class="nb">len</span><span class="p">(</span><span class="n">palette</span><span class="p">)]</span>
+            <span class="n">rev_color</span> <span class="o">=</span> <span class="n">palette</span><span class="p">[(</span><span class="n">i</span><span class="o">*</span><span class="mi">2</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">%</span><span class="nb">len</span><span class="p">(</span><span class="n">palette</span><span class="p">)]</span>
+            <span class="n">cmap</span><span class="p">[</span><span class="n">name</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span><span class="n">fwd_color</span><span class="p">,</span> <span class="n">rev_color</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">cmap</span></div></div>
+    
+    
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Zhewei Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
