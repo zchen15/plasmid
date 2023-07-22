@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 def get_version():
-    fname = 'plasmid/__init__.py'
+    fname = 'src/plasmid/__init__.py'
     out = {'__version__':'',
            '__author__':'',
            '__name__':'',
