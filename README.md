@@ -31,7 +31,8 @@ The `notebooks/` directory contains example jupyter notebooks that display some 
 
 [clustering.ipynb](https://zchen15.github.io/pages/misc/clustering.html) shows how the `aligner` and `cluster` modules can be used to align NGS reads, perform sequence clustering, multi-alignment, and database searches.
 
-More detailed documentation will be provided later.
+## Documentation
+Documentation and tutorials for this project can be found [here](https://zchen15.github.io/plasmid/).
 
 ## Issues
 If you experience any issues with the code, please post them on the issues section along with the log file. I will monitor this periodically and try to fix issues as they arise.
