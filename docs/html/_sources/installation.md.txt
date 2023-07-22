@@ -23,9 +23,9 @@ Plasmid requires a number of Python packages, notably:
 
 ### Bioinformatic software
 Plasmid contains wrappers functions to a number of popular sequence alignment tools. The following are recommended to be installed on the system and accessible via commandline.
-[minimap2](https://github.com/lh3/minimap2), for sequence alignment with long reads
-[bwa](https://github.com/lh3/bwa), for sequence alignment with short reads
-[mmseq2](https://github.com/soedinglab/MMseqs2), for database search
+- [minimap2](https://github.com/lh3/minimap2), for sequence alignment with long reads
+- [bwa](https://github.com/lh3/bwa), for sequence alignment with short reads
+- [mmseq2](https://github.com/soedinglab/MMseqs2), for database search
 
 Plasmid is supported on Linux, macOS and Windows on Python 3.8 to 3.10.
 
