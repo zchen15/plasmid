@@ -223,20 +223,20 @@ class Aligner:
                 else:
                     db = Bio.Seq.Seq(ref)[i:].translate()
                 df = Aligner.search_DNA(qry, db, fwd_only=True, circular=False)
-                for [start, end, s<trand] in df[['start','end','strand']].values:
+                for [start, end, strand] in df[['start','end','strand']].values:
                     # convert back to base pair location
                     start = start*3 + i
-                    end = start += len(qry)*3
+                    end = start + len(qry)*3
                     out.append([start, end, 1])
             # correct for wraps around the origin
-            if circular and len(<out) > 0:
+            if circular and len(out) > 0:
                 L = len(ref)
                 out = np.array(out)
-                out = out[out[:>,0] < L]
+                out = out[out[:,0] < L]
                 out[:,1] = out[:,1]%L
                 out[out[:,1]==0,1] = L
             # write the output>
-            return pd.DataFrame(out, columns=['sta??><<>>>rt','end','strand'])
+            return pd.DataFrame(out, columns=['start','end','strand'])
         else:
             # fwd and reverse search
             fwd_out = Aligner.search_protein(qry, ref, fwd_only=True, circular=circular)
@@ -439,11 +439,15 @@ class Aligner:
                 output+= text+' '+str(x[i+1])+' seq'+str(j)+'\n'
         return output
     
-    def get_msa_stats(msa):
+    def get_msa_stats(msa:list) -> list:
         '''
         Compute counts for each character in the multi-alignment
-        msa = list of sequences
-        return list of [characters, frequency]
+        
+        Args:
+            msa: list sequences
+        
+        Returns:
+            list with columns [characters, frequency]
         '''
         seq = np.array([[i for i in m] for m in msa])
         seq = seq.T
@@ -458,13 +462,16 @@ class Aligner:
             out.append([chars[s], freq[s]])
         return out
     
-    def mappy(self, qry, ref):
+    def mappy(self, qry, ref) -> pd.core.frame.DataFrame:
         '''
         Run minimap aligner
-        qry = dataframe of query sequences with columns [name, sequence]
-        ref = dataframe of reference sequences with columns [name, sequence]
-        k = kmer length
-        w = window size
+        
+        Args:
+            qry: dataframe of query sequences with columns [name, sequence]
+            ref: dataframe of reference sequences with columns [name, sequence]
+
+        Returns:
+            pandas dataframe output read from paf file, which contains sequence alignment information
         '''
         k = self.params['minimap']['k']
         w = self.params['minimap']['w']
@@ -481,11 +488,16 @@ class Aligner:
                'blen','mlen','match_score','NM','mapq','is_primary','CIGAR']
         return pd.DataFrame(out, columns=col)
     
-    def parasail(self, qry, ref):
+    def parasail(self, qry, ref) -> pd.core.frame.DataFrame:
         '''
         Run parasail aligner
-        qry = dataframe of query sequences with columns [name, sequence]
-        ref = dataframe of reference sequences with columns [name, sequence]
+
+        Args:
+            qry: dataframe of query sequences with columns [name, sequence]
+            ref: dataframe of reference sequences with columns [name, sequence]
+        
+        Returns:
+            pandas dataframe of alignment information
         '''
         g1 = self.params['parasail']['g1']
         g2 = self.params['parasail']['g2']
@@ -519,9 +531,17 @@ class Aligner:
         df['NM'] = df['mismatch']+df['indel']
         return df
         
-    def cigar_to_stats(cig, qseq, rseq):
+    def cigar_to_stats(cig:str, qseq:str, rseq:str) -> list:
         '''
         Get alignment statistics associated with parasail output
+        
+        Args:
+            cig: cigar string
+            qseq: query sequence
+            rseq: reference sequence
+
+        Returns:
+            list with columns [q_len, q_start, q_end, t_len, t_start, t_end, M, Xm, indel]
         '''
         cig = Aligner.cigar_decode(cig)
         
@@ -556,13 +576,13 @@ class Aligner:
         indel+= np.sum(x[y=='D'])
         return [q_len, q_start, q_end, t_len, t_start, t_end, M, Xm, indel]
     
-    def cigar_decode(cigar: str, key: str='([0-9]*)([DIM=SX])') -> list:
+    def cigar_decode(cigar:str, key:str='([0-9]*)([DIM=SX])') -> list:
         '''
         Decode cigar strings into counts of indels and mismatches
 
         Args:
-            cigar = cigar string
-            key = key used to decrypt the cigar string
+            cigar: cigar string
+            key: key used to decrypt the cigar string
             
         Returns:
             list containing [[key value, counts],...]
@@ -570,17 +590,17 @@ class Aligner:
         pattern = re.compile(key)
         return [[int(i),j] for i,j in pattern.findall(cigar)]
 
-    def cigar_to_alignment(query: str, ref: str, cigar: str) -> list:
+    def cigar_to_alignment(query:str, ref:str, cigar:str) -> list:
         '''
         Function to align query and reference strings based on CIGAR string
 
         Args:
-            query = query sequence --> this must be relative to how it was used in aligner
-            ref = reference sequence
-            cigar = CIGAR string from aligner
+            query: query sequence. This must be relative to how it was used in aligner
+            ref: reference sequence
+            cigar: CIGAR string from aligner
         
         Returns:
-            return [aligned query, aligned reference, alignment ticks]
+            list with values [aligned query, aligned reference, alignment ticks]
         '''
         pattern = re.compile('([0-9]*)([DIMSX])')
         query = query.upper()
@@ -622,14 +642,14 @@ class Aligner:
                 i2+=span
         return [q_aligned, ref_aligned, align]
     
-    def filter_idx(df: pd.DataFrame, col: list, value: str='score', opt: str='idxmax') -> pd.core.frame.DataFrame:
+    def filter_idx(df, col:list, value:str='score', opt:str='idxmax') -> pd.core.frame.DataFrame:
         '''
         Get max, mean, median, or min values organized by a certain column in a pandas dataframe
 
         Args:
-            col (str): column to group by
-            value (str) : column to sort
-            opt (str) : idxmax or idxmin
+            col: column to group by
+            value: column to sort
+            opt: statistic to compute such as idxmax or idxmin
 
         Returns:
             A pandas DataFrame of filtered values
@@ -639,19 +659,16 @@ class Aligner:
         return df.iloc[idx[value].values].reset_index()
     
    
-    def minimap2_get_index(self, database, filename='index.mmi'):
+    def minimap2_get_index(self, database, filename:str='index.mmi'):
         '''
-        This is a wrapper for the minimap2 to build the fn_index
-        fn_index file is built in the temporary file directory
+        This is a wrapper for the minimap2 to build the fn_index. fn_index file is built in the temporary file directory
         
-        database = database of sequences being search through
-        database must be in pandas dataframe format with columns:
-        [name, sequence] or [name, sequence, quality]
-        or a string defining the fasta or fastq file to index
-        
-        filename = defines the filename of the minimap index
-        
-        return filename of fn_index
+        Args:
+            database: database of sequences being search through database must be in pandas dataframe format with columns:
+            filename: custom filename of thefn_index
+
+        Returns:
+            A string containing the filename of the fn_index
         '''
         work_dir = self.params['work_dir']
         if type(database) == str:
@@ -672,24 +689,25 @@ class Aligner:
         self.params['minimap']['index'] = fn_index
         return fn_index
     
-    def minimap2(self, query, query2=None, database=None):
+    def minimap2(self, query, query2=None, database=None) -> pd.core.frame.DataFrame:
         '''
-        This is a wrapper for the minimap2 aligner.
-        This aligner is better suited for long reads (>100bp) from nanopore sequencing
+        This is a wrapper for the minimap2 aligner. This aligner is better suited for long reads (>100bp) from nanopore sequencing
 
-        query = list of sequences to search for in database
-        query2 = reverse pair of paired end read
+        Args:
+            query: list of sequences to search for in database
+            query2: reverse pair of paired end read
+            database: database of sequences being search through
 
-        query and query2 must be in pandas dataframe format with columns:
-        [name, sequence] or [name, sequence, quality]
-        
-        database = database of sequences being search through
+        Notes:
+            query, query2 must be in pandas dataframe format with columns:
+            [name, sequence] or [name, sequence, quality]
+ 
+            database must be in pandas dataframe format with columns:
+            [name, sequence] or [name, sequence, quality]
+            or a string containing the filename of the fn_index
 
-        database must be in pandas dataframe format with columns:
-        [name, sequence] or [name, sequence, quality]
-        or a string containing the filename of the fn_index
-
-        returns a pandas dataframe of alignment results from the paf file
+        Returns:
+            A pandas dataframe of alignment results from the paf file
         '''
         # Define locations of input and output files
         work_dir = self.params['work_dir']
@@ -759,24 +777,33 @@ class Aligner:
         
         return data
 
-    def aligner_fix_name(df, col):
+    def aligner_fix_name(df, col:str) -> dict:
         '''
         Removes spacing in the names that causes minimap2 to truncate read ids
-        df = dataframe column containing the old id
-        col = column with in the old id
-        returns fixed dataframe and id mapping between old and new names
+        
+        Args:
+            df: dataframe with column containing the old id
+            col: column with in the old id
+        
+        Returns:
+            a dictionary mapping dataframe to id and another dictionary mapping id to dataframe
         '''
         out = df.copy()
         revmap = {str(i)+'_'+out.iloc[i][col].replace(' ','_'):out.iloc[i][col] for i in range(0,len(df))}
         out[col] = list(revmap.keys())
         return out, revmap
 
-    def aligner_restore_name(df, revmap, col):
+    def aligner_restore_name(df, revmap:dict, col:str) -> pd.core.frame.DataFrame:
         '''
         Restore spaces in the names
-        df = dataframe with column containing the new id
-        revmap = dictionary containing mapping of new id to old id
-        col = column name containing the id restore
+
+        Args:
+            df: dataframe with column containing the new id
+            revmap: dictionary containing mapping of new id to old id
+            col: column name containing the id restore
+
+        Returns:
+            A dataframe with restored names
         '''
         df[col] = [revmap[df.iloc[i][col]] for i in range(0,len(df))]
         return df
@@ -784,25 +811,32 @@ class Aligner:
     def get_similarity(data):
         '''
         Add similarity metric to output dataframe from aligner
-        data = dataframe with columns [NM, q_len, t_len]
-        return dataframe with similarity added to columns
+        
+        Args:
+            data: dataframe with columns [NM, q_len, t_len]
+        
+        Returns:
+            a dataframe with similarity added to columns
         '''
         v1 = np.min([data['q_len'].values, data['t_len'].values], axis = 0)
         data['similarity'] = 1 - data['NM']/v1
         data.loc[data['similarity'] < 0, 'similarity'] = 0
         return data
 
-    def bwa_get_index(self, database):
+    def bwa_get_index(self, database) -> str:
         '''
         This is a wrapper for bwa to build the fn_index
         
-        database = database of sequences being searched through
-        
-        database must be in pandas dataframe format with columns:
-        [name, sequence] or [name, sequence, quality]
-        or a string defining the fasta or fastq file to index
-        
-        return filename of bwa index
+        Args:
+            database: database of sequences being searched through
+       
+        Notes:
+            database must be in pandas dataframe format with columns:
+            [name, sequence] or [name, sequence, quality]
+            or a string defining the fasta or fastq file to index
+       
+        Returns:
+            A string containing filename of bwa index
         '''
         bwa = self.params['binaries']['bwa']
         work_dir = self.params['work_dir']
@@ -822,19 +856,21 @@ class Aligner:
         '''
         This is a wrapper for the bwa aligner.
 
-        query = list of sequences to search for in database
-        query2 = reverse pair of paired end read
+        Args:
+            query: list of sequences to search for in database
+            query2: reverse pair of paired end read
+            database: database of sequences being search through
 
-        query and query2 must be in pandas dataframe format with columns:
-        [name, sequence] or [name, sequence, quality]
-                
-        database = database of sequences being search through
+        Notes:
+            query and query2 must be in pandas dataframe format with columns:
+            [name, sequence] or [name, sequence, quality]
         
-        database must be in pandas dataframe format with columns:
-        [name, sequence] or [name, sequence, quality]
-        or a string containing the filename of the fn_index
-        
-        returns a pandas dataframe of alignment results from the sam file
+            database must be in pandas dataframe format with columns:
+            [name, sequence] or [name, sequence, quality]
+            or a string containing the filename of the fn_index
+       
+        Returns:
+            a pandas dataframe of alignment results from the sam file
         '''
         # Define locations of input and output files
         work_dir = self.params['work_dir']
@@ -874,13 +910,17 @@ class Aligner:
 
     def bwa_format_SAM(query, query2, database, data):
         '''
-        Add q_len and t_len information to sam output
-        query = str or pandas dataframe
-        query2 = str or pandas dataframe
-        database = str or pandas dataframe
-        data = pandas dataframe from parse_SAM
+        Add q_len and t_len information to sam output. todo, cleanup
+        
+        Args:
+            query: str or pandas dataframe
+            query2: str or pandas dataframe
+            database: str or pandas dataframe
+            data: pandas dataframe from parse_SAM
 
-        returns dataframe with q_len and t_len info
+        Returns:
+            dataframe with q_len and t_len info
+       
         '''
         paired = False
         if type(query2).__name__!='NoneType':
@@ -916,17 +956,21 @@ class Aligner:
         data = Aligner.get_similarity(data)
         return data
     
-    def bowtie2_get_index(self, database, filename='bowtie2_index'):
+    def bowtie2_get_index(self, database, filename:str='bowtie2_index'):
         '''
         This is a wrapper for bowtie2 to build the fn_index
-        database = database of sequences being search through
-        database must be in pandas dataframe format with columns:
-        [name, sequence] or [name, sequence, quality]
-        or a string defining the fasta or fastq file to index
         
-        filename = defines the filename of the bwa index
+        Args:
+            database: database of sequences being search through
+            filename: defines the filename of the bwa index
         
-        return filename of bwa index
+        Notes:
+            database must be in pandas dataframe format with columns:
+            [name, sequence] or [name, sequence, quality]
+            or a string defining the fasta or fastq file to index
+        
+        Returns:
+            filename of bwa index
         '''
         bowtie2 = self.params['binaries']['bowtie2']
         work_dir = self.params['work_dir']
@@ -951,22 +995,25 @@ class Aligner:
         self.params['bowtie2']['index'] = btfile
         return btfile
     
-    def bowtie2(self, query, query2=None, database=None):
+    def bowtie2(self, query, query2=None, database=None) -> pd.core.frame.DataFrame:
         '''
         This is a wrapper for the bowtie2 aligner.
 
-        query = list of sequences to search for in database
-        query2 = reverse pair of paired end read
+        Args:
+            query: list of sequences to search for in database
+            query2: reverse pair of paired end read
+            database: database of sequences being search through
         
-        query and query2 must be in pandas dataframe format with columns:
-        [name, sequence] or [name, sequence, quality]
-        
-        database = database of sequences being search through
-        database must be in pandas dataframe format with columns:
-        [name, sequence] or [name, sequence, quality]
-        or a string containing the filename of the fn_index
-        
-        returns a pandas dataframe of alignment results from the sam file
+        Notes:
+            query and query2 must be in pandas dataframe format with columns:
+            [name, sequence] or [name, sequence, quality]
+            
+            database must be in pandas dataframe format with columns:
+            [name, sequence] or [name, sequence, quality]
+            or a string containing the filename of the fn_index
+       
+        Returns:
+            a pandas dataframe of alignment results from the sam file
         '''
         # Define locations of input and output files
         work_dir = self.params['work_dir']
@@ -1007,13 +1054,17 @@ class Aligner:
         data = Aligner.bwa_format_SAM(query, query2, database, data)
         return data
 
-    def merge_paired_end(self, read1, read2, outfile=None):
+    def merge_paired_end(self, read1:str, read2:str, outfile:str=None):
         '''
         Merge paired end reads using NGmerge
-        read1  = fastq reads fwd pair
-        read2 = fastq reads rev pair
         
-        return filename of output fastq
+        Args:
+            read1: fastq reads fwd pair
+            read2: fastq reads rev pair
+            outfile: prefix of output fastq file
+
+        Returns:
+            filename of output fastq
         '''
         # do paired alignment
         ngmerge = self.params['binaries']['ngmerge']
@@ -1029,8 +1080,14 @@ class Aligner:
     def get_fastq_statistics(query):
         '''
         Compute quality statistics about each read
-        query and query2 must be in pandas dataframe format with columns:
-        [name, sequence] or [name, sequence, quality]
+        
+        Args:
+            query: dataframe with columns [quality]
+
+        Returns:
+            original dateframe with
+            ['Q_min','Q_lower','Q_median','Q_upper','Q_max']
+            appended to the columns
         '''
         out = []
         for v in query['quality'].values:
@@ -1048,33 +1105,51 @@ class Aligner:
     def phred_to_int(x):
         '''
         Translate phred ASCII to quality integers
+        
+        Args:
+            x: quality strings
+
+        Returns:
+            list of integers
         '''
         return [ord(i)-33 for i in x]
 
-    def mmseq2_get_database(self, database, outdir):
+    def mmseq2_get_database(self, database:str, outdir:str):
         '''
         Wrapper for mmseq2 fetching a database
-        database = database name options include
+
+        Args:
+            database: database name options include
+            outdir: name of the output directory
+
+        Notes:
+            database can be the following options
+            UniRef100, Amino Acid db
+            UniProtKB, Amino Acid db
+            NR, Amino Acid Non-Redundant
+            NT, Nucleotide, Nucleotide Non-Redundant
+            GTDB, Genome Taxonomy Database
+            Pfam-A.full, Profile
+            SILVA, ribosomal RNA
         
-        UniRef100, Amino Acid db
-        UniProtKB, Amino Acid db
-        NR, Amino Acid Non-Redundant
-        NT, Nucleotide, Nucleotide Non-Redundant
-        GTDB, Genome Taxonomy Database
-        Pfam-A.full, Profile
-        SILVA, ribosomal RNA
-        
-        outdir = output directory
+        Returns:
+            string containing the output directory
         '''
         mmseq = self.params['binaries']['mmseq2']
         work_dir = self.params['work_dir']
         # run clustering
         cmd = mmseq +' database '+database+' '+outdir+' '+work_dir.name
         subprocess.run(cmd.split(' '))
+        return outdir
 
-    def mmseq2_cluster(self, query, config='easy-cluster'):
+    def mmseq2_cluster(self, query, config:str='easy-cluster'):
         '''
-        Wrapper for mmseq2 clustering
+        Wrapper for mmseq2 clustering, todo
+        
+        Args:
+            query: dataframe with columns [name, sequence, and/or quality]
+                or string containing filename of fasta or fastq file
+            config: config options to pass to mmseq2
         '''
         mmseq = self.params['binaries']['mmseq2']
         work_dir = self.params['work_dir']
@@ -1091,7 +1166,7 @@ class Aligner:
 
     def mmseq2_search(self, query, config='easy-linsearch'):
         '''
-        Wrapper for mmseq2 search
+        Wrapper for mmseq2 search, todo
         '''
         mmseq = self.params['binaries']['mmseq2']
         
@@ -1100,7 +1175,7 @@ class Aligner:
 
     def mmseq2_taxon(self, query, config='easy-taxonomy'):
         '''
-        Wrapper for mmseq2 search
+        Wrapper for mmseq2 search, todo
         '''
         mmseq = self.params['binaries']['mmseq2']
         
@@ -1109,10 +1184,8 @@ class Aligner:
 
     def prodigal(self, query):
         '''
-        Wrapper for prodigal
+        Wrapper for prodigal, todo
         '''
         return -1
 
 
-    
-    
