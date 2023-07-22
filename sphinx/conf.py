@@ -14,7 +14,7 @@ release = '2023.06.29'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['sphinx.ext.napoleon','sphinx.ext.todo','sphinx.ext.viewcode','sphinx.ext.autodoc']
+extensions = ['sphinx.ext.napoleon','sphinx.ext.autosummary','sphinx.ext.todo','sphinx.ext.viewcode','sphinx.ext.autodoc']
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
