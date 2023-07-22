@@ -32,6 +32,9 @@ from .graphic import colormaps
 class Aligner:
     '''
     This class holds functions pertaining to sequence alignment and analysis
+
+    Attributes:
+        params (dict): stores alignment parameters and run settings alignment tools contained in this class
     '''
     params = {'verbose':False}
     params['parasail'] = {'g1':5,
@@ -48,24 +51,25 @@ class Aligner:
     params['bowtie2'] = {'config':'-a --very-sensitive-local --threads 1 --quiet'}
     
     params['spoa'] = {'algorithm':0,
-                      'genmsa':True,
-                      'm':5,
-                      'n':-4,
-                      'g':-8,
-                      'e':-6,
-                      'q':-10,
-                      'c':-4}
-    
+                    'genmsa':True,
+                    'm':5,
+                    'n':-4,
+                    'g':-8,
+                    'e':-6,
+                    'q':-10,
+                    'c':-4}
+
     params['work_dir'] = None
     params['binaries'] = {'minimap':'minimap2',
-                          'bwa':'bwa',
-                          'bowtie2':'bowtie2',
-                          'mmseqs2':'mmseqs',
-                          'ngmerge':'./ngmerge'}
-
+                'bwa':'bwa',
+                'bowtie2':'bowtie2',
+                'mmseqs2':'mmseqs',
+                'ngmerge':'./ngmerge'}
+    
     def __init__(self, args=None):
         if args!=None:
             self.params = load_args(args, self.params)
+        
         if self.params['verbose']:
             print(self.params)
         self.create_tempdir()
@@ -91,11 +95,14 @@ class Aligner:
     
     def create_tempdir(self):
         '''
-        Create a temporary working directory for aligners
+        Create a temporary working directory for aligners. Name of the temporary working directory is stored in self.params['work_dir']
         '''
         self.params['work_dir'] = tempfile.TemporaryDirectory(prefix='aligner_')
         
     def run(self):
+        '''
+        Wrapper for running functions contained in this class via commandline
+        '''
         qry = self.params['query']
         ref = self.params['reference']
         df_q = read_to_df(qry)
@@ -107,15 +114,16 @@ class Aligner:
         df.to_csv(self.params['ofile'], index=False)
         return df
 
-    def string_match(self, qry:list, ref:list) -> pandas.core.frame.DataFrame:
+    def string_match(self, qry:list, ref:list) -> pd.core.frame.DataFrame:
         '''
         Performs exact string search of query sequences against reference sequences
+        
         Args:
-            qry (list) : list of query sequences 
-            ref (list) : list of reference sequences
+            qry: list of query sequences 
+            ref: list of reference sequences
 
         Returns:
-            pandas.core.frame.DataFrame: A pandas DataFrame with columns [query_id, ref_id, start, end, strand]
+            A pandas DataFrame with columns [query_id, ref_id, start, end, strand]
         '''
         out = []
         for i in range(len(ref)):
@@ -125,19 +133,20 @@ class Aligner:
                 x['ref_id'] = 'ref_'+str(j)
                 out.append(x)
         return pd.concat(out)
- 
-    def search_DNA(qry:str, ref:str, fwd_only:bool=False, circular:bool=False, exact:bool=False) -> pandas.core.frame.DataFrame:
+
+    def search_DNA(qry:str, ref:str, fwd_only:bool=False, circular:bool=False, exact:bool=False) -> pd.core.frame.DataFrame:
         '''
         Find all instances of the query sequence in the reference
+    
         Args:
-            qry (str): DNA subsequence to find
-            ref (str): DNA sequence containing the query subsequence
-            fwd_only (bool): search in forward orientation 5'->3' only. Defaults to searching forward and reverse complement
-            circular (bool): search string as though its a circular plasmid sequence
-            exact (bool): use exact substring search
+            qry: DNA subsequence to find
+            ref: DNA sequence containing the query subsequence
+            fwd_only: search in forward orientation 5'->3' only. Defaults to searching forward and reverse complement
+            circular: search string as though its a circular plasmid sequence
+            exact: use exact substring search
 
         Returns:
-            pandas.core.frame.DataFrame: pandas dataframe with columns [start, end, strand]
+            pandas dataframe with columns [start, end, strand]
         '''
         # make it case in sensitive
         qry = str(qry).upper()
@@ -183,13 +192,18 @@ class Aligner:
         # write the output
         return pd.DataFrame(out, columns=['start','end','strand'])
 
-    def search_protein(qry, ref, fwd_only=False, circular=False):
+    def search_protein(qry, ref, fwd_only:bool=False, circular:bool=False) -> pd.core.frame.DataFrame:
         '''
         Finds all instances of the query protein sequence in the reference DNA sequence. Forward and reverse complements are searched.
-        qry = protein sequence
-        ref = DNA sequence
-        circular = assume reference sequence is circular and search around origin
-        returns a dataframe with columns [start, end, strand]
+        
+        Args:
+            qry (str) = protein sequence
+            ref (str) = DNA sequence
+            fwd_only: search only in the forward direction
+            circular: assume reference sequence is circular and search around origin
+        
+        Returns:
+            A pandas DataFrame with columns [start, end, strand]
         '''
         if type(qry) == Bio.SeqRecord.SeqRecord:
             qry = str(qry.seq)
@@ -209,20 +223,20 @@ class Aligner:
                 else:
                     db = Bio.Seq.Seq(ref)[i:].translate()
                 df = Aligner.search_DNA(qry, db, fwd_only=True, circular=False)
-                for [start, end, strand] in df[['start','end','strand']].values:
+                for [start, end, s<trand] in df[['start','end','strand']].values:
                     # convert back to base pair location
                     start = start*3 + i
-                    end = start + len(qry)*3
+                    end = start += len(qry)*3
                     out.append([start, end, 1])
             # correct for wraps around the origin
-            if circular and len(out) > 0:
+            if circular and len(<out) > 0:
                 L = len(ref)
                 out = np.array(out)
-                out = out[out[:,0] < L]
+                out = out[out[:>,0] < L]
                 out[:,1] = out[:,1]%L
                 out[out[:,1]==0,1] = L
-            # write the output
-            return pd.DataFrame(out, columns=['start','end','strand'])
+            # write the output>
+            return pd.DataFrame(out, columns=['sta??><<>>>rt','end','strand'])
         else:
             # fwd and reverse search
             fwd_out = Aligner.search_protein(qry, ref, fwd_only=True, circular=circular)
@@ -237,7 +251,7 @@ class Aligner:
                 rev_out.iat[i,2] = -1
             return pd.concat([fwd_out, rev_out])
 
-    def search_ORF(seq:str, table:str='Standard', fwd_only:bool=False) -> pandas.core.frame.DataFrame:
+    def search_ORF(seq:str, table:str='Standard', fwd_only:bool=False) -> pd.core.frame.DataFrame:
         '''
         Generates a dataframe of open reading frames for a given sequence
         
@@ -247,7 +261,7 @@ class Aligner:
             fwd_only (bool): search only in forward orientation
 
         Returns:
-            pandas.core.frame.DataFrame: pandas dataframe with columns [name, start, stop, orientation, amino acid sequence]
+            pandas DataFrame with columns [name, start, stop, orientation, amino acid sequence]
         '''
         # search in forward direction
         out = []
@@ -273,10 +287,17 @@ class Aligner:
         df2['start'] = len(seq) - stop
         return pd.concat([df,df2])
     
-    def get_ORF(seq, start='M', stop='*'):
+    def get_ORF(seq:str, start:str='M', stop:str='*') -> pd.core.frame.DataFrame:
         '''
         Get list of ORF based on start and stop codons
-        return list of sequences
+        
+        Args:
+            seq: nucleotide sequence to start
+            start: start codon
+            stop: stop codon
+        
+        Returns:
+            List of open reading frames
         '''
         idx = np.arange(len(seq))
         seq_arr = np.array([i for i in seq])
@@ -305,13 +326,17 @@ class Aligner:
         Search sequence on NIH blast, to do
         '''
         return -1
-
    
-    def spoa(self, seq):
+    def spoa(self, seq:list) -> dict:
         '''
         Runs multi-sequence alignment on provided sequences with spoa
-        seq = list of sequences
-        returns dictionary containing {'consensus':sequence, 'msa':<list of sequences>}
+
+        Args:
+            seq: list of sequences
+        
+        Return:
+            A dictionary containing {'consensus':sequence,
+                                     'msa':[sequences]}
         '''
         algo = self.params['spoa']['algorithm']
         genmsa = self.params['spoa']['genmsa']
@@ -330,13 +355,16 @@ class Aligner:
             out['params'][k] = self.params['spoa'][k]
         return out
     
-    def format_msa(msa, width=100):
+    def format_msa(msa:list, width:int=100) -> str:
         '''
-        Returns a multi-sequence alignment formatted 
-        to a certain width
-        msa = list of sequences
-        width = characters per line
-        returns a string output
+        Format multi-sequence alignment string to a certain width
+
+        Args:
+            msa: list of sequences
+            width: characters per line
+
+        Returns:
+            A string output
         '''
         x = np.arange(0,len(msa[0]),width)
         if x[-1] < len(msa[0]):
@@ -356,17 +384,20 @@ class Aligner:
             output+= ''.join(mchar)+'\n'
         return output
     
-    def colorize_msa(msa, width=100, cmap=None):
+    def colorize_msa(msa:list, width:int=100, cmap:dict={}) -> str:
         '''
-        Returns a multi-sequence alignment formatted 
-        to a certain width
-        msa = list of sequences
-        width = characters per line
-        cmap = colormap from characters to colors
-        returns a string output
+        Formats a multi-sequence alignment with colors and to a certain width
+
+        Args:
+            msa: list of sequences
+            width: characters per line
+            cmap: colormap from characters to colors
+        
+        Returns:
+            A string output
         '''
         # use default nucleic acid colors
-        if cmap==None:
+        if cmap=={}:
             cmap = colormaps['nucleic']
         
         # initialize coloring engine
@@ -591,7 +622,7 @@ class Aligner:
                 i2+=span
         return [q_aligned, ref_aligned, align]
     
-    def filter_idx(df: pd.DataFrame, col: list, value: str='score', opt: str='idxmax') -> pandas.core.frame.DataFrame:
+    def filter_idx(df: pd.DataFrame, col: list, value: str='score', opt: str='idxmax') -> pd.core.frame.DataFrame:
         '''
         Get max, mean, median, or min values organized by a certain column in a pandas dataframe
 
@@ -601,7 +632,7 @@ class Aligner:
             opt (str) : idxmax or idxmin
 
         Returns:
-            pandas.core.frame.DataFrame: A pandas DataFrame of filtered values
+            A pandas DataFrame of filtered values
         '''
         df=df.reset_index(drop=True)
         idx = df.groupby(by=col).agg({value:opt}).reset_index()

@@ -90,6 +90,17 @@
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">plasmid.aligner.</span></span><span class="sig-name descname"><span class="pre">Aligner</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/plasmid/aligner.html#Aligner"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plasmid.aligner.Aligner" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>This class holds functions pertaining to sequence alignment and analysis</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="plasmid.aligner.Aligner.params">
+<span class="sig-name descname"><span class="pre">params</span></span><a class="headerlink" href="#plasmid.aligner.Aligner.params" title="Permalink to this definition"></a></dt>
+<dd><p>stores alignment parameters and run settings alignment tools contained in this class</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="plasmid.aligner.Aligner.aligner_fix_name">
 <span class="sig-name descname"><span class="pre">aligner_fix_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">col</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/plasmid/aligner.html#Aligner.aligner_fix_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plasmid.aligner.Aligner.aligner_fix_name" title="Permalink to this definition"></a></dt>
@@ -233,23 +244,23 @@ returns a string output</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="plasmid.aligner.Aligner.create_tempdir">
 <span class="sig-name descname"><span class="pre">create_tempdir</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/plasmid/aligner.html#Aligner.create_tempdir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plasmid.aligner.Aligner.create_tempdir" title="Permalink to this definition"></a></dt>
-<dd><p>Create a temporary working directory for aligners</p>
+<dd><p>Create a temporary working directory for aligners. Name of the temporary working directory is stored in self.params[‘work_dir’]</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="plasmid.aligner.Aligner.filter_idx">
 <span class="sig-name descname"><span class="pre">filter_idx</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'score'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">opt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'idxmax'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/plasmid/aligner.html#Aligner.filter_idx"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plasmid.aligner.Aligner.filter_idx" title="Permalink to this definition"></a></dt>
-<dd><p>Get max values organized by a certain column in a pandas dataframe</p>
+<dd><p>Get max, mean, median, or min values organized by a certain column in a pandas dataframe</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>by</strong> (<em>col = column to group</em>) – </p></li>
-<li><p><strong>sort</strong> (<em>value = column to</em>) – </p></li>
-<li><p><strong>idxmin</strong> (<em>opt = idxmax or</em>) – </p></li>
+<li><p><strong>col</strong> (<em>str</em>) – column to group by</p></li>
+<li><p><strong>value</strong> (<em>str</em>) – column to sort</p></li>
+<li><p><strong>opt</strong> (<em>str</em>) – idxmax or idxmin</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>pandas dataframe</p>
+<dd class="field-even"><p>A pandas DataFrame of filtered values</p>
 </dd>
 </dl>
 </dd></dl>
@@ -266,9 +277,20 @@ returns a string output</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="plasmid.aligner.Aligner.get_ORF">
-<span class="sig-name descname"><span class="pre">get_ORF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'M'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'*'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/plasmid/aligner.html#Aligner.get_ORF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plasmid.aligner.Aligner.get_ORF" title="Permalink to this definition"></a></dt>
-<dd><p>Get list of ORF based on start and stop codons
-return list of sequences</p>
+<span class="sig-name descname"><span class="pre">get_ORF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'M'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'*'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/plasmid/aligner.html#Aligner.get_ORF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plasmid.aligner.Aligner.get_ORF" title="Permalink to this definition"></a></dt>
+<dd><p>Get list of ORF based on start and stop codons</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seq</strong> – nucleotide sequence to start</p></li>
+<li><p><strong>start</strong> – start codon</p></li>
+<li><p><strong>stop</strong> – stop codon</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of open reading frames</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -377,8 +399,8 @@ SILVA, ribosomal RNA</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="plasmid.aligner.Aligner.params">
-<span class="sig-name descname"><span class="pre">params</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'binaries':</span> <span class="pre">{'bowtie2':</span> <span class="pre">'bowtie2',</span> <span class="pre">'bwa':</span> <span class="pre">'bwa',</span> <span class="pre">'minimap':</span> <span class="pre">'minimap2',</span> <span class="pre">'mmseqs2':</span> <span class="pre">'mmseqs',</span> <span class="pre">'ngmerge':</span> <span class="pre">'./ngmerge'},</span> <span class="pre">'bowtie2':</span> <span class="pre">{'config':</span> <span class="pre">'-a</span> <span class="pre">--very-sensitive-local</span> <span class="pre">--threads</span> <span class="pre">1</span> <span class="pre">--quiet'},</span> <span class="pre">'bwa':</span> <span class="pre">{'config':</span> <span class="pre">'mem</span> <span class="pre">-a'},</span> <span class="pre">'minimap':</span> <span class="pre">{'cigar':</span> <span class="pre">True,</span> <span class="pre">'config':</span> <span class="pre">'-x</span> <span class="pre">map-ont</span> <span class="pre">-P',</span> <span class="pre">'k':</span> <span class="pre">7,</span> <span class="pre">'w':</span> <span class="pre">1},</span> <span class="pre">'parasail':</span> <span class="pre">{'g1':</span> <span class="pre">5,</span> <span class="pre">'g2':</span> <span class="pre">1,</span> <span class="pre">'mat':</span> <span class="pre">&lt;parasail.bindings_v2.Matrix</span> <span class="pre">object&gt;,</span> <span class="pre">'method':</span> <span class="pre">'sg_trace_scan_16'},</span> <span class="pre">'spoa':</span> <span class="pre">{'algorithm':</span> <span class="pre">0,</span> <span class="pre">'c':</span> <span class="pre">-4,</span> <span class="pre">'e':</span> <span class="pre">-6,</span> <span class="pre">'g':</span> <span class="pre">-8,</span> <span class="pre">'genmsa':</span> <span class="pre">True,</span> <span class="pre">'m':</span> <span class="pre">5,</span> <span class="pre">'n':</span> <span class="pre">-4,</span> <span class="pre">'q':</span> <span class="pre">-10},</span> <span class="pre">'verbose':</span> <span class="pre">False,</span> <span class="pre">'work_dir':</span> <span class="pre">None}</span></em><a class="headerlink" href="#plasmid.aligner.Aligner.params" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="id0">
+<span class="sig-name descname"><span class="pre">params</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'binaries':</span> <span class="pre">{'bowtie2':</span> <span class="pre">'bowtie2',</span> <span class="pre">'bwa':</span> <span class="pre">'bwa',</span> <span class="pre">'minimap':</span> <span class="pre">'minimap2',</span> <span class="pre">'mmseqs2':</span> <span class="pre">'mmseqs',</span> <span class="pre">'ngmerge':</span> <span class="pre">'./ngmerge'},</span> <span class="pre">'bowtie2':</span> <span class="pre">{'config':</span> <span class="pre">'-a</span> <span class="pre">--very-sensitive-local</span> <span class="pre">--threads</span> <span class="pre">1</span> <span class="pre">--quiet'},</span> <span class="pre">'bwa':</span> <span class="pre">{'config':</span> <span class="pre">'mem</span> <span class="pre">-a'},</span> <span class="pre">'minimap':</span> <span class="pre">{'cigar':</span> <span class="pre">True,</span> <span class="pre">'config':</span> <span class="pre">'-x</span> <span class="pre">map-ont</span> <span class="pre">-P',</span> <span class="pre">'k':</span> <span class="pre">7,</span> <span class="pre">'w':</span> <span class="pre">1},</span> <span class="pre">'parasail':</span> <span class="pre">{'g1':</span> <span class="pre">5,</span> <span class="pre">'g2':</span> <span class="pre">1,</span> <span class="pre">'mat':</span> <span class="pre">&lt;parasail.bindings_v2.Matrix</span> <span class="pre">object&gt;,</span> <span class="pre">'method':</span> <span class="pre">'sg_trace_scan_16'},</span> <span class="pre">'spoa':</span> <span class="pre">{'algorithm':</span> <span class="pre">0,</span> <span class="pre">'c':</span> <span class="pre">-4,</span> <span class="pre">'e':</span> <span class="pre">-6,</span> <span class="pre">'g':</span> <span class="pre">-8,</span> <span class="pre">'genmsa':</span> <span class="pre">True,</span> <span class="pre">'m':</span> <span class="pre">5,</span> <span class="pre">'n':</span> <span class="pre">-4,</span> <span class="pre">'q':</span> <span class="pre">-10},</span> <span class="pre">'verbose':</span> <span class="pre">False,</span> <span class="pre">'work_dir':</span> <span class="pre">None}</span></em><a class="headerlink" href="#id0" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -404,48 +426,64 @@ ref = dataframe of reference sequences with columns [name, sequence]</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="plasmid.aligner.Aligner.run">
 <span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/plasmid/aligner.html#Aligner.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plasmid.aligner.Aligner.run" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Wrapper for running functions contained in this class via commandline</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="plasmid.aligner.Aligner.search_DNA">
-<span class="sig-name descname"><span class="pre">search_DNA</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fwd_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">circular</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exact</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/plasmid/aligner.html#Aligner.search_DNA"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plasmid.aligner.Aligner.search_DNA" title="Permalink to this definition"></a></dt>
-<dd><p>Find all instances of the query sequence in the reference.
-qry = DNA subsequence to find
-ref = DNA sequence containing the query subsequence
-fwd_only = search in forward orientation 5’-&gt;3’ only. Defaults to searching forward and reverse complement
-circular = search circularly
-exact = use exact substring search
-returns a dataframe with columns [start, end, strand]</p>
+<span class="sig-name descname"><span class="pre">search_DNA</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fwd_only</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">circular</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exact</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/plasmid/aligner.html#Aligner.search_DNA"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plasmid.aligner.Aligner.search_DNA" title="Permalink to this definition"></a></dt>
+<dd><p>Find all instances of the query sequence in the reference</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>qry</strong> – DNA subsequence to find</p></li>
+<li><p><strong>ref</strong> – DNA sequence containing the query subsequence</p></li>
+<li><p><strong>fwd_only</strong> – search in forward orientation 5’-&gt;3’ only. Defaults to searching forward and reverse complement</p></li>
+<li><p><strong>circular</strong> – search string as though its a circular plasmid sequence</p></li>
+<li><p><strong>exact</strong> – use exact substring search</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>pandas dataframe with columns [start, end, strand]</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="plasmid.aligner.Aligner.search_ORF">
-<span class="sig-name descname"><span class="pre">search_ORF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Standard'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fwd_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/plasmid/aligner.html#Aligner.search_ORF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plasmid.aligner.Aligner.search_ORF" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">search_ORF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Standard'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fwd_only</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/plasmid/aligner.html#Aligner.search_ORF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plasmid.aligner.Aligner.search_ORF" title="Permalink to this definition"></a></dt>
 <dd><p>Generates a dataframe of open reading frames for a given sequence</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>seq</strong> (<em>str</em>) – input sequence</p></li>
 <li><p><strong>table</strong> (<em>str</em>) – codon table to use</p></li>
+<li><p><strong>fwd_only</strong> (<em>bool</em>) – search only in forward orientation</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Dataframe with columns [name, start, stop, orientation, amino acid sequence]</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>pd.Dataframe</p>
+<dd class="field-even"><p>pandas DataFrame with columns [name, start, stop, orientation, amino acid sequence]</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="plasmid.aligner.Aligner.search_protein">
-<span class="sig-name descname"><span class="pre">search_protein</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fwd_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">circular</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/plasmid/aligner.html#Aligner.search_protein"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plasmid.aligner.Aligner.search_protein" title="Permalink to this definition"></a></dt>
-<dd><p>Finds all instances of the query protein sequence in the reference DNA sequence. Forward and reverse complements are searched.
-qry = protein sequence
-ref = DNA sequence
-circular = assume reference sequence is circular and search around origin
-returns a dataframe with columns [start, end, strand]</p>
+<span class="sig-name descname"><span class="pre">search_protein</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fwd_only</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">circular</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/plasmid/aligner.html#Aligner.search_protein"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plasmid.aligner.Aligner.search_protein" title="Permalink to this definition"></a></dt>
+<dd><p>Finds all instances of the query protein sequence in the reference DNA sequence. Forward and reverse complements are searched.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>qry</strong> (<em>str</em>) – </p></li>
+<li><p><strong>ref</strong> (<em>str</em>) – </p></li>
+<li><p><strong>fwd_only</strong> – search only in the forward direction</p></li>
+<li><p><strong>circular</strong> – assume reference sequence is circular and search around origin</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A pandas DataFrame with columns [start, end, strand]</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -457,17 +495,20 @@ returns dictionary containing {‘consensus’:sequence, ‘msa’:&lt;list of s
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="plasmid.aligner.Aligner.str_to_df">
-<span class="sig-name descname"><span class="pre">str_to_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">header</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'seq'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/plasmid/aligner.html#Aligner.str_to_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plasmid.aligner.Aligner.str_to_df" title="Permalink to this definition"></a></dt>
-<dd><p>Format query and ref to dataframe if not already
-x = string or list of strings
-returns dataframe</p>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="plasmid.aligner.Aligner.string_match">
-<span class="sig-name descname"><span class="pre">string_match</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">qry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/plasmid/aligner.html#Aligner.string_match"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plasmid.aligner.Aligner.string_match" title="Permalink to this definition"></a></dt>
-<dd><p>Exact string search against query and reference</p>
+<span class="sig-name descname"><span class="pre">string_match</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">qry</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/plasmid/aligner.html#Aligner.string_match"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#plasmid.aligner.Aligner.string_match" title="Permalink to this definition"></a></dt>
+<dd><p>Performs exact string search of query sequences against reference sequences</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>qry</strong> – list of query sequences</p></li>
+<li><p><strong>ref</strong> – list of reference sequences</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A pandas DataFrame with columns [query_id, ref_id, start, end, strand]</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>

@@ -56,6 +56,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#reading-fastq-or-fasta-sequences">Reading fastq or fasta sequences</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#aligning-ngs-reads">Aligning NGS reads</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#running-minimap2-to-compute-alignment-to-reference-sequences">Running minimap2 to compute alignment to reference sequences</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#raw-read-error">raw_read_error</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#computing-pairwise-distance-between-sequences">Computing pairwise distance between sequences</a></li>
@@ -253,6 +254,9 @@ Alignment parameters for minimap2
 </div>
 </div>
 </div>
+</section>
+<section id="raw-read-error">
+<h3>raw_read_error<a class="headerlink" href="#raw-read-error" title="Permalink to this heading"></a></h3>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
@@ -285,9 +289,7 @@ Alignment parameters for minimap2
 <img alt="../_images/6f8e087e3b6931f5be87cbbd32a0d6f95ef098116356b94e8dc8500f30cde313.png" src="../_images/6f8e087e3b6931f5be87cbbd32a0d6f95ef098116356b94e8dc8500f30cde313.png" />
 </div>
 </div>
-<p><a class="anchor" id="raw_read_error"></a>
-The above plot shows the raw error rate of nanopore reads computed by aligning the reads against their reference sequences. This was possible because the references are at least 15% divergent from each other, which is at the limit of sequence corruption for nanopore reads.</p>
-<p><a class="anchor" id="distance_matrix"></a></p>
+<p>The above plot shows the raw error rate of nanopore reads computed by aligning the reads against their reference sequences. This was possible because the references are at least 15% divergent from each other, which is at the limit of sequence corruption for nanopore reads.</p>
 </section>
 </section>
 <section id="computing-pairwise-distance-between-sequences">

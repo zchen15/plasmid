@@ -112,6 +112,9 @@
 <div class="viewcode-block" id="Aligner"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner">[docs]</a><span class="k">class</span> <span class="nc">Aligner</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    This class holds functions pertaining to sequence alignment and analysis</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        params (dict): stores alignment parameters and run settings alignment tools contained in this class</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;verbose&#39;</span><span class="p">:</span><span class="kc">False</span><span class="p">}</span>
     <span class="n">params</span><span class="p">[</span><span class="s1">&#39;parasail&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;g1&#39;</span><span class="p">:</span><span class="mi">5</span><span class="p">,</span>
@@ -171,11 +174,14 @@
     
 <div class="viewcode-block" id="Aligner.create_tempdir"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.create_tempdir">[docs]</a>    <span class="k">def</span> <span class="nf">create_tempdir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Create a temporary working directory for aligners</span>
+<span class="sd">        Create a temporary working directory for aligners. Name of the temporary working directory is stored in self.params[&#39;work_dir&#39;]</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;work_dir&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;aligner_&#39;</span><span class="p">)</span></div>
         
 <div class="viewcode-block" id="Aligner.run"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Wrapper for running functions contained in this class via commandline</span>
+<span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">qry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;query&#39;</span><span class="p">]</span>
         <span class="n">ref</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;reference&#39;</span><span class="p">]</span>
         <span class="n">df_q</span> <span class="o">=</span> <span class="n">read_to_df</span><span class="p">(</span><span class="n">qry</span><span class="p">)</span>
@@ -187,15 +193,39 @@
         <span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;ofile&#39;</span><span class="p">],</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">df</span></div>
 
-<div class="viewcode-block" id="Aligner.search_DNA"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.search_DNA">[docs]</a>    <span class="k">def</span> <span class="nf">search_DNA</span><span class="p">(</span><span class="n">qry</span><span class="p">,</span> <span class="n">ref</span><span class="p">,</span> <span class="n">fwd_only</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">circular</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">exact</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="Aligner.string_match"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.string_match">[docs]</a>    <span class="k">def</span> <span class="nf">string_match</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">qry</span><span class="p">:</span><span class="nb">list</span><span class="p">,</span> <span class="n">ref</span><span class="p">:</span><span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Find all instances of the query sequence in the reference.</span>
-<span class="sd">        qry = DNA subsequence to find</span>
-<span class="sd">        ref = DNA sequence containing the query subsequence</span>
-<span class="sd">        fwd_only = search in forward orientation 5&#39;-&gt;3&#39; only. Defaults to searching forward and reverse complement</span>
-<span class="sd">        circular = search circularly</span>
-<span class="sd">        exact = use exact substring search</span>
-<span class="sd">        returns a dataframe with columns [start, end, strand]</span>
+<span class="sd">        Performs exact string search of query sequences against reference sequences</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            qry: list of query sequences </span>
+<span class="sd">            ref: list of reference sequences</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A pandas DataFrame with columns [query_id, ref_id, start, end, strand]</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ref</span><span class="p">)):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">qry</span><span class="p">)):</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">search_DNA</span><span class="p">(</span><span class="n">qseq</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">rseq</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="n">x</span><span class="p">[</span><span class="s1">&#39;query_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;query_&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                <span class="n">x</span><span class="p">[</span><span class="s1">&#39;ref_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;ref_&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+                <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">out</span><span class="p">)</span></div>
+ 
+<div class="viewcode-block" id="Aligner.search_DNA"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.search_DNA">[docs]</a>    <span class="k">def</span> <span class="nf">search_DNA</span><span class="p">(</span><span class="n">qry</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span> <span class="n">ref</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span> <span class="n">fwd_only</span><span class="p">:</span><span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">circular</span><span class="p">:</span><span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">exact</span><span class="p">:</span><span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Find all instances of the query sequence in the reference</span>
+<span class="sd">    </span>
+<span class="sd">        Args:</span>
+<span class="sd">            qry: DNA subsequence to find</span>
+<span class="sd">            ref: DNA sequence containing the query subsequence</span>
+<span class="sd">            fwd_only: search in forward orientation 5&#39;-&gt;3&#39; only. Defaults to searching forward and reverse complement</span>
+<span class="sd">            circular: search string as though its a circular plasmid sequence</span>
+<span class="sd">            exact: use exact substring search</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pandas dataframe with columns [start, end, strand]</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="c1"># make it case in sensitive</span>
         <span class="n">qry</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">qry</span><span class="p">)</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
@@ -241,13 +271,18 @@
         <span class="c1"># write the output</span>
         <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;start&#39;</span><span class="p">,</span><span class="s1">&#39;end&#39;</span><span class="p">,</span><span class="s1">&#39;strand&#39;</span><span class="p">])</span></div>
 
-<div class="viewcode-block" id="Aligner.search_protein"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.search_protein">[docs]</a>    <span class="k">def</span> <span class="nf">search_protein</span><span class="p">(</span><span class="n">qry</span><span class="p">,</span> <span class="n">ref</span><span class="p">,</span> <span class="n">fwd_only</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">circular</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="Aligner.search_protein"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.search_protein">[docs]</a>    <span class="k">def</span> <span class="nf">search_protein</span><span class="p">(</span><span class="n">qry</span><span class="p">,</span> <span class="n">ref</span><span class="p">,</span> <span class="n">fwd_only</span><span class="p">:</span><span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">circular</span><span class="p">:</span><span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Finds all instances of the query protein sequence in the reference DNA sequence. Forward and reverse complements are searched.</span>
-<span class="sd">        qry = protein sequence</span>
-<span class="sd">        ref = DNA sequence</span>
-<span class="sd">        circular = assume reference sequence is circular and search around origin</span>
-<span class="sd">        returns a dataframe with columns [start, end, strand]</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            qry (str) = protein sequence</span>
+<span class="sd">            ref (str) = DNA sequence</span>
+<span class="sd">            fwd_only: search only in the forward direction</span>
+<span class="sd">            circular: assume reference sequence is circular and search around origin</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            A pandas DataFrame with columns [start, end, strand]</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">qry</span><span class="p">)</span> <span class="o">==</span> <span class="n">Bio</span><span class="o">.</span><span class="n">SeqRecord</span><span class="o">.</span><span class="n">SeqRecord</span><span class="p">:</span>
             <span class="n">qry</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">qry</span><span class="o">.</span><span class="n">seq</span><span class="p">)</span>
@@ -295,16 +330,17 @@
                 <span class="n">rev_out</span><span class="o">.</span><span class="n">iat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
             <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">fwd_out</span><span class="p">,</span> <span class="n">rev_out</span><span class="p">])</span></div>
 
-<div class="viewcode-block" id="Aligner.search_ORF"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.search_ORF">[docs]</a>    <span class="k">def</span> <span class="nf">search_ORF</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="s1">&#39;Standard&#39;</span><span class="p">,</span> <span class="n">fwd_only</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="Aligner.search_ORF"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.search_ORF">[docs]</a>    <span class="k">def</span> <span class="nf">search_ORF</span><span class="p">(</span><span class="n">seq</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span> <span class="n">table</span><span class="p">:</span><span class="nb">str</span><span class="o">=</span><span class="s1">&#39;Standard&#39;</span><span class="p">,</span> <span class="n">fwd_only</span><span class="p">:</span><span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Generates a dataframe of open reading frames for a given sequence</span>
 <span class="sd">        </span>
 <span class="sd">        Args:</span>
 <span class="sd">            seq (str): input sequence</span>
 <span class="sd">            table (str): codon table to use</span>
+<span class="sd">            fwd_only (bool): search only in forward orientation</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            pd.Dataframe: Dataframe with columns [name, start, stop, orientation, amino acid sequence]</span>
+<span class="sd">            pandas DataFrame with columns [name, start, stop, orientation, amino acid sequence]</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="c1"># search in forward direction</span>
         <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
@@ -330,10 +366,17 @@
         <span class="n">df2</span><span class="p">[</span><span class="s1">&#39;start&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span> <span class="o">-</span> <span class="n">stop</span>
         <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df</span><span class="p">,</span><span class="n">df2</span><span class="p">])</span></div>
     
-<div class="viewcode-block" id="Aligner.get_ORF"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.get_ORF">[docs]</a>    <span class="k">def</span> <span class="nf">get_ORF</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="s1">&#39;M&#39;</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="s1">&#39;*&#39;</span><span class="p">):</span>
+<div class="viewcode-block" id="Aligner.get_ORF"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.get_ORF">[docs]</a>    <span class="k">def</span> <span class="nf">get_ORF</span><span class="p">(</span><span class="n">seq</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span><span class="nb">str</span><span class="o">=</span><span class="s1">&#39;M&#39;</span><span class="p">,</span> <span class="n">stop</span><span class="p">:</span><span class="nb">str</span><span class="o">=</span><span class="s1">&#39;*&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Get list of ORF based on start and stop codons</span>
-<span class="sd">        return list of sequences</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            seq: nucleotide sequence to start</span>
+<span class="sd">            start: start codon</span>
+<span class="sd">            stop: stop codon</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            List of open reading frames</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">))</span>
         <span class="n">seq_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">seq</span><span class="p">])</span>
@@ -363,21 +406,7 @@
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">return</span> <span class="o">-</span><span class="mi">1</span></div>
 
-<div class="viewcode-block" id="Aligner.string_match"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.string_match">[docs]</a>    <span class="k">def</span> <span class="nf">string_match</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">qry</span><span class="p">,</span> <span class="n">ref</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Exact string search against query and reference</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">qry</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">str_to_df</span><span class="p">(</span><span class="n">qry</span><span class="p">,</span> <span class="s1">&#39;query&#39;</span><span class="p">)</span>
-        <span class="n">ref</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">str_to_df</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="s1">&#39;ref&#39;</span><span class="p">)</span>
-        <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">rname</span><span class="p">,</span> <span class="n">rseq</span> <span class="ow">in</span> <span class="n">ref</span><span class="p">[[</span><span class="s1">&#39;name&#39;</span><span class="p">,</span><span class="s1">&#39;sequence&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">qname</span><span class="p">,</span> <span class="n">qseq</span> <span class="ow">in</span> <span class="n">qry</span><span class="p">[[</span><span class="s1">&#39;name&#39;</span><span class="p">,</span><span class="s1">&#39;sequence&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
-                <span class="n">x</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">search_DNA</span><span class="p">(</span><span class="n">qseq</span><span class="p">,</span> <span class="n">rseq</span><span class="p">)</span>
-                <span class="n">x</span><span class="p">[</span><span class="s1">&#39;query_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">qname</span>
-                <span class="n">x</span><span class="p">[</span><span class="s1">&#39;ref_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rname</span>
-                <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">out</span><span class="p">)</span></div>
-    
+   
 <div class="viewcode-block" id="Aligner.spoa"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.spoa">[docs]</a>    <span class="k">def</span> <span class="nf">spoa</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seq</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Runs multi-sequence alignment on provided sequences with spoa</span>
@@ -662,35 +691,23 @@
                 <span class="n">i2</span><span class="o">+=</span><span class="n">span</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">q_aligned</span><span class="p">,</span> <span class="n">ref_aligned</span><span class="p">,</span> <span class="n">align</span><span class="p">]</span></div>
     
-<div class="viewcode-block" id="Aligner.filter_idx"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.filter_idx">[docs]</a>    <span class="k">def</span> <span class="nf">filter_idx</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s1">&#39;score&#39;</span><span class="p">,</span> <span class="n">opt</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s1">&#39;idxmax&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<div class="viewcode-block" id="Aligner.filter_idx"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.filter_idx">[docs]</a>    <span class="k">def</span> <span class="nf">filter_idx</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s1">&#39;score&#39;</span><span class="p">,</span> <span class="n">opt</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s1">&#39;idxmax&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Get max values organized by a certain column in a pandas dataframe</span>
+<span class="sd">        Get max, mean, median, or min values organized by a certain column in a pandas dataframe</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            col = column to group by</span>
-<span class="sd">            value = column to sort</span>
-<span class="sd">            opt = idxmax or idxmin</span>
+<span class="sd">            col (str): column to group by</span>
+<span class="sd">            value (str) : column to sort</span>
+<span class="sd">            opt (str) : idxmax or idxmin</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            pandas dataframe</span>
+<span class="sd">            A pandas DataFrame of filtered values</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">idx</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="n">col</span><span class="p">)</span><span class="o">.</span><span class="n">agg</span><span class="p">({</span><span class="n">value</span><span class="p">:</span><span class="n">opt</span><span class="p">})</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">idx</span><span class="p">[</span><span class="n">value</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span></div>
     
-<div class="viewcode-block" id="Aligner.str_to_df"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.str_to_df">[docs]</a>    <span class="k">def</span> <span class="nf">str_to_df</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="s1">&#39;seq&#39;</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Format query and ref to dataframe if not already        </span>
-<span class="sd">        x = string or list of strings</span>
-<span class="sd">        returns dataframe</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
-            <span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span>
-        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-            <span class="n">x</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;sequence&#39;</span><span class="p">])</span>
-            <span class="n">x</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">header</span><span class="o">+</span><span class="s1">&#39;_&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))]</span>
-        <span class="k">return</span> <span class="n">x</span></div>
-    
+   
 <div class="viewcode-block" id="Aligner.minimap2_get_index"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.minimap2_get_index">[docs]</a>    <span class="k">def</span> <span class="nf">minimap2_get_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">database</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s1">&#39;index.mmi&#39;</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        This is a wrapper for the minimap2 to build the fn_index</span>
