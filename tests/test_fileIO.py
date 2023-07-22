@@ -6,7 +6,7 @@ import glob
 
 def test_read_fastq():
     # Read a fastq file
-    fname = 'data/COI/CO1_0.fq.bz2'
+    fname = 'data/coi.fq.bz2'
     x = plasmid.fileIO.read_fastq(fname)
     assert type(x).__name__ == 'DataFrame'
     col = ['name','sequence','quality']
@@ -33,7 +33,7 @@ def test_read_fastx():
         assert c in x.columns
 
     # Read a fastq file
-    fname = 'data/COI/CO1_0.fq.bz2'
+    fname = 'data/coi.fq.bz2'
     x = plasmid.fileIO.read_fastx(fname)
     assert type(x).__name__ == 'DataFrame'
     col = ['name','sequence','quality']

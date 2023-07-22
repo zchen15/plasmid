@@ -8,8 +8,8 @@ import os
 
 def test_mappy():
     # Read a fasta and fastq file
-    f1 = 'data/COI/CO1_0.fq.bz2'
-    f2 = 'data/COI/CO1_0.fq.bz2'
+    f1 = 'data/coi.fq.bz2'
+    f2 = 'data/coi.fq.bz2'
     f1 = plasmid.fileIO.read_fastq(f1)
     f2 = plasmid.fileIO.read_fastq(f2)
     f1 = f1.iloc[:10]
@@ -24,8 +24,8 @@ def test_mappy():
     return x
 
 def test_parasail():
-    f1 = 'data/COI/CO1_0.fq.bz2'
-    f2 = 'data/COI/CO1_0.fq.bz2'
+    f1 = 'data/coi.fq.bz2'
+    f2 = 'data/coi.fq.bz2'
     f1 = plasmid.fileIO.read_fastq(f1)
     f2 = plasmid.fileIO.read_fastq(f2)
     f1 = f1.iloc[:10]
@@ -55,8 +55,8 @@ def test_pyspoa():
     return x
 
 def test_minimap2():
-    f1 = 'data/COI/CO1_0.fq.bz2'
-    f2 = 'data/COI/CO1_0.fq.bz2'
+    f1 = 'data/coi.fq.bz2'
+    f2 = 'data/coi.fq.bz2'
     f1 = plasmid.fileIO.read_fastq(f1)
     f2 = plasmid.fileIO.read_fastq(f2)
     f1 = f1.iloc[:10]
@@ -82,8 +82,8 @@ def test_minimap2():
     return x
 
 def test_bwa():
-    f1 = 'data/COI/CO1_0.fq.bz2'
-    f2 = 'data/COI/CO1_0.fq.bz2'
+    f1 = 'data/coi.fq.bz2'
+    f2 = 'data/coi.fq.bz2'
     f1 = plasmid.fileIO.read_fastq(f1)
     f2 = plasmid.fileIO.read_fastq(f2)
     f1 = f1.iloc[:10]
@@ -102,8 +102,8 @@ def test_bwa():
     return x
 
 def test_bowtie2():
-    f1 = 'data/COI/CO1_0.fq.bz2'
-    f2 = 'data/COI/CO1_0.fq.bz2'
+    f1 = 'data/coi.fq.bz2'
+    f2 = 'data/coi.fq.bz2'
     f1 = plasmid.fileIO.read_fastq(f1)
     f2 = plasmid.fileIO.read_fastq(f2)
     f1 = f1.iloc[:10]
@@ -122,7 +122,7 @@ def test_bowtie2():
     return x
 
 def test_get_fastq_statistics():
-    f1 = 'data/COI/CO1_0.fq.bz2'
+    f1 = 'data/coi.fq.bz2'
     f1 = plasmid.fileIO.read_fastq(f1)
     f1 = f1.iloc[:10]
     x = plasmid.Aligner.get_fastq_statistics(f1)
