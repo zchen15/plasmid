@@ -286,10 +286,13 @@
 <div class="viewcode-block" id="Aligner.search_ORF"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.search_ORF">[docs]</a>    <span class="k">def</span> <span class="nf">search_ORF</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="s1">&#39;Standard&#39;</span><span class="p">,</span> <span class="n">fwd_only</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Generates a dataframe of open reading frames for a given sequence</span>
-<span class="sd">        seq = input sequence</span>
-<span class="sd">        table = codon table to use</span>
-<span class="sd">        return pandas Dataframe with columns</span>
-<span class="sd">            [name, start, stop, orientation, amino acid sequence]</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            seq (str): input sequence</span>
+<span class="sd">            table (str): codon table to use</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.Dataframe: Dataframe with columns [name, start, stop, orientation, amino acid sequence]</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="c1"># search in forward direction</span>
         <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
