@@ -10,6 +10,7 @@
 
 echo generating html docs with sphinx
 mkdir docs
+rm -rf docs/html
 cd sphinx
 make html
 cp index.html ../docs/

@@ -107,15 +107,37 @@ class Aligner:
         df.to_csv(self.params['ofile'], index=False)
         return df
 
-    def search_DNA(qry, ref, fwd_only=False, circular=False, exact=False):
+    def string_match(self, qry:list, ref:list) -> pandas.core.frame.DataFrame:
         '''
-        Find all instances of the query sequence in the reference.
-        qry = DNA subsequence to find
-        ref = DNA sequence containing the query subsequence
-        fwd_only = search in forward orientation 5'->3' only. Defaults to searching forward and reverse complement
-        circular = search circularly
-        exact = use exact substring search
-        returns a dataframe with columns [start, end, strand]
+        Performs exact string search of query sequences against reference sequences
+        Args:
+            qry (list) : list of query sequences 
+            ref (list) : list of reference sequences
+
+        Returns:
+            pandas.core.frame.DataFrame: A pandas DataFrame with columns [query_id, ref_id, start, end, strand]
+        '''
+        out = []
+        for i in range(len(ref)):
+            for j in range(len(qry)):
+                x = Aligner.search_DNA(qseq[j], rseq[i])
+                x['query_id'] = 'query_'+str(i)
+                x['ref_id'] = 'ref_'+str(j)
+                out.append(x)
+        return pd.concat(out)
+ 
+    def search_DNA(qry:str, ref:str, fwd_only:bool=False, circular:bool=False, exact:bool=False) -> pandas.core.frame.DataFrame:
+        '''
+        Find all instances of the query sequence in the reference
+        Args:
+            qry (str): DNA subsequence to find
+            ref (str): DNA sequence containing the query subsequence
+            fwd_only (bool): search in forward orientation 5'->3' only. Defaults to searching forward and reverse complement
+            circular (bool): search string as though its a circular plasmid sequence
+            exact (bool): use exact substring search
+
+        Returns:
+            pandas.core.frame.DataFrame: pandas dataframe with columns [start, end, strand]
         '''
         # make it case in sensitive
         qry = str(qry).upper()
@@ -215,16 +237,17 @@ class Aligner:
                 rev_out.iat[i,2] = -1
             return pd.concat([fwd_out, rev_out])
 
-    def search_ORF(seq, table='Standard', fwd_only=False):
+    def search_ORF(seq:str, table:str='Standard', fwd_only:bool=False) -> pandas.core.frame.DataFrame:
         '''
         Generates a dataframe of open reading frames for a given sequence
         
         Args:
             seq (str): input sequence
             table (str): codon table to use
+            fwd_only (bool): search only in forward orientation
 
         Returns:
-            pd.Dataframe: Dataframe with columns [name, start, stop, orientation, amino acid sequence]
+            pandas.core.frame.DataFrame: pandas dataframe with columns [name, start, stop, orientation, amino acid sequence]
         '''
         # search in forward direction
         out = []
@@ -283,21 +306,7 @@ class Aligner:
         '''
         return -1
 
-    def string_match(self, qry, ref):
-        '''
-        Exact string search against query and reference
-        '''
-        qry = Aligner.str_to_df(qry, 'query')
-        ref = Aligner.str_to_df(ref, 'ref')
-        out = []
-        for rname, rseq in ref[['name','sequence']].values:
-            for qname, qseq in qry[['name','sequence']].values:
-                x = Aligner.search_DNA(qseq, rseq)
-                x['query_id'] = qname
-                x['ref_id'] = rname
-                out.append(x)
-        return pd.concat(out)
-    
+   
     def spoa(self, seq):
         '''
         Runs multi-sequence alignment on provided sequences with spoa
@@ -582,35 +591,23 @@ class Aligner:
                 i2+=span
         return [q_aligned, ref_aligned, align]
     
-    def filter_idx(df: pd.DataFrame, col: list, value: str='score', opt: str='idxmax') -> pd.DataFrame:
+    def filter_idx(df: pd.DataFrame, col: list, value: str='score', opt: str='idxmax') -> pandas.core.frame.DataFrame:
         '''
-        Get max values organized by a certain column in a pandas dataframe
+        Get max, mean, median, or min values organized by a certain column in a pandas dataframe
 
         Args:
-            col = column to group by
-            value = column to sort
-            opt = idxmax or idxmin
+            col (str): column to group by
+            value (str) : column to sort
+            opt (str) : idxmax or idxmin
 
         Returns:
-            pandas dataframe
+            pandas.core.frame.DataFrame: A pandas DataFrame of filtered values
         '''
         df=df.reset_index(drop=True)
         idx = df.groupby(by=col).agg({value:opt}).reset_index()
         return df.iloc[idx[value].values].reset_index()
     
-    def str_to_df(x, header='seq'):
-        '''
-        Format query and ref to dataframe if not already        
-        x = string or list of strings
-        returns dataframe
-        '''
-        if type(x) == str:
-            x = [x]
-        if type(x) == list or type(x) == np.ndarray:
-            x = pd.DataFrame(x, columns=['sequence'])
-            x['name'] = [header+'_'+str(i) for i in range(len(x))]
-        return x
-    
+   
     def minimap2_get_index(self, database, filename='index.mmi'):
         '''
         This is a wrapper for the minimap2 to build the fn_index
