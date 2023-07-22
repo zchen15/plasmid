@@ -656,7 +656,8 @@
 <span class="sd">            value = column to sort</span>
 <span class="sd">            opt = idxmax or idxmin</span>
 
-<span class="sd">        Return:</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            pandas dataframe</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">idx</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="n">col</span><span class="p">)</span><span class="o">.</span><span class="n">agg</span><span class="p">({</span><span class="n">value</span><span class="p">:</span><span class="n">opt</span><span class="p">})</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>

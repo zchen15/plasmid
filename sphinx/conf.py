@@ -6,6 +6,10 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+#import os
+#import sys
+#sys.path.insert(0, os.path.abspath('..'))
+
 project = 'Plasmid: A python library for gene editing'
 copyright = '2023, Zhewei Chen'
 author = 'Zhewei Chen'
@@ -17,7 +21,7 @@ release = '2023.06.29'
 extensions = ['sphinx.ext.napoleon','sphinx.ext.autosummary','sphinx.ext.todo','sphinx.ext.viewcode','sphinx.ext.autodoc']
 
 templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['setup.py','_build', 'Thumbs.db', '.DS_Store']
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

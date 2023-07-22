@@ -218,10 +218,13 @@ class Aligner:
     def search_ORF(seq, table='Standard', fwd_only=False):
         '''
         Generates a dataframe of open reading frames for a given sequence
-        seq = input sequence
-        table = codon table to use
-        return pandas Dataframe with columns
-            [name, start, stop, orientation, amino acid sequence]
+        
+        Args:
+            seq (str): input sequence
+            table (str): codon table to use
+
+        Returns:
+            pd.Dataframe: Dataframe with columns [name, start, stop, orientation, amino acid sequence]
         '''
         # search in forward direction
         out = []
