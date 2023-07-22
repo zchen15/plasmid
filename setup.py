@@ -1,11 +1,13 @@
+#!/usr/bin/env python
+
 from setuptools import setup, find_packages
 
-def get_version():
-    fname = 'src/plasmid/__init__.py'
+def get_version(fname = 'src/plasmid/__init__.py'):
     out = {'__version__':'',
            '__author__':'',
            '__name__':'',
-           '__email__':''}
+           '__email__':'',
+           '__description__':''}
     with open(fname,'r') as f:
         x = f.read()
     x = x.split('\n')
@@ -21,6 +23,7 @@ __version__ = info['__version__']
 __author__ = info['__author__']
 __name__ = info['__name__']
 __email__ = info['__email__']
+__description__ = info['__description__']
 
 def get_requirements(fname):
     with open(fname,'r') as f:
@@ -34,7 +37,6 @@ def read(path):
     return out
 
 long_description = read('README.md')
-
 setup(
     install_requires=get_requirements('requirements.txt'),
     python_requires='>=3.6',
@@ -45,12 +47,13 @@ setup(
     author_email=__email__,
     maintainer=__author__,
     maintainer_email=__email__,
-    description='Plasmid: A python package for the visualizing, editing, and assembling DNA',
+    description=__description__,
     long_description=long_description,
     long_description_content_type='text/markdown',
     zip_safe=False,
-    packages=find_packages(include=[__name__]),
     include_package_data=False,
+    packages=find_packages('src'),
+    package_dir={'':'src'},
     url='https://github.com/zchen15/plasmid',
     keywords='gene editor, plasmid, genbank, dna assembly, genomics, synthetic biology',
     classifiers=[
