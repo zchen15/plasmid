@@ -588,7 +588,7 @@ class Aligner:
             value = column to sort
             opt = idxmax or idxmin
 
-        Return:
+        Returns:
             pandas dataframe
         '''
         df=df.reset_index(drop=True)
