@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>plasmid.aligner &mdash; Plasmid: A python library for gene editing 2023.06.29 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Plasmid: A python library for gene editing
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Plasmid: A python library for gene editing</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">plasmid.aligner</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for plasmid.aligner</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># Class function for aligners</span>
+
+<span class="c1"># computing libraries</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="c1"># reading and writing genbank files</span>
+<span class="kn">import</span> <span class="nn">Bio</span>
+<span class="kn">import</span> <span class="nn">Bio.SeqUtils</span>
+<span class="kn">import</span> <span class="nn">spoa</span>
+<span class="kn">import</span> <span class="nn">parasail</span>
+<span class="kn">import</span> <span class="nn">mappy</span>
+<span class="kn">import</span> <span class="nn">sklearn</span>
+
+<span class="c1"># system and time</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+
+<span class="c1"># import custom libraries</span>
+<span class="kn">from</span> <span class="nn">.misc</span> <span class="kn">import</span> <span class="n">read_to_df</span>
+<span class="kn">from</span> <span class="nn">.misc</span> <span class="kn">import</span> <span class="n">revcomp</span>
+<span class="kn">from</span> <span class="nn">.misc</span> <span class="kn">import</span> <span class="n">translate</span>
+<span class="kn">from</span> <span class="nn">.misc</span> <span class="kn">import</span> <span class="n">substring_search</span>
+<span class="kn">from</span> <span class="nn">.misc</span> <span class="kn">import</span> <span class="n">isDNA</span>
+<span class="kn">from</span> <span class="nn">.misc</span> <span class="kn">import</span> <span class="n">load_args</span>
+<span class="kn">from</span> <span class="nn">.fileIO</span> <span class="kn">import</span> <span class="n">fileIO</span>
+<span class="kn">from</span> <span class="nn">.graphic</span> <span class="kn">import</span> <span class="n">Graphic</span>
+<span class="kn">from</span> <span class="nn">.graphic</span> <span class="kn">import</span> <span class="n">colormaps</span>
+
+<div class="viewcode-block" id="Aligner"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner">[docs]</a><span class="k">class</span> <span class="nc">Aligner</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    This class holds functions pertaining to sequence alignment and analysis</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;verbose&#39;</span><span class="p">:</span><span class="kc">False</span><span class="p">}</span>
+    <span class="n">params</span><span class="p">[</span><span class="s1">&#39;parasail&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;g1&#39;</span><span class="p">:</span><span class="mi">5</span><span class="p">,</span>
+                          <span class="s1">&#39;g2&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span>
+                          <span class="s1">&#39;mat&#39;</span><span class="p">:</span><span class="n">parasail</span><span class="o">.</span><span class="n">nuc44</span><span class="p">,</span>
+                          <span class="s1">&#39;method&#39;</span><span class="p">:</span><span class="s1">&#39;sg_trace_scan_16&#39;</span><span class="p">}</span>
+
+    <span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;k&#39;</span><span class="p">:</span><span class="mi">7</span><span class="p">,</span>
+                         <span class="s1">&#39;w&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span>
+                         <span class="s1">&#39;config&#39;</span><span class="p">:</span><span class="s1">&#39;-x map-ont -P&#39;</span><span class="p">,</span>
+                         <span class="s1">&#39;cigar&#39;</span><span class="p">:</span><span class="kc">True</span><span class="p">}</span>
+
+    <span class="n">params</span><span class="p">[</span><span class="s1">&#39;bwa&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;config&#39;</span><span class="p">:</span><span class="s1">&#39;mem -a&#39;</span><span class="p">}</span>
+    <span class="n">params</span><span class="p">[</span><span class="s1">&#39;bowtie2&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;config&#39;</span><span class="p">:</span><span class="s1">&#39;-a --very-sensitive-local --threads 1 --quiet&#39;</span><span class="p">}</span>
+    
+    <span class="n">params</span><span class="p">[</span><span class="s1">&#39;spoa&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;algorithm&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span>
+                      <span class="s1">&#39;genmsa&#39;</span><span class="p">:</span><span class="kc">True</span><span class="p">,</span>
+                      <span class="s1">&#39;m&#39;</span><span class="p">:</span><span class="mi">5</span><span class="p">,</span>
+                      <span class="s1">&#39;n&#39;</span><span class="p">:</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span>
+                      <span class="s1">&#39;g&#39;</span><span class="p">:</span><span class="o">-</span><span class="mi">8</span><span class="p">,</span>
+                      <span class="s1">&#39;e&#39;</span><span class="p">:</span><span class="o">-</span><span class="mi">6</span><span class="p">,</span>
+                      <span class="s1">&#39;q&#39;</span><span class="p">:</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span>
+                      <span class="s1">&#39;c&#39;</span><span class="p">:</span><span class="o">-</span><span class="mi">4</span><span class="p">}</span>
+    
+    <span class="n">params</span><span class="p">[</span><span class="s1">&#39;work_dir&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">params</span><span class="p">[</span><span class="s1">&#39;binaries&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;minimap&#39;</span><span class="p">:</span><span class="s1">&#39;minimap2&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;bwa&#39;</span><span class="p">:</span><span class="s1">&#39;bwa&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;bowtie2&#39;</span><span class="p">:</span><span class="s1">&#39;bowtie2&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;mmseqs2&#39;</span><span class="p">:</span><span class="s1">&#39;mmseqs&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;ngmerge&#39;</span><span class="p">:</span><span class="s1">&#39;./ngmerge&#39;</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">args</span><span class="o">!=</span><span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="n">load_args</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_tempdir</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Destructor class to clean up temporary files</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">folder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;work_dir&#39;</span><span class="p">]</span>
+        <span class="n">folder</span><span class="o">.</span><span class="n">cleanup</span><span class="p">()</span>
+    
+    <span class="k">def</span> <span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Entry function for use in with statements</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="bp">self</span>
+    
+    <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Exit function for use in with statements</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">del</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="Aligner.create_tempdir"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.create_tempdir">[docs]</a>    <span class="k">def</span> <span class="nf">create_tempdir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Create a temporary working directory for aligners</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;work_dir&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;aligner_&#39;</span><span class="p">)</span></div>
+        
+<div class="viewcode-block" id="Aligner.run"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">qry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;query&#39;</span><span class="p">]</span>
+        <span class="n">ref</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;reference&#39;</span><span class="p">]</span>
+        <span class="n">df_q</span> <span class="o">=</span> <span class="n">read_to_df</span><span class="p">(</span><span class="n">qry</span><span class="p">)</span>
+        <span class="n">df_r</span> <span class="o">=</span> <span class="n">read_to_df</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">])</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">df_q</span><span class="p">,</span> <span class="n">df_r</span><span class="p">)</span>
+        <span class="n">sort</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;sort&#39;</span><span class="p">]</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">filter_idx</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;query_id&#39;</span><span class="p">,</span> <span class="n">sort</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">sort</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;ofile&#39;</span><span class="p">],</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">df</span></div>
+
+<div class="viewcode-block" id="Aligner.search_DNA"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.search_DNA">[docs]</a>    <span class="k">def</span> <span class="nf">search_DNA</span><span class="p">(</span><span class="n">qry</span><span class="p">,</span> <span class="n">ref</span><span class="p">,</span> <span class="n">fwd_only</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">circular</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">exact</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Find all instances of the query sequence in the reference.</span>
+<span class="sd">        qry = DNA subsequence to find</span>
+<span class="sd">        ref = DNA sequence containing the query subsequence</span>
+<span class="sd">        fwd_only = search in forward orientation 5&#39;-&gt;3&#39; only. Defaults to searching forward and reverse complement</span>
+<span class="sd">        circular = search circularly</span>
+<span class="sd">        exact = use exact substring search</span>
+<span class="sd">        returns a dataframe with columns [start, end, strand]</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="c1"># make it case in sensitive</span>
+        <span class="n">qry</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">qry</span><span class="p">)</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+        <span class="n">ref</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+        <span class="n">qry</span> <span class="o">=</span> <span class="n">qry</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">qry</span> <span class="o">=</span> <span class="n">qry</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">fwd_only</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">circular</span><span class="p">:</span>
+                <span class="n">ref</span><span class="o">+=</span><span class="n">ref</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">if</span> <span class="n">isDNA</span><span class="p">(</span><span class="n">qry</span><span class="p">)</span> <span class="ow">and</span> <span class="n">exact</span><span class="o">==</span><span class="kc">False</span><span class="p">:</span>
+                <span class="c1"># search with ambiguous bases</span>
+                <span class="n">fwd</span> <span class="o">=</span> <span class="n">Bio</span><span class="o">.</span><span class="n">SeqUtils</span><span class="o">.</span><span class="n">nt_search</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="n">qry</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">fwd</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+                    <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="o">+</span><span class="nb">len</span><span class="p">(</span><span class="n">qry</span><span class="p">),</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># use exact string search</span>
+                <span class="n">fwd</span> <span class="o">=</span> <span class="n">substring_search</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="n">qry</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">fwd</span><span class="p">:</span>
+                    <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="o">+</span><span class="nb">len</span><span class="p">(</span><span class="n">qry</span><span class="p">),</span> <span class="mi">1</span><span class="p">])</span>
+
+            <span class="k">if</span> <span class="n">circular</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">out</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+                <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="n">out</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">L</span><span class="p">]</span>
+                <span class="n">out</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">%</span><span class="n">L</span>
+                <span class="n">out</span><span class="p">[</span><span class="n">out</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">L</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># fwd and reverse search</span>
+            <span class="n">fwd_out</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">search_DNA</span><span class="p">(</span><span class="n">qry</span><span class="p">,</span> <span class="n">ref</span><span class="p">,</span> <span class="n">fwd_only</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">circular</span><span class="o">=</span><span class="n">circular</span><span class="p">,</span> <span class="n">exact</span><span class="o">=</span><span class="n">exact</span><span class="p">)</span>
+            <span class="n">rev_ref</span> <span class="o">=</span> <span class="n">revcomp</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span>
+            <span class="n">rev_out</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">search_DNA</span><span class="p">(</span><span class="n">qry</span><span class="p">,</span> <span class="n">rev_ref</span><span class="p">,</span> <span class="n">fwd_only</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">circular</span><span class="o">=</span><span class="n">circular</span><span class="p">,</span> <span class="n">exact</span><span class="o">=</span><span class="n">exact</span><span class="p">)</span>
+            <span class="c1"># correct reverse locations</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">rev_out</span><span class="p">)):</span>
+                <span class="n">s1</span> <span class="o">=</span> <span class="n">rev_out</span><span class="o">.</span><span class="n">iat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">s2</span> <span class="o">=</span> <span class="n">rev_out</span><span class="o">.</span><span class="n">iat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">rev_out</span><span class="o">.</span><span class="n">iat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span> <span class="o">-</span> <span class="n">s2</span> 
+                <span class="n">rev_out</span><span class="o">.</span><span class="n">iat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span> <span class="o">-</span> <span class="n">s1</span>
+                <span class="n">rev_out</span><span class="o">.</span><span class="n">iat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">fwd_out</span><span class="p">,</span> <span class="n">rev_out</span><span class="p">])</span>
+
+        <span class="c1"># write the output</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;start&#39;</span><span class="p">,</span><span class="s1">&#39;end&#39;</span><span class="p">,</span><span class="s1">&#39;strand&#39;</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="Aligner.search_protein"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.search_protein">[docs]</a>    <span class="k">def</span> <span class="nf">search_protein</span><span class="p">(</span><span class="n">qry</span><span class="p">,</span> <span class="n">ref</span><span class="p">,</span> <span class="n">fwd_only</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">circular</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Finds all instances of the query protein sequence in the reference DNA sequence. Forward and reverse complements are searched.</span>
+<span class="sd">        qry = protein sequence</span>
+<span class="sd">        ref = DNA sequence</span>
+<span class="sd">        circular = assume reference sequence is circular and search around origin</span>
+<span class="sd">        returns a dataframe with columns [start, end, strand]</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">qry</span><span class="p">)</span> <span class="o">==</span> <span class="n">Bio</span><span class="o">.</span><span class="n">SeqRecord</span><span class="o">.</span><span class="n">SeqRecord</span><span class="p">:</span>
+            <span class="n">qry</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">qry</span><span class="o">.</span><span class="n">seq</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">qry</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">qry</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span> <span class="o">==</span> <span class="n">Bio</span><span class="o">.</span><span class="n">SeqRecord</span><span class="o">.</span><span class="n">SeqRecord</span><span class="p">:</span>
+            <span class="n">ref</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ref</span><span class="o">.</span><span class="n">seq</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ref</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span>
+        
+        <span class="c1"># look for stuff in forward 5&#39;-&gt;3&#39; at each frame shift</span>
+        <span class="k">if</span> <span class="n">fwd_only</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">circular</span><span class="p">:</span>
+                    <span class="n">db</span> <span class="o">=</span> <span class="n">Bio</span><span class="o">.</span><span class="n">Seq</span><span class="o">.</span><span class="n">Seq</span><span class="p">(</span><span class="n">ref</span><span class="o">+</span><span class="n">ref</span><span class="p">)[</span><span class="n">i</span><span class="p">:]</span><span class="o">.</span><span class="n">translate</span><span class="p">()</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">db</span> <span class="o">=</span> <span class="n">Bio</span><span class="o">.</span><span class="n">Seq</span><span class="o">.</span><span class="n">Seq</span><span class="p">(</span><span class="n">ref</span><span class="p">)[</span><span class="n">i</span><span class="p">:]</span><span class="o">.</span><span class="n">translate</span><span class="p">()</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">search_DNA</span><span class="p">(</span><span class="n">qry</span><span class="p">,</span> <span class="n">db</span><span class="p">,</span> <span class="n">fwd_only</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">circular</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="k">for</span> <span class="p">[</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">strand</span><span class="p">]</span> <span class="ow">in</span> <span class="n">df</span><span class="p">[[</span><span class="s1">&#39;start&#39;</span><span class="p">,</span><span class="s1">&#39;end&#39;</span><span class="p">,</span><span class="s1">&#39;strand&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
+                    <span class="c1"># convert back to base pair location</span>
+                    <span class="n">start</span> <span class="o">=</span> <span class="n">start</span><span class="o">*</span><span class="mi">3</span> <span class="o">+</span> <span class="n">i</span>
+                    <span class="n">end</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">qry</span><span class="p">)</span><span class="o">*</span><span class="mi">3</span>
+                    <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="c1"># correct for wraps around the origin</span>
+            <span class="k">if</span> <span class="n">circular</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">out</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">L</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span>
+                <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+                <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="n">out</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">L</span><span class="p">]</span>
+                <span class="n">out</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">%</span><span class="n">L</span>
+                <span class="n">out</span><span class="p">[</span><span class="n">out</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">L</span>
+            <span class="c1"># write the output</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;start&#39;</span><span class="p">,</span><span class="s1">&#39;end&#39;</span><span class="p">,</span><span class="s1">&#39;strand&#39;</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># fwd and reverse search</span>
+            <span class="n">fwd_out</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">search_protein</span><span class="p">(</span><span class="n">qry</span><span class="p">,</span> <span class="n">ref</span><span class="p">,</span> <span class="n">fwd_only</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">circular</span><span class="o">=</span><span class="n">circular</span><span class="p">)</span>
+            <span class="n">rev_ref</span> <span class="o">=</span> <span class="n">revcomp</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span>
+            <span class="n">rev_out</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">search_protein</span><span class="p">(</span><span class="n">qry</span><span class="p">,</span> <span class="n">rev_ref</span><span class="p">,</span> <span class="n">fwd_only</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">circular</span><span class="o">=</span><span class="n">circular</span><span class="p">)</span>
+            <span class="c1"># correct reverse locations</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">rev_out</span><span class="p">)):</span>
+                <span class="n">s1</span> <span class="o">=</span> <span class="n">rev_out</span><span class="o">.</span><span class="n">iat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">s2</span> <span class="o">=</span> <span class="n">rev_out</span><span class="o">.</span><span class="n">iat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">rev_out</span><span class="o">.</span><span class="n">iat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span> <span class="o">-</span> <span class="n">s2</span> 
+                <span class="n">rev_out</span><span class="o">.</span><span class="n">iat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span> <span class="o">-</span> <span class="n">s1</span>
+                <span class="n">rev_out</span><span class="o">.</span><span class="n">iat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">fwd_out</span><span class="p">,</span> <span class="n">rev_out</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="Aligner.search_ORF"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.search_ORF">[docs]</a>    <span class="k">def</span> <span class="nf">search_ORF</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="s1">&#39;Standard&#39;</span><span class="p">,</span> <span class="n">fwd_only</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Generates a dataframe of open reading frames for a given sequence</span>
+<span class="sd">        seq = input sequence</span>
+<span class="sd">        table = codon table to use</span>
+<span class="sd">        return pandas Dataframe with columns</span>
+<span class="sd">            [name, start, stop, orientation, amino acid sequence]</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="c1"># search in forward direction</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+            <span class="c1"># translate and get ORF</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">translate</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">frame</span><span class="o">=</span><span class="n">i</span><span class="p">)</span>
+            <span class="c1"># convert to nt positions</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">get_ORF</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">df</span><span class="p">[</span><span class="s1">&#39;start&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;start&#39;</span><span class="p">]</span><span class="o">*</span><span class="mi">3</span><span class="o">+</span><span class="n">i</span> 
+            <span class="n">df</span><span class="p">[</span><span class="s1">&#39;stop&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;stop&#39;</span><span class="p">])</span><span class="o">*</span><span class="mi">3</span><span class="o">+</span><span class="n">i</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+        <span class="n">df</span><span class="p">[</span><span class="s1">&#39;orientation&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">fwd_only</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">df</span>
+        
+        <span class="c1"># search in reverse direction</span>
+        <span class="n">rev_seq</span> <span class="o">=</span> <span class="n">revcomp</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+        <span class="n">df2</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">search_ORF</span><span class="p">(</span><span class="n">rev_seq</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="n">table</span><span class="p">,</span> <span class="n">fwd_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">df2</span><span class="p">[</span><span class="s1">&#39;orientation&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">stop</span> <span class="o">=</span> <span class="n">df2</span><span class="o">.</span><span class="n">stop</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">df2</span><span class="p">[</span><span class="s1">&#39;stop&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span> <span class="o">-</span> <span class="n">df2</span><span class="p">[</span><span class="s1">&#39;start&#39;</span><span class="p">]</span>
+        <span class="n">df2</span><span class="p">[</span><span class="s1">&#39;start&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span> <span class="o">-</span> <span class="n">stop</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df</span><span class="p">,</span><span class="n">df2</span><span class="p">])</span></div>
+    
+<div class="viewcode-block" id="Aligner.get_ORF"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.get_ORF">[docs]</a>    <span class="k">def</span> <span class="nf">get_ORF</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="s1">&#39;M&#39;</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="s1">&#39;*&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Get list of ORF based on start and stop codons</span>
+<span class="sd">        return list of sequences</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">))</span>
+        <span class="n">seq_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">seq</span><span class="p">])</span>
+        <span class="c1"># get all positions of start and stop codons</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="n">seq_arr</span><span class="o">==</span><span class="n">start</span><span class="p">]</span>
+        <span class="n">stop</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="n">seq_arr</span><span class="o">==</span><span class="n">stop</span><span class="p">]</span>
+        
+        <span class="c1"># generate ORF frags from start and stop positions</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">start</span><span class="p">)):</span>
+            <span class="n">s1</span> <span class="o">=</span> <span class="n">start</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">s2</span> <span class="o">=</span> <span class="n">stop</span><span class="p">[</span><span class="n">stop</span> <span class="o">&gt;</span> <span class="n">s1</span><span class="p">]</span>
+            <span class="c1"># get first stop codon</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">s2</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">s2</span> <span class="o">=</span> <span class="n">s2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">seq</span><span class="p">[</span><span class="n">s1</span><span class="p">:</span><span class="n">s2</span><span class="o">+</span><span class="mi">1</span><span class="p">]])</span>
+            <span class="c1"># exit loop if no more stop codons are present</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">break</span>
+        <span class="n">col</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;start&#39;</span><span class="p">,</span><span class="s1">&#39;stop&#39;</span><span class="p">,</span><span class="s1">&#39;sequence&#39;</span><span class="p">]</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">col</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span></div>
+    
+<div class="viewcode-block" id="Aligner.blast"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.blast">[docs]</a>    <span class="k">def</span> <span class="nf">blast</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sequence</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Search sequence on NIH blast, to do</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mi">1</span></div>
+
+<div class="viewcode-block" id="Aligner.string_match"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.string_match">[docs]</a>    <span class="k">def</span> <span class="nf">string_match</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">qry</span><span class="p">,</span> <span class="n">ref</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Exact string search against query and reference</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">qry</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">str_to_df</span><span class="p">(</span><span class="n">qry</span><span class="p">,</span> <span class="s1">&#39;query&#39;</span><span class="p">)</span>
+        <span class="n">ref</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">str_to_df</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="s1">&#39;ref&#39;</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">rname</span><span class="p">,</span> <span class="n">rseq</span> <span class="ow">in</span> <span class="n">ref</span><span class="p">[[</span><span class="s1">&#39;name&#39;</span><span class="p">,</span><span class="s1">&#39;sequence&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">qname</span><span class="p">,</span> <span class="n">qseq</span> <span class="ow">in</span> <span class="n">qry</span><span class="p">[[</span><span class="s1">&#39;name&#39;</span><span class="p">,</span><span class="s1">&#39;sequence&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">search_DNA</span><span class="p">(</span><span class="n">qseq</span><span class="p">,</span> <span class="n">rseq</span><span class="p">)</span>
+                <span class="n">x</span><span class="p">[</span><span class="s1">&#39;query_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">qname</span>
+                <span class="n">x</span><span class="p">[</span><span class="s1">&#39;ref_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rname</span>
+                <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">out</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="Aligner.spoa"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.spoa">[docs]</a>    <span class="k">def</span> <span class="nf">spoa</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seq</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Runs multi-sequence alignment on provided sequences with spoa</span>
+<span class="sd">        seq = list of sequences</span>
+<span class="sd">        returns dictionary containing {&#39;consensus&#39;:sequence, &#39;msa&#39;:&lt;list of sequences&gt;}</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">algo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;spoa&#39;</span><span class="p">][</span><span class="s1">&#39;algorithm&#39;</span><span class="p">]</span>
+        <span class="n">genmsa</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;spoa&#39;</span><span class="p">][</span><span class="s1">&#39;genmsa&#39;</span><span class="p">]</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;spoa&#39;</span><span class="p">][</span><span class="s1">&#39;m&#39;</span><span class="p">]</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;spoa&#39;</span><span class="p">][</span><span class="s1">&#39;n&#39;</span><span class="p">]</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;spoa&#39;</span><span class="p">][</span><span class="s1">&#39;g&#39;</span><span class="p">]</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;spoa&#39;</span><span class="p">][</span><span class="s1">&#39;e&#39;</span><span class="p">]</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;spoa&#39;</span><span class="p">][</span><span class="s1">&#39;q&#39;</span><span class="p">]</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;spoa&#39;</span><span class="p">][</span><span class="s1">&#39;c&#39;</span><span class="p">]</span>
+        
+        <span class="n">consensus</span><span class="p">,</span> <span class="n">msa</span> <span class="o">=</span> <span class="n">spoa</span><span class="o">.</span><span class="n">poa</span><span class="p">(</span><span class="n">sequences</span><span class="o">=</span><span class="n">seq</span><span class="p">,</span> <span class="n">genmsa</span><span class="o">=</span><span class="n">genmsa</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="n">algo</span><span class="p">,</span> <span class="n">m</span><span class="o">=</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="n">g</span><span class="p">,</span> <span class="n">e</span><span class="o">=</span><span class="n">e</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="n">q</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="n">c</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;consensus&#39;</span><span class="p">:</span><span class="n">consensus</span><span class="p">,</span>
+               <span class="s1">&#39;msa&#39;</span><span class="p">:</span><span class="n">msa</span><span class="p">,</span>
+               <span class="s1">&#39;params&#39;</span><span class="p">:{}}</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;spoa&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">out</span><span class="p">[</span><span class="s1">&#39;params&#39;</span><span class="p">][</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;spoa&#39;</span><span class="p">][</span><span class="n">k</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">out</span></div>
+    
+<div class="viewcode-block" id="Aligner.format_msa"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.format_msa">[docs]</a>    <span class="k">def</span> <span class="nf">format_msa</span><span class="p">(</span><span class="n">msa</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a multi-sequence alignment formatted </span>
+<span class="sd">        to a certain width</span>
+<span class="sd">        msa = list of sequences</span>
+<span class="sd">        width = characters per line</span>
+<span class="sd">        returns a string output</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">msa</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span><span class="n">width</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">msa</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">msa</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">msa</span><span class="p">)):</span>
+                <span class="n">output</span><span class="o">+=</span> <span class="n">msa</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span><span class="o">+</span><span class="s1">&#39; seq&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="c1"># find mismatches</span>
+            <span class="n">match</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="kc">True</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">msa</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+                <span class="n">seq1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">msa</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]]])</span>
+                <span class="n">seq2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">msa</span><span class="p">[</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">][</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]]])</span>
+                <span class="k">match</span><span class="o">*=</span> <span class="p">(</span><span class="n">seq1</span><span class="o">==</span><span class="n">seq2</span><span class="p">)</span>
+            <span class="n">mchar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s1">&#39; &#39;</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+            <span class="n">mchar</span><span class="p">[</span><span class="o">~</span><span class="n">match</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;.&#39;</span>
+            <span class="n">output</span><span class="o">+=</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">mchar</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="k">return</span> <span class="n">output</span></div>
+    
+<div class="viewcode-block" id="Aligner.colorize_msa"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.colorize_msa">[docs]</a>    <span class="k">def</span> <span class="nf">colorize_msa</span><span class="p">(</span><span class="n">msa</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a multi-sequence alignment formatted </span>
+<span class="sd">        to a certain width</span>
+<span class="sd">        msa = list of sequences</span>
+<span class="sd">        width = characters per line</span>
+<span class="sd">        cmap = colormap from characters to colors</span>
+<span class="sd">        returns a string output</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="c1"># use default nucleic acid colors</span>
+        <span class="k">if</span> <span class="n">cmap</span><span class="o">==</span><span class="kc">None</span><span class="p">:</span>
+            <span class="n">cmap</span> <span class="o">=</span> <span class="n">colormaps</span><span class="p">[</span><span class="s1">&#39;nucleic&#39;</span><span class="p">]</span>
+        
+        <span class="c1"># initialize coloring engine</span>
+        <span class="n">gr</span> <span class="o">=</span> <span class="n">Graphic</span><span class="p">()</span>
+        
+        <span class="c1"># get character frequencies</span>
+        <span class="n">stats</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">get_msa_stats</span><span class="p">(</span><span class="n">msa</span><span class="p">)</span>
+        
+        <span class="c1"># colorize characters in the minor population</span>
+        <span class="n">seq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">m</span><span class="p">]</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">msa</span><span class="p">])</span>
+        <span class="n">dim</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">carr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="s1">&#39;&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span><span class="o">*</span><span class="n">dim</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">msa</span><span class="p">[</span><span class="mi">0</span><span class="p">])):</span>
+            <span class="n">chars</span> <span class="o">=</span> <span class="n">stats</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">freq</span> <span class="o">=</span> <span class="n">stats</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">b</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="c1"># catch cases where at least two characters are frequent</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">chars</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">freq</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">freq</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+                <span class="n">b</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">b</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">chars</span><span class="p">)):</span>
+                <span class="n">c</span> <span class="o">=</span> <span class="n">seq</span><span class="p">[:,</span><span class="n">i</span><span class="p">]</span><span class="o">==</span><span class="n">chars</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+                <span class="n">carr</span><span class="p">[</span><span class="n">c</span><span class="p">,</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">chars</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+
+        <span class="c1"># format lines</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">msa</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span><span class="n">width</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">msa</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">msa</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+            
+        <span class="c1"># format to colors</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">msa</span><span class="p">)):</span>
+                <span class="n">start</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">stop</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">text</span> <span class="o">=</span> <span class="n">msa</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">]</span>
+                <span class="n">fgarr</span> <span class="o">=</span> <span class="n">carr</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">]</span>
+                <span class="n">text</span> <span class="o">=</span> <span class="n">gr</span><span class="o">.</span><span class="n">color_by_array</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">cmap</span><span class="p">,</span> <span class="n">bgarr</span><span class="o">=</span><span class="n">fgarr</span><span class="p">)</span>
+                <span class="n">output</span><span class="o">+=</span> <span class="n">text</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span><span class="o">+</span><span class="s1">&#39; seq&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="k">return</span> <span class="n">output</span></div>
+    
+<div class="viewcode-block" id="Aligner.get_msa_stats"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.get_msa_stats">[docs]</a>    <span class="k">def</span> <span class="nf">get_msa_stats</span><span class="p">(</span><span class="n">msa</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Compute counts for each character in the multi-alignment</span>
+<span class="sd">        msa = list of sequences</span>
+<span class="sd">        return list of [characters, frequency]</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">seq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">m</span><span class="p">]</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">msa</span><span class="p">])</span>
+        <span class="n">seq</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">hist</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">return_counts</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">seq</span><span class="p">]</span>
+        <span class="c1"># sort the characters by frequency</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">hist</span><span class="p">)):</span>
+            <span class="n">freq</span> <span class="o">=</span> <span class="n">hist</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">chars</span> <span class="o">=</span> <span class="n">hist</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">freq</span><span class="p">)</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">chars</span><span class="p">[</span><span class="n">s</span><span class="p">],</span> <span class="n">freq</span><span class="p">[</span><span class="n">s</span><span class="p">]])</span>
+        <span class="k">return</span> <span class="n">out</span></div>
+    
+<div class="viewcode-block" id="Aligner.mappy"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.mappy">[docs]</a>    <span class="k">def</span> <span class="nf">mappy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">qry</span><span class="p">,</span> <span class="n">ref</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Run minimap aligner</span>
+<span class="sd">        qry = dataframe of query sequences with columns [name, sequence]</span>
+<span class="sd">        ref = dataframe of reference sequences with columns [name, sequence]</span>
+<span class="sd">        k = kmer length</span>
+<span class="sd">        w = window size</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">][</span><span class="s1">&#39;k&#39;</span><span class="p">]</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">][</span><span class="s1">&#39;w&#39;</span><span class="p">]</span>
+        
+        <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">rname</span><span class="p">,</span> <span class="n">rseq</span> <span class="ow">in</span> <span class="n">ref</span><span class="p">[[</span><span class="s1">&#39;name&#39;</span><span class="p">,</span><span class="s1">&#39;sequence&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
+            <span class="n">a</span> <span class="o">=</span> <span class="n">mappy</span><span class="o">.</span><span class="n">Aligner</span><span class="p">(</span><span class="n">seq</span><span class="o">=</span><span class="n">rseq</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="n">w</span><span class="o">=</span><span class="n">w</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">qname</span><span class="p">,</span> <span class="n">qseq</span> <span class="ow">in</span> <span class="n">qry</span><span class="p">[[</span><span class="s1">&#39;name&#39;</span><span class="p">,</span><span class="s1">&#39;sequence&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">a</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">qseq</span><span class="p">):</span>
+                    <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">qname</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">qseq</span><span class="p">),</span> <span class="n">h</span><span class="o">.</span><span class="n">q_st</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">q_en</span><span class="p">,</span> <span class="n">rname</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">ctg_len</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">r_st</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">r_en</span><span class="p">,</span> 
+                                <span class="n">h</span><span class="o">.</span><span class="n">trans_strand</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">read_num</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">blen</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">mlen</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">mlen</span><span class="o">/</span><span class="n">h</span><span class="o">.</span><span class="n">blen</span><span class="p">,</span>
+                                <span class="n">h</span><span class="o">.</span><span class="n">NM</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">mapq</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">is_primary</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">cigar_str</span><span class="p">])</span>
+        <span class="n">col</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;query_id&#39;</span><span class="p">,</span><span class="s1">&#39;q_len&#39;</span><span class="p">,</span><span class="s1">&#39;q_start&#39;</span><span class="p">,</span><span class="s1">&#39;q_end&#39;</span><span class="p">,</span><span class="s1">&#39;ref_id&#39;</span><span class="p">,</span><span class="s1">&#39;t_len&#39;</span><span class="p">,</span><span class="s1">&#39;t_start&#39;</span><span class="p">,</span><span class="s1">&#39;t_end&#39;</span><span class="p">,</span><span class="s1">&#39;strand&#39;</span><span class="p">,</span><span class="s1">&#39;read_num&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;blen&#39;</span><span class="p">,</span><span class="s1">&#39;mlen&#39;</span><span class="p">,</span><span class="s1">&#39;match_score&#39;</span><span class="p">,</span><span class="s1">&#39;NM&#39;</span><span class="p">,</span><span class="s1">&#39;mapq&#39;</span><span class="p">,</span><span class="s1">&#39;is_primary&#39;</span><span class="p">,</span><span class="s1">&#39;CIGAR&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">col</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="Aligner.parasail"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.parasail">[docs]</a>    <span class="k">def</span> <span class="nf">parasail</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">qry</span><span class="p">,</span> <span class="n">ref</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Run parasail aligner</span>
+<span class="sd">        qry = dataframe of query sequences with columns [name, sequence]</span>
+<span class="sd">        ref = dataframe of reference sequences with columns [name, sequence]</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">g1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;parasail&#39;</span><span class="p">][</span><span class="s1">&#39;g1&#39;</span><span class="p">]</span>
+        <span class="n">g2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;parasail&#39;</span><span class="p">][</span><span class="s1">&#39;g2&#39;</span><span class="p">]</span>
+        <span class="n">mat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;parasail&#39;</span><span class="p">][</span><span class="s1">&#39;mat&#39;</span><span class="p">]</span>
+        <span class="n">method</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;parasail&#39;</span><span class="p">][</span><span class="s1">&#39;method&#39;</span><span class="p">]</span>
+        
+        <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># select aligner function to use</span>
+        <span class="n">paligner</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">parasail</span><span class="p">,</span> <span class="n">method</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">rname</span><span class="p">,</span> <span class="n">rseq</span> <span class="ow">in</span> <span class="n">ref</span><span class="p">[[</span><span class="s1">&#39;name&#39;</span><span class="p">,</span><span class="s1">&#39;sequence&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">qname</span><span class="p">,</span> <span class="n">qseq</span> <span class="ow">in</span> <span class="n">qry</span><span class="p">[[</span><span class="s1">&#39;name&#39;</span><span class="p">,</span><span class="s1">&#39;sequence&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
+                <span class="n">qseqR</span> <span class="o">=</span> <span class="n">revcomp</span><span class="p">(</span><span class="n">qseq</span><span class="p">)</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="n">paligner</span><span class="p">(</span><span class="n">qseq</span><span class="p">,</span> <span class="n">rseq</span><span class="p">,</span> <span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">,</span> <span class="n">mat</span><span class="p">)</span>
+                <span class="n">resR</span> <span class="o">=</span> <span class="n">paligner</span><span class="p">(</span><span class="n">qseqR</span><span class="p">,</span> <span class="n">rseq</span><span class="p">,</span> <span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">,</span> <span class="n">mat</span><span class="p">)</span>
+                <span class="n">cigarF</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                <span class="n">cigarR</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                <span class="k">if</span> <span class="s1">&#39;trace&#39;</span> <span class="ow">in</span> <span class="n">method</span><span class="p">:</span>
+                    <span class="n">cigarF</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">cigar</span><span class="o">.</span><span class="n">decode</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;UTF-8&#39;</span><span class="p">)</span>
+                    <span class="n">cigarR</span> <span class="o">=</span> <span class="n">resR</span><span class="o">.</span><span class="n">cigar</span><span class="o">.</span><span class="n">decode</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;UTF-8&#39;</span><span class="p">)</span>
+                <span class="n">sF</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">cigar_to_stats</span><span class="p">(</span><span class="n">cigarF</span><span class="p">,</span> <span class="n">qseq</span><span class="p">,</span> <span class="n">rseq</span><span class="p">)</span>
+                <span class="n">sF</span> <span class="o">=</span> <span class="p">[</span><span class="n">qname</span><span class="p">,</span> <span class="n">rname</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">score</span><span class="p">]</span><span class="o">+</span><span class="n">sF</span><span class="o">+</span><span class="p">[</span><span class="n">cigarF</span><span class="p">]</span>
+                <span class="n">sR</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">cigar_to_stats</span><span class="p">(</span><span class="n">cigarR</span><span class="p">,</span> <span class="n">qseq</span><span class="p">,</span> <span class="n">rseq</span><span class="p">)</span>
+                <span class="n">sR</span> <span class="o">=</span> <span class="p">[</span><span class="n">qname</span><span class="p">,</span> <span class="n">rname</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">score</span><span class="p">]</span><span class="o">+</span><span class="n">sR</span><span class="o">+</span><span class="p">[</span><span class="n">cigarR</span><span class="p">]</span>
+                <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sF</span><span class="p">)</span>
+                <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sR</span><span class="p">)</span>
+        <span class="n">col</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;query_id&#39;</span><span class="p">,</span><span class="s1">&#39;ref_id&#39;</span><span class="p">,</span><span class="s1">&#39;strand&#39;</span><span class="p">,</span><span class="s1">&#39;AS&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;q_len&#39;</span><span class="p">,</span><span class="s1">&#39;q_start&#39;</span><span class="p">,</span><span class="s1">&#39;q_end&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;t_len&#39;</span><span class="p">,</span><span class="s1">&#39;t_start&#39;</span><span class="p">,</span><span class="s1">&#39;t_end&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;match&#39;</span><span class="p">,</span><span class="s1">&#39;mismatch&#39;</span><span class="p">,</span><span class="s1">&#39;indel&#39;</span><span class="p">,</span><span class="s1">&#39;CIGAR&#39;</span><span class="p">]</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">col</span><span class="p">)</span>
+        <span class="n">df</span><span class="p">[</span><span class="s1">&#39;NM&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;mismatch&#39;</span><span class="p">]</span><span class="o">+</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;indel&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">df</span></div>
+        
+<div class="viewcode-block" id="Aligner.cigar_to_stats"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.cigar_to_stats">[docs]</a>    <span class="k">def</span> <span class="nf">cigar_to_stats</span><span class="p">(</span><span class="n">cig</span><span class="p">,</span> <span class="n">qseq</span><span class="p">,</span> <span class="n">rseq</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Get alignment statistics associated with parasail output</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">cig</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">cigar_decode</span><span class="p">(</span><span class="n">cig</span><span class="p">)</span>
+        
+        <span class="c1"># compute match boundaries</span>
+        <span class="n">q_start</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">q_end</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">qseq</span><span class="p">)</span>
+        <span class="n">q_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">qseq</span><span class="p">)</span>
+        <span class="n">t_start</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">t_end</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">rseq</span><span class="p">)</span>
+        <span class="n">t_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">rseq</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cig</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;I&#39;</span><span class="p">:</span>
+            <span class="n">t_start</span> <span class="o">=</span> <span class="n">cig</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">cig</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;D&#39;</span><span class="p">:</span>
+            <span class="n">q_start</span> <span class="o">=</span> <span class="n">cig</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">cig</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;I&#39;</span><span class="p">:</span>
+            <span class="n">t_end</span><span class="o">-=</span> <span class="n">cig</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">cig</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;D&#39;</span><span class="p">:</span>
+            <span class="n">q_end</span><span class="o">-=</span> <span class="n">cig</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cig</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">cig</span><span class="p">))])</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cig</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">cig</span><span class="p">))])</span>
+        
+        <span class="c1"># get number of matches</span>
+        <span class="n">M</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">y</span><span class="o">==</span><span class="s1">&#39;=&#39;</span><span class="p">])</span>
+        <span class="n">M</span><span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">y</span><span class="o">==</span><span class="s1">&#39;M&#39;</span><span class="p">])</span>
+        
+        <span class="c1"># get number of mismatches</span>
+        <span class="n">Xm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">y</span><span class="o">==</span><span class="s1">&#39;X&#39;</span><span class="p">])</span>
+
+        <span class="c1"># get indel count</span>
+        <span class="n">indel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">y</span><span class="o">==</span><span class="s1">&#39;I&#39;</span><span class="p">])</span>
+        <span class="n">indel</span><span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">y</span><span class="o">==</span><span class="s1">&#39;D&#39;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">q_len</span><span class="p">,</span> <span class="n">q_start</span><span class="p">,</span> <span class="n">q_end</span><span class="p">,</span> <span class="n">t_len</span><span class="p">,</span> <span class="n">t_start</span><span class="p">,</span> <span class="n">t_end</span><span class="p">,</span> <span class="n">M</span><span class="p">,</span> <span class="n">Xm</span><span class="p">,</span> <span class="n">indel</span><span class="p">]</span></div>
+    
+<div class="viewcode-block" id="Aligner.cigar_decode"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.cigar_decode">[docs]</a>    <span class="k">def</span> <span class="nf">cigar_decode</span><span class="p">(</span><span class="n">cigar</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s1">&#39;([0-9]*)([DIM=SX])&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Decode cigar strings into counts of indels and mismatches</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            cigar = cigar string</span>
+<span class="sd">            key = key used to decrypt the cigar string</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            list containing [[key value, counts],...]</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[[</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">),</span><span class="n">j</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">j</span> <span class="ow">in</span> <span class="n">pattern</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">cigar</span><span class="p">)]</span></div>
+
+<div class="viewcode-block" id="Aligner.cigar_to_alignment"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.cigar_to_alignment">[docs]</a>    <span class="k">def</span> <span class="nf">cigar_to_alignment</span><span class="p">(</span><span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ref</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">cigar</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Function to align query and reference strings based on CIGAR string</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            query = query sequence --&gt; this must be relative to how it was used in aligner</span>
+<span class="sd">            ref = reference sequence</span>
+<span class="sd">            cigar = CIGAR string from aligner</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            return [aligned query, aligned reference, alignment ticks]</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s1">&#39;([0-9]*)([DIMSX])&#39;</span><span class="p">)</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+        <span class="n">ref</span> <span class="o">=</span> <span class="n">ref</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+        <span class="n">q_aligned</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="n">ref_aligned</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="n">align</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="n">i1</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">i2</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">pattern</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">cigar</span><span class="p">):</span>
+            <span class="n">span</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s1">&#39;M&#39;</span><span class="p">:</span>
+                <span class="n">q_aligned</span><span class="o">+=</span><span class="n">query</span><span class="p">[</span><span class="n">i1</span><span class="p">:</span><span class="n">i1</span><span class="o">+</span><span class="n">span</span><span class="p">]</span>
+                <span class="n">ref_aligned</span><span class="o">+=</span><span class="n">ref</span><span class="p">[</span><span class="n">i2</span><span class="p">:</span><span class="n">i2</span><span class="o">+</span><span class="n">span</span><span class="p">]</span>
+                <span class="n">align</span><span class="o">+=</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;|&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">span</span><span class="p">)</span>
+                <span class="n">i1</span><span class="o">+=</span><span class="n">span</span>
+                <span class="n">i2</span><span class="o">+=</span><span class="n">span</span>
+            <span class="k">elif</span> <span class="n">c</span><span class="o">==</span><span class="s1">&#39;X&#39;</span><span class="p">:</span>
+                <span class="n">q_aligned</span><span class="o">+=</span><span class="n">query</span><span class="p">[</span><span class="n">i1</span><span class="p">:</span><span class="n">i1</span><span class="o">+</span><span class="n">span</span><span class="p">]</span>
+                <span class="n">ref_aligned</span><span class="o">+=</span><span class="n">ref</span><span class="p">[</span><span class="n">i2</span><span class="p">:</span><span class="n">i2</span><span class="o">+</span><span class="n">span</span><span class="p">]</span>
+                <span class="n">align</span><span class="o">+=</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39; &#39;</span><span class="p">]</span><span class="o">*</span><span class="n">span</span><span class="p">)</span>
+                <span class="n">i1</span><span class="o">+=</span><span class="n">span</span>
+                <span class="n">i2</span><span class="o">+=</span><span class="n">span</span>
+            <span class="k">elif</span> <span class="n">c</span><span class="o">==</span><span class="s1">&#39;S&#39;</span> <span class="ow">or</span> <span class="n">c</span><span class="o">==</span><span class="s1">&#39;H&#39;</span><span class="p">:</span>
+                <span class="n">q_aligned</span><span class="o">+=</span><span class="n">query</span><span class="p">[</span><span class="n">i1</span><span class="p">:</span><span class="n">i1</span><span class="o">+</span><span class="n">span</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="c1"># query contains soft clipped sequence</span>
+                <span class="n">ref_aligned</span><span class="o">+=</span><span class="n">ref</span><span class="p">[</span><span class="n">i2</span><span class="p">:</span><span class="n">i2</span><span class="o">+</span><span class="n">span</span><span class="p">]</span>
+                <span class="n">align</span><span class="o">+=</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39; &#39;</span><span class="p">]</span><span class="o">*</span><span class="n">span</span><span class="p">)</span>
+                <span class="n">i1</span><span class="o">+=</span><span class="n">span</span>
+                <span class="n">i2</span><span class="o">+=</span><span class="n">span</span>
+            <span class="k">elif</span> <span class="n">c</span><span class="o">==</span><span class="s1">&#39;I&#39;</span><span class="p">:</span>
+                <span class="n">q_aligned</span><span class="o">+=</span><span class="n">query</span><span class="p">[</span><span class="n">i1</span><span class="p">:</span><span class="n">i1</span><span class="o">+</span><span class="n">span</span><span class="p">]</span> <span class="c1"># query contains an insert</span>
+                <span class="n">ref_aligned</span><span class="o">+=</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;-&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">span</span><span class="p">)</span> <span class="c1"># adds gap to reference</span>
+                <span class="n">align</span><span class="o">+=</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39; &#39;</span><span class="p">]</span><span class="o">*</span><span class="n">span</span><span class="p">)</span>
+                <span class="n">i1</span><span class="o">+=</span><span class="n">span</span>
+            <span class="k">elif</span> <span class="n">c</span><span class="o">==</span><span class="s1">&#39;D&#39;</span><span class="p">:</span>
+                <span class="n">q_aligned</span><span class="o">+=</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;-&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">span</span><span class="p">)</span> <span class="c1"># query contains a deletion --&gt; add a gap</span>
+                <span class="n">ref_aligned</span><span class="o">+=</span><span class="n">ref</span><span class="p">[</span><span class="n">i2</span><span class="p">:</span><span class="n">i2</span><span class="o">+</span><span class="n">span</span><span class="p">]</span>
+                <span class="n">align</span><span class="o">+=</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39; &#39;</span><span class="p">]</span><span class="o">*</span><span class="n">span</span><span class="p">)</span>
+                <span class="n">i2</span><span class="o">+=</span><span class="n">span</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">q_aligned</span><span class="p">,</span> <span class="n">ref_aligned</span><span class="p">,</span> <span class="n">align</span><span class="p">]</span></div>
+    
+<div class="viewcode-block" id="Aligner.filter_idx"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.filter_idx">[docs]</a>    <span class="k">def</span> <span class="nf">filter_idx</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s1">&#39;score&#39;</span><span class="p">,</span> <span class="n">opt</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s1">&#39;idxmax&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Get max values organized by a certain column in a pandas dataframe</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            col = column to group by</span>
+<span class="sd">            value = column to sort</span>
+<span class="sd">            opt = idxmax or idxmin</span>
+
+<span class="sd">        Return:</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="n">col</span><span class="p">)</span><span class="o">.</span><span class="n">agg</span><span class="p">({</span><span class="n">value</span><span class="p">:</span><span class="n">opt</span><span class="p">})</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">idx</span><span class="p">[</span><span class="n">value</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span></div>
+    
+<div class="viewcode-block" id="Aligner.str_to_df"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.str_to_df">[docs]</a>    <span class="k">def</span> <span class="nf">str_to_df</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="s1">&#39;seq&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Format query and ref to dataframe if not already        </span>
+<span class="sd">        x = string or list of strings</span>
+<span class="sd">        returns dataframe</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;sequence&#39;</span><span class="p">])</span>
+            <span class="n">x</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">header</span><span class="o">+</span><span class="s1">&#39;_&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))]</span>
+        <span class="k">return</span> <span class="n">x</span></div>
+    
+<div class="viewcode-block" id="Aligner.minimap2_get_index"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.minimap2_get_index">[docs]</a>    <span class="k">def</span> <span class="nf">minimap2_get_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">database</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s1">&#39;index.mmi&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        This is a wrapper for the minimap2 to build the fn_index</span>
+<span class="sd">        fn_index file is built in the temporary file directory</span>
+<span class="sd">        </span>
+<span class="sd">        database = database of sequences being search through</span>
+<span class="sd">        database must be in pandas dataframe format with columns:</span>
+<span class="sd">        [name, sequence] or [name, sequence, quality]</span>
+<span class="sd">        or a string defining the fasta or fastq file to index</span>
+<span class="sd">        </span>
+<span class="sd">        filename = defines the filename of the minimap index</span>
+<span class="sd">        </span>
+<span class="sd">        return filename of fn_index</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">work_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;work_dir&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">database</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="n">db_file</span> <span class="o">=</span> <span class="n">database</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">db_file</span> <span class="o">=</span> <span class="n">work_dir</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;/db&#39;</span>
+            <span class="n">db_file</span> <span class="o">=</span> <span class="n">fileIO</span><span class="o">.</span><span class="n">write_fastx</span><span class="p">(</span><span class="n">db_file</span><span class="p">,</span> <span class="n">database</span><span class="p">)</span>
+
+        <span class="c1"># set the parameters</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">][</span><span class="s1">&#39;w&#39;</span><span class="p">]</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">][</span><span class="s1">&#39;k&#39;</span><span class="p">]</span>
+        <span class="n">mm2bin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;binaries&#39;</span><span class="p">][</span><span class="s1">&#39;minimap&#39;</span><span class="p">]</span>
+        <span class="n">fn_index</span> <span class="o">=</span> <span class="n">work_dir</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="n">filename</span>
+        
+        <span class="c1"># execute the command</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="n">mm2bin</span> <span class="o">+</span><span class="s1">&#39; -k &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39; -w &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">w</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39; -d &#39;</span><span class="o">+</span><span class="n">fn_index</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">db_file</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">][</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fn_index</span>
+        <span class="k">return</span> <span class="n">fn_index</span></div>
+    
+<div class="viewcode-block" id="Aligner.minimap2"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.minimap2">[docs]</a>    <span class="k">def</span> <span class="nf">minimap2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">query2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">database</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        This is a wrapper for the minimap2 aligner.</span>
+<span class="sd">        This aligner is better suited for long reads (&gt;100bp) from nanopore sequencing</span>
+
+<span class="sd">        query = list of sequences to search for in database</span>
+<span class="sd">        query2 = reverse pair of paired end read</span>
+
+<span class="sd">        query and query2 must be in pandas dataframe format with columns:</span>
+<span class="sd">        [name, sequence] or [name, sequence, quality]</span>
+<span class="sd">        </span>
+<span class="sd">        database = database of sequences being search through</span>
+
+<span class="sd">        database must be in pandas dataframe format with columns:</span>
+<span class="sd">        [name, sequence] or [name, sequence, quality]</span>
+<span class="sd">        or a string containing the filename of the fn_index</span>
+
+<span class="sd">        returns a pandas dataframe of alignment results from the paf file</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="c1"># Define locations of input and output files</span>
+        <span class="n">work_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;work_dir&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">query</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">fileIO</span><span class="o">.</span><span class="n">read_fastx</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="n">query</span><span class="p">,</span> <span class="n">qmap</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">aligner_fix_name</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="s1">&#39;name&#39;</span><span class="p">)</span>
+        <span class="n">qfile</span> <span class="o">=</span> <span class="n">work_dir</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="s1">&#39;read1&#39;</span>
+        <span class="n">qfile</span> <span class="o">=</span> <span class="n">fileIO</span><span class="o">.</span><span class="n">write_fastx</span><span class="p">(</span><span class="n">qfile</span><span class="p">,</span> <span class="n">query</span><span class="p">)</span>
+        
+        <span class="n">paired</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">query2</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="o">!=</span><span class="s1">&#39;NoneType&#39;</span><span class="p">:</span>
+            <span class="n">paired</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">query2</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+                <span class="n">query2</span> <span class="o">=</span> <span class="n">fileIO</span><span class="o">.</span><span class="n">read_fastx</span><span class="p">(</span><span class="n">query2</span><span class="p">)</span>
+
+            <span class="n">query2</span><span class="p">,</span> <span class="n">qmap2</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">aligner_fix_name</span><span class="p">(</span><span class="n">query2</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="s1">&#39;name&#39;</span><span class="p">)</span>
+            <span class="n">mfile</span> <span class="o">=</span> <span class="n">work_dir</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="s1">&#39;read2&#39;</span>
+            <span class="n">mfile</span> <span class="o">=</span> <span class="n">fileIO</span><span class="o">.</span><span class="n">write_fastx</span><span class="p">(</span><span class="n">mfile</span><span class="p">,</span> <span class="n">query2</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">database</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="o">==</span><span class="s1">&#39;NoneType&#39;</span><span class="p">:</span>
+            <span class="n">dbfile</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">][</span><span class="s1">&#39;index&#39;</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">database</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="n">dbfile</span> <span class="o">=</span> <span class="n">database</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">database</span><span class="p">,</span> <span class="n">dbmap</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">aligner_fix_name</span><span class="p">(</span><span class="n">database</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="s1">&#39;name&#39;</span><span class="p">)</span>
+            <span class="n">dbfile</span> <span class="o">=</span> <span class="n">work_dir</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="s1">&#39;database&#39;</span>
+            <span class="n">dbfile</span> <span class="o">=</span> <span class="n">fileIO</span><span class="o">.</span><span class="n">write_fastx</span><span class="p">(</span><span class="n">dbfile</span><span class="p">,</span> <span class="n">database</span><span class="p">)</span>
+        
+        <span class="n">outfile</span> <span class="o">=</span> <span class="n">work_dir</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s1">&#39;/results.paf&#39;</span>
+        
+        <span class="c1"># set the parameters</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">][</span><span class="s1">&#39;w&#39;</span><span class="p">]</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">][</span><span class="s1">&#39;k&#39;</span><span class="p">]</span>
+        <span class="n">mm2bin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;binaries&#39;</span><span class="p">][</span><span class="s1">&#39;minimap&#39;</span><span class="p">]</span>
+        
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">][</span><span class="s1">&#39;config&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">][</span><span class="s1">&#39;cigar&#39;</span><span class="p">]:</span> <span class="c1"># adds flag to generate cigar string</span>
+            <span class="n">config</span><span class="o">+=</span> <span class="s1">&#39; -c&#39;</span>
+        <span class="n">config</span><span class="o">+=</span> <span class="s1">&#39; -k &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="n">config</span><span class="o">+=</span> <span class="s1">&#39; -w &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+
+        <span class="c1"># Do paired end search if needed</span>
+        <span class="k">if</span> <span class="n">paired</span><span class="p">:</span>
+            <span class="n">cmd</span> <span class="o">=</span> <span class="n">mm2bin</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">config</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">dbfile</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">qfile</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">mfile</span><span class="o">+</span><span class="s1">&#39; -o &#39;</span><span class="o">+</span><span class="n">outfile</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cmd</span> <span class="o">=</span> <span class="n">mm2bin</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">config</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">dbfile</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">qfile</span><span class="o">+</span><span class="s1">&#39; -o &#39;</span><span class="o">+</span><span class="n">outfile</span>
+        <span class="c1"># call the aligner</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">))</span>
+        <span class="c1"># extract the PAF file information</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">fileIO</span><span class="o">.</span><span class="n">parse_PAF</span><span class="p">(</span><span class="n">outfile</span><span class="p">)</span>
+        <span class="c1"># add spaces back to the sequences</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">aligner_restore_name</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">qmap</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="s1">&#39;query_id&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">query2</span><span class="o">!=</span><span class="kc">None</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">aligner_restore_name</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">qmap2</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="s1">&#39;query_id&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">database</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="o">==</span><span class="s1">&#39;DataFrame&#39;</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">aligner_restore_name</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dbmap</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="s1">&#39;database_id&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Format the fields to integer</span>
+        <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;q_len&#39;</span><span class="p">,</span><span class="s1">&#39;q_start&#39;</span><span class="p">,</span><span class="s1">&#39;q_end&#39;</span><span class="p">,</span><span class="s1">&#39;t_len&#39;</span><span class="p">,</span><span class="s1">&#39;t_start&#39;</span><span class="p">,</span><span class="s1">&#39;t_end&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;match&#39;</span><span class="p">,</span><span class="s1">&#39;tot&#39;</span><span class="p">,</span><span class="s1">&#39;mapq&#39;</span><span class="p">,</span><span class="s1">&#39;cm&#39;</span><span class="p">,</span><span class="s1">&#39;s1&#39;</span><span class="p">,</span><span class="s1">&#39;s2&#39;</span><span class="p">,</span><span class="s1">&#39;NM&#39;</span><span class="p">,</span><span class="s1">&#39;AS&#39;</span><span class="p">,</span><span class="s1">&#39;ms&#39;</span><span class="p">,</span><span class="s1">&#39;nn&#39;</span><span class="p">,</span><span class="s1">&#39;rl&#39;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">cols</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">data</span><span class="p">[</span><span class="s1">&#39;match_score&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;match&#39;</span><span class="p">]</span><span class="o">/</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;tot&#39;</span><span class="p">]</span><span class="o">*</span><span class="mf">1.0</span> <span class="c1"># compute blast like score</span>
+
+        <span class="c1"># compute similarity</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">get_similarity</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Aligner.aligner_fix_name"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.aligner_fix_name">[docs]</a>    <span class="k">def</span> <span class="nf">aligner_fix_name</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Removes spacing in the names that causes minimap2 to truncate read ids</span>
+<span class="sd">        df = dataframe column containing the old id</span>
+<span class="sd">        col = column with in the old id</span>
+<span class="sd">        returns fixed dataframe and id mapping between old and new names</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">revmap</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_&#39;</span><span class="o">+</span><span class="n">out</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span><span class="s1">&#39;_&#39;</span><span class="p">):</span><span class="n">out</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">col</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">))}</span>
+        <span class="n">out</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">revmap</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">out</span><span class="p">,</span> <span class="n">revmap</span></div>
+
+<div class="viewcode-block" id="Aligner.aligner_restore_name"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.aligner_restore_name">[docs]</a>    <span class="k">def</span> <span class="nf">aligner_restore_name</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">revmap</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Restore spaces in the names</span>
+<span class="sd">        df = dataframe with column containing the new id</span>
+<span class="sd">        revmap = dictionary containing mapping of new id to old id</span>
+<span class="sd">        col = column name containing the id restore</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">revmap</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">col</span><span class="p">]]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">))]</span>
+        <span class="k">return</span> <span class="n">df</span></div>
+
+<div class="viewcode-block" id="Aligner.get_similarity"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.get_similarity">[docs]</a>    <span class="k">def</span> <span class="nf">get_similarity</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Add similarity metric to output dataframe from aligner</span>
+<span class="sd">        data = dataframe with columns [NM, q_len, t_len]</span>
+<span class="sd">        return dataframe with similarity added to columns</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">v1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">([</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;q_len&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;t_len&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">data</span><span class="p">[</span><span class="s1">&#39;similarity&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;NM&#39;</span><span class="p">]</span><span class="o">/</span><span class="n">v1</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;similarity&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;similarity&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Aligner.bwa_get_index"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.bwa_get_index">[docs]</a>    <span class="k">def</span> <span class="nf">bwa_get_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">database</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        This is a wrapper for bwa to build the fn_index</span>
+<span class="sd">        </span>
+<span class="sd">        database = database of sequences being searched through</span>
+<span class="sd">        </span>
+<span class="sd">        database must be in pandas dataframe format with columns:</span>
+<span class="sd">        [name, sequence] or [name, sequence, quality]</span>
+<span class="sd">        or a string defining the fasta or fastq file to index</span>
+<span class="sd">        </span>
+<span class="sd">        return filename of bwa index</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">bwa</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;binaries&#39;</span><span class="p">][</span><span class="s1">&#39;bwa&#39;</span><span class="p">]</span>
+        <span class="n">work_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;work_dir&#39;</span><span class="p">]</span>
+
+        <span class="c1"># write input files</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">database</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="n">dbfile</span> <span class="o">=</span> <span class="n">database</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dbfile</span> <span class="o">=</span> <span class="n">work_dir</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;/db&#39;</span>
+            <span class="n">dbfile</span> <span class="o">=</span> <span class="n">fileIO</span><span class="o">.</span><span class="n">write_fastx</span><span class="p">(</span><span class="n">dbfile</span><span class="p">,</span> <span class="n">database</span><span class="p">)</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="n">bwa</span><span class="o">+</span><span class="s1">&#39; index &#39;</span><span class="o">+</span><span class="n">dbfile</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;bwa&#39;</span><span class="p">][</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dbfile</span>
+        <span class="k">return</span> <span class="n">dbfile</span></div>
+
+<div class="viewcode-block" id="Aligner.bwa"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.bwa">[docs]</a>    <span class="k">def</span> <span class="nf">bwa</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">query2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">database</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        This is a wrapper for the bwa aligner.</span>
+
+<span class="sd">        query = list of sequences to search for in database</span>
+<span class="sd">        query2 = reverse pair of paired end read</span>
+
+<span class="sd">        query and query2 must be in pandas dataframe format with columns:</span>
+<span class="sd">        [name, sequence] or [name, sequence, quality]</span>
+<span class="sd">                </span>
+<span class="sd">        database = database of sequences being search through</span>
+<span class="sd">        </span>
+<span class="sd">        database must be in pandas dataframe format with columns:</span>
+<span class="sd">        [name, sequence] or [name, sequence, quality]</span>
+<span class="sd">        or a string containing the filename of the fn_index</span>
+<span class="sd">        </span>
+<span class="sd">        returns a pandas dataframe of alignment results from the sam file</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="c1"># Define locations of input and output files</span>
+        <span class="n">work_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;work_dir&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">query</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="n">qfile</span> <span class="o">=</span> <span class="n">query</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">qfile</span> <span class="o">=</span> <span class="n">work_dir</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="s1">&#39;read1&#39;</span>
+            <span class="n">qfile</span> <span class="o">=</span> <span class="n">fileIO</span><span class="o">.</span><span class="n">write_fastx</span><span class="p">(</span><span class="n">qfile</span><span class="p">,</span> <span class="n">query</span><span class="p">)</span>
+        
+        <span class="n">paired</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">query2</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="o">!=</span><span class="s1">&#39;NoneType&#39;</span><span class="p">:</span>
+            <span class="n">paired</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">query2</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+                <span class="n">mfile</span> <span class="o">=</span> <span class="n">query2</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">mfile</span> <span class="o">=</span> <span class="n">work_dir</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="s1">&#39;read2&#39;</span>
+                <span class="n">mfile</span> <span class="o">=</span> <span class="n">fileIO</span><span class="o">.</span><span class="n">write_fastx</span><span class="p">(</span><span class="n">mfile</span><span class="p">,</span> <span class="n">query2</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">database</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="o">!=</span><span class="s1">&#39;NoneType&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bwa_get_index</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
+        <span class="n">dbfile</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;bwa&#39;</span><span class="p">][</span><span class="s1">&#39;index&#39;</span><span class="p">]</span>
+        <span class="n">outfile</span> <span class="o">=</span> <span class="n">work_dir</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s1">&#39;/results.sam&#39;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;bwa&#39;</span><span class="p">][</span><span class="s1">&#39;config&#39;</span><span class="p">]</span>
+        <span class="n">bwa</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;binaries&#39;</span><span class="p">][</span><span class="s1">&#39;bwa&#39;</span><span class="p">]</span>
+        
+        <span class="c1"># do paired end search if needed</span>
+        <span class="k">if</span> <span class="n">paired</span><span class="p">:</span>
+            <span class="n">cmd</span> <span class="o">=</span> <span class="n">bwa</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">config</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">dbfile</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">qfile</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">mfile</span><span class="o">+</span><span class="s1">&#39; -o &#39;</span><span class="o">+</span><span class="n">outfile</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cmd</span> <span class="o">=</span> <span class="n">bwa</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">config</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">dbfile</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">qfile</span><span class="o">+</span><span class="s1">&#39; -o &#39;</span><span class="o">+</span><span class="n">outfile</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">))</span>
+        
+        <span class="c1"># extract the SAM file information</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">fileIO</span><span class="o">.</span><span class="n">parse_SAM</span><span class="p">(</span><span class="n">outfile</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">bwa_format_SAM</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">query2</span><span class="p">,</span> <span class="n">database</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Aligner.bwa_format_SAM"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.bwa_format_SAM">[docs]</a>    <span class="k">def</span> <span class="nf">bwa_format_SAM</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">query2</span><span class="p">,</span> <span class="n">database</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Add q_len and t_len information to sam output</span>
+<span class="sd">        query = str or pandas dataframe</span>
+<span class="sd">        query2 = str or pandas dataframe</span>
+<span class="sd">        database = str or pandas dataframe</span>
+<span class="sd">        data = pandas dataframe from parse_SAM</span>
+
+<span class="sd">        returns dataframe with q_len and t_len info</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">paired</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">query2</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="o">!=</span><span class="s1">&#39;NoneType&#39;</span><span class="p">:</span>
+            <span class="n">paired</span> <span class="o">=</span> <span class="kc">True</span>
+        
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">fileIO</span><span class="o">.</span><span class="n">read_fastx</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">query2</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">:</span>
+            <span class="n">query2</span> <span class="o">=</span> <span class="n">fileIO</span><span class="o">.</span><span class="n">read_fastx</span><span class="p">(</span><span class="n">query2</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">database</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">:</span>
+            <span class="n">database</span> <span class="o">=</span> <span class="n">fileIO</span><span class="o">.</span><span class="n">read_fastx</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
+        
+        <span class="c1"># add q_len and t_len info</span>
+        <span class="n">q_len</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">([</span><span class="n">query</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">query</span><span class="p">[</span><span class="s1">&#39;sequence&#39;</span><span class="p">]]])</span>
+        <span class="n">q_len</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">q_len</span><span class="p">,</span> <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;query_id&#39;</span><span class="p">,</span><span class="s1">&#39;q_len&#39;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">paired</span><span class="p">:</span>
+            <span class="n">q_len2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">([</span><span class="n">query2</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">query2</span><span class="p">[</span><span class="s1">&#39;sequence&#39;</span><span class="p">]]])</span>
+            <span class="n">q_len2</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">q_len</span><span class="p">,</span> <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;query_id&#39;</span><span class="p">,</span><span class="s1">&#39;q_len&#39;</span><span class="p">])</span>
+            <span class="n">q_len</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">q_len</span><span class="p">,</span> <span class="n">q_len2</span><span class="p">])</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">q_len</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s1">&#39;query_id&#39;</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>
+        
+        <span class="n">t_len</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">([</span><span class="n">database</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">database</span><span class="p">[</span><span class="s1">&#39;sequence&#39;</span><span class="p">]]])</span>
+        <span class="n">t_len</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">t_len</span><span class="p">,</span> <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;database_id&#39;</span><span class="p">,</span><span class="s1">&#39;t_len&#39;</span><span class="p">])</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">t_len</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s1">&#39;database_id&#39;</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span> <span class="c1"># drop shit that doesn&#39;t have sequence length</span>
+        
+        <span class="c1"># Format the fields to integer</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;q_len&#39;</span><span class="p">,</span><span class="s1">&#39;t_len&#39;</span><span class="p">,</span><span class="s1">&#39;t_start&#39;</span><span class="p">,</span><span class="s1">&#39;t_end&#39;</span><span class="p">,</span><span class="s1">&#39;mapq&#39;</span><span class="p">,</span><span class="s1">&#39;AS&#39;</span><span class="p">,</span><span class="s1">&#39;XS&#39;</span><span class="p">,</span><span class="s1">&#39;XN&#39;</span><span class="p">,</span><span class="s1">&#39;XM&#39;</span><span class="p">,</span><span class="s1">&#39;XO&#39;</span><span class="p">,</span><span class="s1">&#39;XG&#39;</span><span class="p">,</span><span class="s1">&#39;NM&#39;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">x</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        
+        <span class="c1"># compute similarity</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">get_similarity</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+    
+<div class="viewcode-block" id="Aligner.bowtie2_get_index"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.bowtie2_get_index">[docs]</a>    <span class="k">def</span> <span class="nf">bowtie2_get_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">database</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s1">&#39;bowtie2_index&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        This is a wrapper for bowtie2 to build the fn_index</span>
+<span class="sd">        database = database of sequences being search through</span>
+<span class="sd">        database must be in pandas dataframe format with columns:</span>
+<span class="sd">        [name, sequence] or [name, sequence, quality]</span>
+<span class="sd">        or a string defining the fasta or fastq file to index</span>
+<span class="sd">        </span>
+<span class="sd">        filename = defines the filename of the bwa index</span>
+<span class="sd">        </span>
+<span class="sd">        return filename of bwa index</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">bowtie2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;binaries&#39;</span><span class="p">][</span><span class="s1">&#39;bowtie2&#39;</span><span class="p">]</span>
+        <span class="n">work_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;work_dir&#39;</span><span class="p">]</span>
+
+        <span class="c1"># write input files</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">database</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">&#39;.fq&#39;</span> <span class="ow">in</span> <span class="n">database</span> <span class="ow">or</span> <span class="s1">&#39;.fastq&#39;</span> <span class="ow">in</span> <span class="n">database</span><span class="p">:</span>
+                <span class="n">database</span> <span class="o">=</span> <span class="n">fileIO</span><span class="o">.</span><span class="n">read_fastq</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
+                <span class="n">dbfile</span> <span class="o">=</span> <span class="n">work_dir</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;/db&#39;</span>
+                <span class="n">fileIO</span><span class="o">.</span><span class="n">write_fasta</span><span class="p">(</span><span class="n">dbfile</span><span class="p">,</span> <span class="n">database</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">dbfile</span> <span class="o">=</span> <span class="n">database</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dbfile</span> <span class="o">=</span> <span class="n">work_dir</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;/db&#39;</span>
+            <span class="n">fileIO</span><span class="o">.</span><span class="n">write_fasta</span><span class="p">(</span><span class="n">dbfile</span><span class="p">,</span> <span class="n">database</span><span class="p">)</span>
+
+        <span class="n">btfile</span> <span class="o">=</span> <span class="n">work_dir</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s1">&#39;/&#39;</span><span class="o">+</span><span class="n">filename</span>
+        <span class="c1"># bowtie2 only builds indexes against fasta files</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="n">bowtie2</span><span class="o">+</span><span class="s1">&#39;-build --quiet -f &#39;</span><span class="o">+</span><span class="n">dbfile</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">btfile</span><span class="o">+</span><span class="s1">&#39; --threads 2&#39;</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">))</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;bowtie2&#39;</span><span class="p">][</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">btfile</span>
+        <span class="k">return</span> <span class="n">btfile</span></div>
+    
+<div class="viewcode-block" id="Aligner.bowtie2"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.bowtie2">[docs]</a>    <span class="k">def</span> <span class="nf">bowtie2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">query2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">database</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        This is a wrapper for the bowtie2 aligner.</span>
+
+<span class="sd">        query = list of sequences to search for in database</span>
+<span class="sd">        query2 = reverse pair of paired end read</span>
+<span class="sd">        </span>
+<span class="sd">        query and query2 must be in pandas dataframe format with columns:</span>
+<span class="sd">        [name, sequence] or [name, sequence, quality]</span>
+<span class="sd">        </span>
+<span class="sd">        database = database of sequences being search through</span>
+<span class="sd">        database must be in pandas dataframe format with columns:</span>
+<span class="sd">        [name, sequence] or [name, sequence, quality]</span>
+<span class="sd">        or a string containing the filename of the fn_index</span>
+<span class="sd">        </span>
+<span class="sd">        returns a pandas dataframe of alignment results from the sam file</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="c1"># Define locations of input and output files</span>
+        <span class="n">work_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;work_dir&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">query</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="n">qfile</span> <span class="o">=</span> <span class="n">query</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">qfile</span> <span class="o">=</span> <span class="n">work_dir</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="s1">&#39;read1&#39;</span>
+            <span class="n">qfile</span> <span class="o">=</span> <span class="n">fileIO</span><span class="o">.</span><span class="n">write_fastx</span><span class="p">(</span><span class="n">qfile</span><span class="p">,</span> <span class="n">query</span><span class="p">)</span>
+        
+        <span class="n">paired</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">query2</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="o">!=</span><span class="s1">&#39;NoneType&#39;</span><span class="p">:</span>
+            <span class="n">paired</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">query2</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+                <span class="n">mfile</span> <span class="o">=</span> <span class="n">query2</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">mfile</span> <span class="o">=</span> <span class="n">work_dir</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="s1">&#39;read2&#39;</span>
+                <span class="n">mfile</span> <span class="o">=</span> <span class="n">fileIO</span><span class="o">.</span><span class="n">write_fastx</span><span class="p">(</span><span class="n">mfile</span><span class="p">,</span> <span class="n">query2</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">database</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="o">!=</span><span class="s1">&#39;NoneType&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bowtie2_get_index</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
+        <span class="n">btfile</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;bowtie2&#39;</span><span class="p">][</span><span class="s1">&#39;index&#39;</span><span class="p">]</span>
+        <span class="n">outfile</span> <span class="o">=</span> <span class="n">work_dir</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s1">&#39;/results.sam&#39;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;bowtie2&#39;</span><span class="p">][</span><span class="s1">&#39;config&#39;</span><span class="p">]</span>
+        <span class="n">bowtie2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;binaries&#39;</span><span class="p">][</span><span class="s1">&#39;bowtie2&#39;</span><span class="p">]</span>
+        
+        <span class="k">if</span> <span class="n">paired</span><span class="p">:</span>
+            <span class="n">cmd</span> <span class="o">=</span> <span class="n">bowtie2</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">config</span><span class="o">+</span><span class="s1">&#39; -x &#39;</span><span class="o">+</span><span class="n">btfile</span><span class="o">+</span><span class="s1">&#39; -1 &#39;</span><span class="o">+</span><span class="n">qfile</span><span class="o">+</span><span class="s1">&#39; -2 &#39;</span><span class="o">+</span><span class="n">mfile</span><span class="o">+</span><span class="s1">&#39; -S &#39;</span><span class="o">+</span><span class="n">outfile</span>            
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">&#39;.fq&#39;</span> <span class="ow">in</span> <span class="n">qfile</span><span class="p">:</span>
+                <span class="n">cmd</span> <span class="o">=</span> <span class="n">bowtie2</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">config</span><span class="o">+</span><span class="s1">&#39; -x &#39;</span><span class="o">+</span><span class="n">btfile</span><span class="o">+</span><span class="s1">&#39; -q &#39;</span><span class="o">+</span><span class="n">qfile</span><span class="o">+</span><span class="s1">&#39; -S &#39;</span><span class="o">+</span><span class="n">outfile</span>
+            <span class="k">elif</span> <span class="s1">&#39;.fa&#39;</span> <span class="ow">in</span> <span class="n">qfile</span><span class="p">:</span>
+                <span class="n">cmd</span> <span class="o">=</span> <span class="n">bowtie2</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">config</span><span class="o">+</span><span class="s1">&#39; -x &#39;</span><span class="o">+</span><span class="n">btfile</span><span class="o">+</span><span class="s1">&#39; -f &#39;</span><span class="o">+</span><span class="n">qfile</span><span class="o">+</span><span class="s1">&#39; -S &#39;</span><span class="o">+</span><span class="n">outfile</span>
+        <span class="c1"># call bowtie2</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">))</span>
+        
+        <span class="c1"># extract the SAM file information</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">fileIO</span><span class="o">.</span><span class="n">parse_SAM</span><span class="p">(</span><span class="n">outfile</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">bwa_format_SAM</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">query2</span><span class="p">,</span> <span class="n">database</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Aligner.merge_paired_end"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.merge_paired_end">[docs]</a>    <span class="k">def</span> <span class="nf">merge_paired_end</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">read1</span><span class="p">,</span> <span class="n">read2</span><span class="p">,</span> <span class="n">outfile</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Merge paired end reads using NGmerge</span>
+<span class="sd">        read1  = fastq reads fwd pair</span>
+<span class="sd">        read2 = fastq reads rev pair</span>
+<span class="sd">        </span>
+<span class="sd">        return filename of output fastq</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="c1"># do paired alignment</span>
+        <span class="n">ngmerge</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;binaries&#39;</span><span class="p">][</span><span class="s1">&#39;ngmerge&#39;</span><span class="p">]</span>
+        <span class="n">work_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;work_dir&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">outfile</span><span class="p">)</span><span class="o">==</span><span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">):</span>
+            <span class="n">outfile</span> <span class="o">=</span> <span class="n">work_dir</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s1">&#39;/results.fq.gz&#39;</span>
+        
+        <span class="c1"># run the read merge tool</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="n">ngmerge</span><span class="o">+</span><span class="s1">&#39; -1 &#39;</span><span class="o">+</span><span class="n">read1</span><span class="o">+</span><span class="s1">&#39; -2 &#39;</span><span class="o">+</span><span class="n">read2</span><span class="o">+</span><span class="s1">&#39; -o &#39;</span><span class="o">+</span><span class="n">outfile</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">outfile</span></div>
+
+<div class="viewcode-block" id="Aligner.get_fastq_statistics"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.get_fastq_statistics">[docs]</a>    <span class="k">def</span> <span class="nf">get_fastq_statistics</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Compute quality statistics about each read</span>
+<span class="sd">        query and query2 must be in pandas dataframe format with columns:</span>
+<span class="sd">        [name, sequence] or [name, sequence, quality]</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">query</span><span class="p">[</span><span class="s1">&#39;quality&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">Aligner</span><span class="o">.</span><span class="n">phred_to_int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.75</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">q</span><span class="p">)</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+        <span class="n">col</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Q_min&#39;</span><span class="p">,</span><span class="s1">&#39;Q_lower&#39;</span><span class="p">,</span><span class="s1">&#39;Q_median&#39;</span><span class="p">,</span><span class="s1">&#39;Q_upper&#39;</span><span class="p">,</span><span class="s1">&#39;Q_max&#39;</span><span class="p">]</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">col</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">col</span><span class="p">:</span>
+            <span class="n">query</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">c</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">query</span></div>
+
+<div class="viewcode-block" id="Aligner.phred_to_int"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.phred_to_int">[docs]</a>    <span class="k">def</span> <span class="nf">phred_to_int</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Translate phred ASCII to quality integers</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">-</span><span class="mi">33</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">x</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Aligner.mmseq2_get_database"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.mmseq2_get_database">[docs]</a>    <span class="k">def</span> <span class="nf">mmseq2_get_database</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">database</span><span class="p">,</span> <span class="n">outdir</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Wrapper for mmseq2 fetching a database</span>
+<span class="sd">        database = database name options include</span>
+<span class="sd">        </span>
+<span class="sd">        UniRef100, Amino Acid db</span>
+<span class="sd">        UniProtKB, Amino Acid db</span>
+<span class="sd">        NR, Amino Acid Non-Redundant</span>
+<span class="sd">        NT, Nucleotide, Nucleotide Non-Redundant</span>
+<span class="sd">        GTDB, Genome Taxonomy Database</span>
+<span class="sd">        Pfam-A.full, Profile</span>
+<span class="sd">        SILVA, ribosomal RNA</span>
+<span class="sd">        </span>
+<span class="sd">        outdir = output directory</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">mmseq</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;binaries&#39;</span><span class="p">][</span><span class="s1">&#39;mmseq2&#39;</span><span class="p">]</span>
+        <span class="n">work_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;work_dir&#39;</span><span class="p">]</span>
+        <span class="c1"># run clustering</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="n">mmseq</span> <span class="o">+</span><span class="s1">&#39; database &#39;</span><span class="o">+</span><span class="n">database</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">outdir</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">work_dir</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Aligner.mmseq2_cluster"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.mmseq2_cluster">[docs]</a>    <span class="k">def</span> <span class="nf">mmseq2_cluster</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="s1">&#39;easy-cluster&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Wrapper for mmseq2 clustering</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">mmseq</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;binaries&#39;</span><span class="p">][</span><span class="s1">&#39;mmseq2&#39;</span><span class="p">]</span>
+        <span class="n">work_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;work_dir&#39;</span><span class="p">]</span>
+        
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">query</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="n">qfile</span> <span class="o">=</span> <span class="n">query</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">qfile</span> <span class="o">=</span> <span class="n">work_dir</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="s1">&#39;query&#39;</span>
+            <span class="n">qfile</span> <span class="o">=</span> <span class="n">fileIO</span><span class="o">.</span><span class="n">write_fastx</span><span class="p">(</span><span class="n">qfile</span><span class="p">,</span> <span class="n">query</span><span class="p">)</span>
+        
+        <span class="c1"># run clustering</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="n">mmseq</span> <span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">config</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">qfile</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">ofile</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">work_dir</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Aligner.mmseq2_search"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.mmseq2_search">[docs]</a>    <span class="k">def</span> <span class="nf">mmseq2_search</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="s1">&#39;easy-linsearch&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Wrapper for mmseq2 search</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">mmseq</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;binaries&#39;</span><span class="p">][</span><span class="s1">&#39;mmseq2&#39;</span><span class="p">]</span>
+        
+        <span class="n">cmd</span> <span class="o">=</span> <span class="n">mmseq</span> <span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">config</span></div>
+        <span class="c1">#mmseqs easy-cluster examples/DB.fasta clusterRes tmp --min-seq-id 0.5 -c 0.8 --cov-mode 1</span>
+
+<div class="viewcode-block" id="Aligner.mmseq2_taxon"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.mmseq2_taxon">[docs]</a>    <span class="k">def</span> <span class="nf">mmseq2_taxon</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="s1">&#39;easy-taxonomy&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Wrapper for mmseq2 search</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">mmseq</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;binaries&#39;</span><span class="p">][</span><span class="s1">&#39;mmseq2&#39;</span><span class="p">]</span>
+        
+        <span class="n">cmd</span> <span class="o">=</span> <span class="n">mmseq</span> <span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">config</span></div>
+        <span class="c1">#mmseqs easy-cluster examples/DB.fasta clusterRes tmp --min-seq-id 0.5 -c 0.8 --cov-mode 1</span>
+
+<div class="viewcode-block" id="Aligner.prodigal"><a class="viewcode-back" href="../../plasmid.html#plasmid.aligner.Aligner.prodigal">[docs]</a>    <span class="k">def</span> <span class="nf">prodigal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Wrapper for prodigal</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mi">1</span></div></div>
+
+
+    
+    
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Zhewei Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
