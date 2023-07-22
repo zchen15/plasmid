@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Designing primers with Plasmid &mdash; Plasmid: A python library for gene editing 2023.06.29 documentation</title>
+  <title>Designing primers &mdash; Plasmid: A python library for gene editing 2023.06.29 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" type="text/css" />
@@ -22,8 +22,8 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Aligning and clustering sequences with Plasmid" href="clustering.html" />
-    <link rel="prev" title="Manipulating genbank records with Plasmid" href="genbank_editing.html" /> 
+    <link rel="next" title="Aligning and clustering sequences" href="clustering.html" />
+    <link rel="prev" title="Manipulating genbank records" href="genbank_editing.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -51,9 +51,8 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">How-to guides &amp; Examples</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="genbank_editing.html">Manipulating genbank records with Plasmid</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Designing primers with Plasmid</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#table-of-contents">Table of Contents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="genbank_editing.html">Manipulating genbank records</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Designing primers</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#extension-pcr">Extension PCR</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#running-extension-pcr">Running extension PCR</a></li>
 </ul>
@@ -68,7 +67,7 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="clustering.html">Aligning and clustering sequences with Plasmid</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clustering.html">Aligning and clustering sequences</a></li>
 </ul>
 
         </div>
@@ -85,7 +84,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Designing primers with Plasmid</li>
+      <li class="breadcrumb-item active">Designing primers</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/notebooks/primer_design.ipynb.txt" rel="nofollow"> View page source</a>
       </li>
@@ -95,16 +94,9 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="designing-primers-with-plasmid">
-<h1>Designing primers with Plasmid<a class="headerlink" href="#designing-primers-with-plasmid" title="Permalink to this heading"></a></h1>
+  <section id="designing-primers">
+<h1>Designing primers<a class="headerlink" href="#designing-primers" title="Permalink to this heading"></a></h1>
 <p>This notebook illustrates the various functions contained in the <code class="docutils literal notranslate"><span class="pre">designer</span></code> class, which can be used to generate primers for extension PCR and DNA assembly.</p>
-<section id="table-of-contents">
-<h2>Table of Contents<a class="headerlink" href="#table-of-contents" title="Permalink to this heading"></a></h2>
-<ol class="arabic simple">
-<li><p><span class="xref myst">Extension PCR</span></p></li>
-<li><p><span class="xref myst">Gibson Assembly</span></p></li>
-<li><p><span class="xref myst">Goldengate Assembly</span></p></li>
-</ol>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">plasmid</span> <span class="k">as</span> <span class="nn">pge</span>
@@ -120,7 +112,6 @@
 </div>
 </div>
 <p><a class="anchor" id="xtPCR"></a></p>
-</section>
 <section id="extension-pcr">
 <h2>Extension PCR<a class="headerlink" href="#extension-pcr" title="Permalink to this heading"></a></h2>
 <p><a class="reference external" href="https://en.wikipedia.org/wiki/Overlap_extension_polymerase_chain_reaction">Extension PCR</a> uses primers with overlapping annealing sites to assemble a larger DNA fragment. This method is useful for adding promoters, ribosome binding sites, or cloning overhangs onto a larger gene fragment.</p>
@@ -312,11 +303,11 @@ reading  ../data/dcas9_RFP.gb  as genbank file
 reading  ../data/xRFP.gb  as genbank file
 </pre></div>
 </div>
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>res.x [10.60608033 14.38486143 23.88497503]
-res.fun -59.0
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>res.x [11.51496424  1.67750846 15.96703809]
+res.fun -54.0
 exclude: []
-overlaps: [&#39;GCGGGCAGTAAAAAActttt&#39;, &#39;TGCTTAACGCCcttttCTGT&#39;, &#39;ATGTAAC ATGGTGAATGTG&#39;]
-Tm overlap: [49.290031925644485, 51.50908680175826, 44.26293101370322]
+overlaps: [&#39;CGGGCAGTAAAAAActttt &#39;, &#39;GTCACTCCACCGGTGCTTAA&#39;, &#39;GATCGACAATGTAAC ATGG&#39;]
+Tm overlap: [45.828042650749126, 53.47392347753578, 45.13818370718934]
 processing primers for frag 0
 running fwd
 </pre></div>
@@ -331,34 +322,121 @@ running fwd
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>running rev
 </pre></div>
 </div>
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>processing primers for frag 2
-running fwd
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>parasail_sg_flags_scan_avx2_256_16: s2Len must be &gt; 0
 </pre></div>
 </div>
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>running rev
-</pre></div>
-</div>
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>     locus_tag         Tm                                           sequence  \
-0  frag0_fin_F  55.851352                   ATGTAAC  ATGGTGAATGTGAAACCAGTAAC   
-1  frag0_fin_R  56.106442                        aaaagTTTT TTACTGCCCGCTTTCCA   
-2  frag1_fin_F  55.335316            GCGGGCAGTAAAAAActttt  ATGGCGAGTAGCGAAGA   
-3  frag1_fin_R  56.777386                   ACAGaaaagGGCG TTAAGCACCGGTGGAGTG   
-4  frag2_fin_F  55.363272             TGCTTAACGCCctttt CTGTCAGACCAAGTTTACGAG   
-5  frag2_fin_R  54.627626              CACATTCACCAT  GTTACATTGTCGATCTGTTCATG   
-6         seq0        NaN  ATGTAAC ATGGTGAATGTGAAACCAGTAACGTTATACGATGTCGC...   
-7         seq1        NaN  GCGGGCAGTAAAAAActttt ATGGCGAGTAGCGAAGACGTTATCA...   
-8         seq2        NaN  TGCTTAACGCCcttttCTGTCAGACCAAGTTTACGAGCTCGCTTGG...   
+<div class="output traceback highlight-ipythontb notranslate"><div class="highlight"><pre><span></span><span class="gt">---------------------------------------------------------------------------</span>
+<span class="ne">ValueError</span><span class="g g-Whitespace">                                </span>Traceback (most recent call last)
+<span class="nn">~/python/lib/python3.9/site-packages/scipy/optimize/_differentialevolution.py</span> in <span class="ni">?</span><span class="nt">(self, population)</span>
+<span class="g g-Whitespace">   </span><span class="mi">1151</span>             <span class="c1"># wrong number of arguments for _mapwrapper</span>
+<span class="g g-Whitespace">   </span><span class="mi">1152</span>             <span class="c1"># or wrong length returned from the mapper</span>
+<span class="ne">-&gt; </span><span class="mi">1153</span>             <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+<span class="g g-Whitespace">   </span><span class="mi">1154</span>                 <span class="s2">&quot;The map-like callable must be of the form f(func, iterable), &quot;</span>
 
-                  annealed  strand  
-0  ATGGTGAATGTGAAACCAGTAAC     1.0  
-1        TTACTGCCCGCTTTCCA    -1.0  
-2        ATGGCGAGTAGCGAAGA     1.0  
-3       TTAAGCACCGGTGGAGTG    -1.0  
-4    CTGTCAGACCAAGTTTACGAG     1.0  
-5  GTTACATTGTCGATCTGTTCATG    -1.0  
-6                      NaN     NaN  
-7                      NaN     NaN  
-8                      NaN     NaN  
+<span class="nn">~/python/lib/python3.9/site-packages/scipy/_lib/_util.py</span> in <span class="ni">?</span><span class="nt">(self, x)</span>
+<span class="g g-Whitespace">    </span><span class="mi">359</span>     <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+<span class="ne">--&gt; </span><span class="mi">360</span>         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="p">)</span>
+
+<span class="nn">~/python/lib/python3.9/site-packages/plasmid/designer.py</span> in <span class="ni">?</span><span class="nt">(self, pos, fL, seq, w, verbose)</span>
+<span class="g g-Whitespace">    </span><span class="mi">233</span>         <span class="c1"># cross reactivity</span>
+<span class="g g-Whitespace">    </span><span class="mi">234</span>         <span class="k">if</span> <span class="n">w</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">!=</span><span class="mi">0</span><span class="p">:</span>
+<span class="ne">--&gt; </span><span class="mi">235</span>             <span class="n">cost</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xtPCR_crosscheck</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">fL</span><span class="p">,</span> <span class="n">seq</span><span class="p">)</span>
+<span class="g g-Whitespace">    </span><span class="mi">236</span>         <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+
+<span class="nn">~/python/lib/python3.9/site-packages/plasmid/designer.py</span> in <span class="ni">?</span><span class="nt">(self, pos, fL, seq)</span>
+<span class="g g-Whitespace">    </span><span class="mi">296</span>             <span class="c1"># score cross reactivity</span>
+<span class="g g-Whitespace">    </span><span class="mi">297</span>             <span class="n">res1</span> <span class="o">=</span> <span class="n">parasail</span><span class="o">.</span><span class="n">sg_scan_16</span><span class="p">(</span><span class="n">annealed</span><span class="p">,</span> <span class="n">annealed</span><span class="p">,</span> <span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">,</span> <span class="n">parasail</span><span class="o">.</span><span class="n">nuc44</span><span class="p">)</span>
+<span class="ne">--&gt; </span><span class="mi">298</span>             <span class="n">score</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res1</span><span class="o">.</span><span class="n">score</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_reactivity</span><span class="p">(</span><span class="n">annealed</span><span class="p">,</span> <span class="n">exclude</span><span class="p">,</span> <span class="n">res1</span><span class="o">.</span><span class="n">score</span><span class="p">))</span>
+<span class="g g-Whitespace">    </span><span class="mi">299</span> 
+
+<span class="nn">~/python/lib/python3.9/site-packages/plasmid/designer.py</span> in <span class="ni">?</span><span class="nt">(self, seq, seqlist, best)</span>
+<span class="g g-Whitespace">    </span><span class="mi">548</span>         <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">seqlist</span><span class="p">)):</span>
+<span class="g g-Whitespace">    </span><span class="mi">549</span>             <span class="n">res2</span> <span class="o">=</span> <span class="n">parasail</span><span class="o">.</span><span class="n">sg_scan_16</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">seqlist</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">,</span> <span class="n">parasail</span><span class="o">.</span><span class="n">nuc44</span><span class="p">)</span>
+<span class="ne">--&gt; </span><span class="mi">550</span>             <span class="n">score</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">([</span><span class="n">score</span><span class="p">,</span> <span class="n">res2</span><span class="o">.</span><span class="n">score</span><span class="p">])</span>
+<span class="g g-Whitespace">    </span><span class="mi">551</span>             <span class="k">if</span> <span class="n">best</span><span class="o">!=</span><span class="kc">None</span> <span class="ow">and</span> <span class="n">best</span><span class="o">==</span><span class="n">res2</span><span class="o">.</span><span class="n">score</span><span class="p">:</span>
+
+<span class="nn">~/python/lib/python3.9/site-packages/parasail/bindings_v2.py</span> in <span class="ni">?</span><span class="nt">(self)</span>
+<span class="g g-Whitespace">    </span><span class="mi">279</span>     <span class="nd">@property</span>
+<span class="g g-Whitespace">    </span><span class="mi">280</span>     <span class="k">def</span> <span class="nf">score</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="ne">--&gt; </span><span class="mi">281</span>         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pointer</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">score</span>
+
+<span class="ne">ValueError</span>: NULL pointer access
+
+<span class="n">The</span> <span class="n">above</span> <span class="n">exception</span> <span class="n">was</span> <span class="n">the</span> <span class="n">direct</span> <span class="n">cause</span> <span class="n">of</span> <span class="n">the</span> <span class="n">following</span> <span class="n">exception</span><span class="p">:</span>
+
+<span class="ne">RuntimeError</span><span class="g g-Whitespace">                              </span>Traceback (most recent call last)
+<span class="n">Cell</span> <span class="n">In</span><span class="p">[</span><span class="mi">7</span><span class="p">],</span> <span class="n">line</span> <span class="mi">18</span>
+<span class="g g-Whitespace">     </span><span class="mi">15</span> <span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;xtPCR&#39;</span><span class="p">][</span><span class="s1">&#39;nM&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">20</span><span class="p">,</span> <span class="mi">500</span><span class="p">]</span>  <span class="c1"># defines the [seed, finisher] primer conc in nM</span>
+<span class="g g-Whitespace">     </span><span class="mi">16</span> <span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="ne">---&gt; </span><span class="mi">18</span> <span class="n">res</span> <span class="o">=</span> <span class="n">pcr</span><span class="o">.</span><span class="n">Gibson</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+<span class="g g-Whitespace">     </span><span class="mi">19</span> <span class="nb">print</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+
+<span class="nn">File ~/python/lib/python3.9/site-packages/plasmid/designer.py:568,</span> in <span class="ni">Designer.Gibson</span><span class="nt">(self, seqlist, w, method, circular)</span>
+<span class="g g-Whitespace">    </span><span class="mi">566</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;goldengate&#39;</span><span class="p">][</span><span class="s1">&#39;ggsite&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+<span class="g g-Whitespace">    </span><span class="mi">567</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;goldengate&#39;</span><span class="p">][</span><span class="s1">&#39;padding&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+<span class="ne">--&gt; </span><span class="mi">568</span> <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">GoldenGate</span><span class="p">(</span><span class="n">seqlist</span><span class="p">,</span> <span class="n">circular</span><span class="o">=</span><span class="n">circular</span><span class="p">)</span>
+
+<span class="nn">File ~/python/lib/python3.9/site-packages/plasmid/designer.py:489,</span> in <span class="ni">Designer.GoldenGate</span><span class="nt">(self, seqlist, exclude, w, circular)</span>
+<span class="g g-Whitespace">    </span><span class="mi">487</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;processing primers for frag&#39;</span><span class="p">,</span><span class="n">i</span><span class="p">)</span>
+<span class="g g-Whitespace">    </span><span class="mi">488</span> <span class="p">[</span><span class="n">fL</span><span class="p">,</span> <span class="n">seq</span><span class="p">,</span> <span class="n">fR</span><span class="p">]</span> <span class="o">=</span> <span class="n">frags</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+<span class="ne">--&gt; </span><span class="mi">489</span> <span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xtPCR</span><span class="p">(</span><span class="n">fL</span><span class="p">,</span> <span class="n">seq</span><span class="p">,</span> <span class="n">fR</span><span class="p">)</span>
+<span class="g g-Whitespace">    </span><span class="mi">490</span> <span class="n">p</span><span class="p">[</span><span class="s1">&#39;locus_tag&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;frag&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_&#39;</span><span class="o">+</span><span class="n">j</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">p</span><span class="p">[</span><span class="s1">&#39;locus_tag&#39;</span><span class="p">]]</span>
+<span class="g g-Whitespace">    </span><span class="mi">491</span> <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+<span class="nn">File ~/python/lib/python3.9/site-packages/plasmid/designer.py:190,</span> in <span class="ni">Designer.xtPCR</span><span class="nt">(self, fL, seq, fR, padding, niter, w, get_cost)</span>
+<span class="g g-Whitespace">    </span><span class="mi">188</span> <span class="n">fwd</span> <span class="o">=</span> <span class="n">df_F</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="g g-Whitespace">    </span><span class="mi">189</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;running rev&#39;</span><span class="p">)</span>
+<span class="ne">--&gt; </span><span class="mi">190</span> <span class="n">df_R</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xtPCR</span><span class="p">(</span><span class="n">fR</span><span class="p">,</span> <span class="n">seqR</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">w</span><span class="o">=</span><span class="n">w</span><span class="p">,</span> <span class="n">get_cost</span><span class="o">=</span><span class="n">get_cost</span><span class="p">)</span>
+<span class="g g-Whitespace">    </span><span class="mi">191</span> <span class="n">rev</span> <span class="o">=</span> <span class="n">df_R</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="g g-Whitespace">    </span><span class="mi">192</span> <span class="n">fwd</span><span class="p">[</span><span class="s1">&#39;locus_tag&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_F&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fwd</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)]</span> <span class="o">+</span> <span class="p">[</span><span class="s1">&#39;fin_F&#39;</span><span class="p">]</span>
+
+<span class="nn">File ~/python/lib/python3.9/site-packages/plasmid/designer.py:158,</span> in <span class="ni">Designer.xtPCR</span><span class="nt">(self, fL, seq, fR, padding, niter, w, get_cost)</span>
+<span class="g g-Whitespace">    </span><span class="mi">156</span> <span class="n">bounds</span> <span class="o">=</span> <span class="p">[(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;xtPCR&#39;</span><span class="p">][</span><span class="s1">&#39;len&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;xtPCR&#39;</span><span class="p">][</span><span class="s1">&#39;len&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">])]</span><span class="o">*</span><span class="n">N_left</span> <span class="o">+</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;xtPCR&#39;</span><span class="p">][</span><span class="s1">&#39;len&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;xtPCR&#39;</span><span class="p">][</span><span class="s1">&#39;len&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])]</span><span class="o">*</span><span class="n">N_left</span>
+<span class="g g-Whitespace">    </span><span class="mi">157</span> <span class="n">x0</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;xtPCR&#39;</span><span class="p">][</span><span class="s1">&#39;len&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span><span class="o">*</span><span class="n">N_left</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">N_left</span>
+<span class="ne">--&gt; </span><span class="mi">158</span> <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xtPCR_cost</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">x0</span><span class="p">)</span> 
+<span class="g g-Whitespace">    </span><span class="mi">159</span> <span class="c1"># save the best result</span>
+<span class="g g-Whitespace">    </span><span class="mi">160</span> <span class="k">if</span> <span class="n">best_res</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">res</span><span class="o">.</span><span class="n">fun</span><span class="p">:</span>
+
+<span class="nn">File ~/python/lib/python3.9/site-packages/plasmid/designer.py:93,</span> in <span class="ni">Designer.optimizer</span><span class="nt">(self, cost_func, args, bounds, x0, discrete)</span>
+<span class="g g-Whitespace">     </span><span class="mi">91</span>     <span class="k">return</span> <span class="n">sp</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">basinhopping</span><span class="p">(</span><span class="n">cost_func</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">minimizer_kwargs</span><span class="o">=</span><span class="n">kwargs</span><span class="p">)</span>
+<span class="g g-Whitespace">     </span><span class="mi">92</span> <span class="k">elif</span> <span class="n">method</span><span class="o">==</span><span class="s1">&#39;differential_evolution&#39;</span><span class="p">:</span>
+<span class="ne">---&gt; </span><span class="mi">93</span>     <span class="k">return</span> <span class="n">sp</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">differential_evolution</span><span class="p">(</span><span class="n">cost_func</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">bounds</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="n">args</span><span class="p">,</span> <span class="n">constraints</span><span class="o">=</span><span class="n">cons</span><span class="p">)</span>
+
+<span class="nn">File ~/python/lib/python3.9/site-packages/scipy/optimize/_differentialevolution.py:402,</span> in <span class="ni">differential_evolution</span><span class="nt">(func, bounds, args, strategy, maxiter, popsize, tol, mutation, recombination, seed, callback, disp, polish, init, atol, updating, workers, constraints, x0, integrality, vectorized)</span>
+<span class="g g-Whitespace">    </span><span class="mi">385</span> <span class="c1"># using a context manager means that any created Pool objects are</span>
+<span class="g g-Whitespace">    </span><span class="mi">386</span> <span class="c1"># cleared up.</span>
+<span class="g g-Whitespace">    </span><span class="mi">387</span> <span class="k">with</span> <span class="n">DifferentialEvolutionSolver</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="n">args</span><span class="p">,</span>
+<span class="g g-Whitespace">    </span><span class="mi">388</span>                                  <span class="n">strategy</span><span class="o">=</span><span class="n">strategy</span><span class="p">,</span>
+<span class="g g-Whitespace">    </span><span class="mi">389</span>                                  <span class="n">maxiter</span><span class="o">=</span><span class="n">maxiter</span><span class="p">,</span>
+   <span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="g g-Whitespace">    </span><span class="mi">400</span>                                  <span class="n">integrality</span><span class="o">=</span><span class="n">integrality</span><span class="p">,</span>
+<span class="g g-Whitespace">    </span><span class="mi">401</span>                                  <span class="n">vectorized</span><span class="o">=</span><span class="n">vectorized</span><span class="p">)</span> <span class="k">as</span> <span class="n">solver</span><span class="p">:</span>
+<span class="ne">--&gt; </span><span class="mi">402</span>     <span class="n">ret</span> <span class="o">=</span> <span class="n">solver</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+<span class="g g-Whitespace">    </span><span class="mi">404</span> <span class="k">return</span> <span class="n">ret</span>
+
+<span class="nn">File ~/python/lib/python3.9/site-packages/scipy/optimize/_differentialevolution.py:1013,</span> in <span class="ni">DifferentialEvolutionSolver.solve</span><span class="nt">(self)</span>
+<span class="g g-Whitespace">   </span><span class="mi">1008</span>     <span class="bp">self</span><span class="o">.</span><span class="n">feasible</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraint_violation</span> <span class="o">=</span> <span class="p">(</span>
+<span class="g g-Whitespace">   </span><span class="mi">1009</span>         <span class="bp">self</span><span class="o">.</span><span class="n">_calculate_population_feasibilities</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="p">))</span>
+<span class="g g-Whitespace">   </span><span class="mi">1011</span>     <span class="c1"># only work out population energies for feasible solutions</span>
+<span class="g g-Whitespace">   </span><span class="mi">1012</span>     <span class="bp">self</span><span class="o">.</span><span class="n">population_energies</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">feasible</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+<span class="ne">-&gt; </span><span class="mi">1013</span>         <span class="bp">self</span><span class="o">.</span><span class="n">_calculate_population_energies</span><span class="p">(</span>
+<span class="g g-Whitespace">   </span><span class="mi">1014</span>             <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">feasible</span><span class="p">]))</span>
+<span class="g g-Whitespace">   </span><span class="mi">1016</span>     <span class="bp">self</span><span class="o">.</span><span class="n">_promote_lowest_energy</span><span class="p">()</span>
+<span class="g g-Whitespace">   </span><span class="mi">1018</span> <span class="c1"># do the optimization.</span>
+
+<span class="nn">File ~/python/lib/python3.9/site-packages/scipy/optimize/_differentialevolution.py:1153,</span> in <span class="ni">DifferentialEvolutionSolver._calculate_population_energies</span><span class="nt">(self, population)</span>
+<span class="g g-Whitespace">   </span><span class="mi">1149</span>     <span class="n">calc_energies</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">calc_energies</span><span class="p">)</span>
+<span class="g g-Whitespace">   </span><span class="mi">1150</span> <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+<span class="g g-Whitespace">   </span><span class="mi">1151</span>     <span class="c1"># wrong number of arguments for _mapwrapper</span>
+<span class="g g-Whitespace">   </span><span class="mi">1152</span>     <span class="c1"># or wrong length returned from the mapper</span>
+<span class="ne">-&gt; </span><span class="mi">1153</span>     <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+<span class="g g-Whitespace">   </span><span class="mi">1154</span>         <span class="s2">&quot;The map-like callable must be of the form f(func, iterable), &quot;</span>
+<span class="g g-Whitespace">   </span><span class="mi">1155</span>         <span class="s2">&quot;returning a sequence of numbers the same length as &#39;iterable&#39;&quot;</span>
+<span class="g g-Whitespace">   </span><span class="mi">1156</span>     <span class="p">)</span> <span class="kn">from</span> <span class="nn">e</span>
+<span class="g g-Whitespace">   </span><span class="mi">1158</span> <span class="k">if</span> <span class="n">calc_energies</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="n">S</span><span class="p">:</span>
+<span class="g g-Whitespace">   </span><span class="mi">1159</span>     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">vectorized</span><span class="p">:</span>
+
+<span class="ne">RuntimeError</span>: The map-like callable must be of the form f(func, iterable), returning a sequence of numbers the same length as &#39;iterable&#39;
 </pre></div>
 </div>
 </div>
@@ -377,20 +455,6 @@ running fwd
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">pcr</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Designer</span><span class="p">()</span>
 <span class="n">help</span><span class="p">(</span><span class="n">pcr</span><span class="o">.</span><span class="n">GoldenGate</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;goldengate&#39;</span><span class="p">])</span>
-</pre></div>
-</div>
-</div>
-<div class="cell_output docutils container">
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Help on method GoldenGate in module plasmid.designer:
-
-GoldenGate(seqlist, exclude=[], w=[0, 1], circular=True) method of plasmid.designer.Designer instance
-    Design primers for goldengate assembly
-    seqlist = list of sequences to assemble
-    exclude = sites to exclude
-    circular = assemble fragments into a circular construct
-    returns list of primers
-
-{&#39;Tm&#39;: 50, &#39;nM&#39;: 20, &#39;padding&#39;: &#39;&#39;, &#39;ggsite&#39;: &#39;&#39;, &#39;ggN&#39;: 20, &#39;window&#39;: 30}
 </pre></div>
 </div>
 </div>
@@ -431,74 +495,50 @@ GoldenGate(seqlist, exclude=[], w=[0, 1], circular=True) method of plasmid.desig
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>reading  ../data/xRFP.gb  as genbank file
 reading  ../data/dcas9_RFP.gb  as genbank file
 reading  ../data/xRFP.gb  as genbank file
-</pre></div>
-</div>
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>res.x [27.17299802 32.32654129 12.23344284]
+res.x [10.34275508  4.10592271  9.27857462]
 res.fun -12.0
 exclude: []
-overlaps: [&#39;GTAG&#39;, &#39;GTTT&#39;, &#39;GGGc&#39;]
-Tm overlap: [-63.72743868625798, -67.45237457822893, -41.01531509599255]
+overlaps: [&#39;AAAA&#39;, &#39;TGCT&#39;, &#39;ACGG&#39;]
+Tm overlap: [-79.98814282127228, -58.96562554863294, -46.79908254371483]
 processing primers for frag 0
 running fwd
+running rev
 </pre></div>
 </div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/home/peguin/python/lib/python3.9/site-packages/scipy/optimize/_numdiff.py:576: RuntimeWarning: invalid value encountered in subtract
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/home/zchen/Public/python/lib/python3.11/site-packages/scipy/optimize/_numdiff.py:576: RuntimeWarning: invalid value encountered in subtract
   df = fun(x) - f0
-</pre></div>
-</div>
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>running rev
 </pre></div>
 </div>
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>processing primers for frag 1
 running fwd
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/home/peguin/python/lib/python3.9/site-packages/scipy/optimize/_numdiff.py:576: RuntimeWarning: invalid value encountered in subtract
-  df = fun(x) - f0
-</pre></div>
-</div>
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>running rev
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/home/peguin/python/lib/python3.9/site-packages/scipy/optimize/_numdiff.py:576: RuntimeWarning: invalid value encountered in subtract
-  df = fun(x) - f0
-</pre></div>
-</div>
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>processing primers for frag 2
+running rev
+processing primers for frag 2
 running fwd
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/home/peguin/python/lib/python3.9/site-packages/scipy/optimize/_numdiff.py:576: RuntimeWarning: invalid value encountered in subtract
-  df = fun(x) - f0
-</pre></div>
-</div>
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>running rev
-</pre></div>
-</div>
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>     locus_tag         Tm                                           sequence  \
-0  frag0_fin_F  55.851352  atatatatggGGTCTCcGGGctttt ATGGTGAATGTGAAACCAGTAAC   
-1  frag0_fin_R  56.106442  atatatatggGGTCTCcCTACTCGCCATaaaagTTTT TTACTGCC...   
-2  frag1_fin_F  55.129431           atatatatggGGTCTCc GTAGCGAAGACGTTATCAAAGA   
-3  frag1_fin_R  56.777386  atatatatggGGTCTCcAAACTTGGTCTGACAGaaaagGGCG TTA...   
-4  frag2_fin_F  56.144721               atatatatggGGTCTCc GTTTACGAGCTCGCTTGG   
-5  frag2_fin_R  54.627626     atatatatggGGTCTCcgCCCC GTTACATTGTCGATCTGTTCATG   
-6         seq0        NaN  atatatatggGGTCTCcGGGcttttATGGTGAATGTGAAACCAGTA...   
-7         seq1        NaN  atatatatggGGTCTCcGTAGCGAAGACGTTATCAAAGAGTTCATG...   
-8         seq2        NaN  atatatatggGGTCTCcGTTTACGAGCTCGCTTGGACTCCTGTTGA...   
+running rev
+     locus_tag         Tm                                           sequence   
+0  frag0_fin_F  55.851352  atatatatggGGTCTCcACGGGGctttt ATGGTGAATGTGAAACC...  \
+1  frag0_fin_R  56.106442             atatatatggGGTCTCcTTT TTACTGCCCGCTTTCCA   
+2  frag1_fin_F  55.335316      atatatatggGGTCTCcAAAAActttt ATGGCGAGTAGCGAAGA   
+3  frag1_fin_R  56.119961                  atatatatggGGTCTCc AGCACCGGTGGAGTG   
+4  frag2_fin_F  55.363272  atatatatggGGTCTCcTGCTTAACGCCctttt CTGTCAGACCAA...   
+5  frag2_fin_R  54.627626        atatatatggGGTCTCcCC GTTACATTGTCGATCTGTTCATG   
+6         seq0        NaN  atatatatggGGTCTCcACGGGGcttttATGGTGAATGTGAAACCA...   
+7         seq1        NaN  atatatatggGGTCTCcAAAAActtttATGGCGAGTAGCGAAGACG...   
+8         seq2        NaN  atatatatggGGTCTCcTGCTTAACGCCcttttCTGTCAGACCAAG...   
 
                   annealed  strand  
 0  ATGGTGAATGTGAAACCAGTAAC     1.0  
 1        TTACTGCCCGCTTTCCA    -1.0  
-2   GTAGCGAAGACGTTATCAAAGA     1.0  
-3       TTAAGCACCGGTGGAGTG    -1.0  
-4       GTTTACGAGCTCGCTTGG     1.0  
+2        ATGGCGAGTAGCGAAGA     1.0  
+3          AGCACCGGTGGAGTG    -1.0  
+4    CTGTCAGACCAAGTTTACGAG     1.0  
 5  GTTACATTGTCGATCTGTTCATG    -1.0  
 6                      NaN     NaN  
 7                      NaN     NaN  
 8                      NaN     NaN  
 </pre></div>
 </div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/home/peguin/python/lib/python3.9/site-packages/scipy/optimize/_numdiff.py:576: RuntimeWarning: invalid value encountered in subtract
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/home/zchen/Public/python/lib/python3.11/site-packages/scipy/optimize/_numdiff.py:576: RuntimeWarning: invalid value encountered in subtract
   df = fun(x) - f0
 </pre></div>
 </div>
@@ -514,8 +554,8 @@ running fwd
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="genbank_editing.html" class="btn btn-neutral float-left" title="Manipulating genbank records with Plasmid" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="clustering.html" class="btn btn-neutral float-right" title="Aligning and clustering sequences with Plasmid" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="genbank_editing.html" class="btn btn-neutral float-left" title="Manipulating genbank records" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="clustering.html" class="btn btn-neutral float-right" title="Aligning and clustering sequences" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

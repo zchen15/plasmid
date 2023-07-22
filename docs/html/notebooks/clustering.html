@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aligning and clustering sequences with Plasmid &mdash; Plasmid: A python library for gene editing 2023.06.29 documentation</title>
+  <title>Aligning and clustering sequences &mdash; Plasmid: A python library for gene editing 2023.06.29 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" type="text/css" />
@@ -22,7 +22,7 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="prev" title="Designing primers with Plasmid" href="primer_design.html" /> 
+    <link rel="prev" title="Designing primers" href="primer_design.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -50,10 +50,9 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">How-to guides &amp; Examples</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="genbank_editing.html">Manipulating genbank records with Plasmid</a></li>
-<li class="toctree-l1"><a class="reference internal" href="primer_design.html">Designing primers with Plasmid</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Aligning and clustering sequences with Plasmid</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#table-of-contents">Table of Contents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="genbank_editing.html">Manipulating genbank records</a></li>
+<li class="toctree-l1"><a class="reference internal" href="primer_design.html">Designing primers</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Aligning and clustering sequences</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#reading-fastq-or-fasta-sequences">Reading fastq or fasta sequences</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#aligning-ngs-reads">Aligning NGS reads</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#running-minimap2-to-compute-alignment-to-reference-sequences">Running minimap2 to compute alignment to reference sequences</a></li>
@@ -88,7 +87,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Aligning and clustering sequences with Plasmid</li>
+      <li class="breadcrumb-item active">Aligning and clustering sequences</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/notebooks/clustering.ipynb.txt" rel="nofollow"> View page source</a>
       </li>
@@ -98,19 +97,9 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="aligning-and-clustering-sequences-with-plasmid">
-<h1>Aligning and clustering sequences with Plasmid<a class="headerlink" href="#aligning-and-clustering-sequences-with-plasmid" title="Permalink to this heading"></a></h1>
+  <section id="aligning-and-clustering-sequences">
+<h1>Aligning and clustering sequences<a class="headerlink" href="#aligning-and-clustering-sequences" title="Permalink to this heading"></a></h1>
 <p>This notebook illustrates the various functions contained in the <code class="docutils literal notranslate"><span class="pre">aligner</span></code>, <code class="docutils literal notranslate"><span class="pre">cluster</span></code>, and <code class="docutils literal notranslate"><span class="pre">fileIO</span></code> modules, which can be used to read, align, cluster sequences, and search databases.</p>
-<section id="table-of-contents">
-<h2>Table of Contents<a class="headerlink" href="#table-of-contents" title="Permalink to this heading"></a></h2>
-<ol class="arabic simple">
-<li><p><span class="xref myst">Reading fastq or fasta files</span></p></li>
-<li><p><span class="xref myst">Aligning NGS reads against reference sequences</span></p></li>
-<li><p><span class="xref myst">Computing pairwise distance between sequences</span></p></li>
-<li><p><span class="xref myst">Clustering sequences</span></p></li>
-<li><p><span class="xref myst">Performing Multi-alignment</span></p></li>
-<li><p><span class="xref myst">Viewing CIGAR alignments</span></p></li>
-</ol>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -123,7 +112,6 @@
 </div>
 </div>
 <p><a class="anchor" id="read_fastq"></a></p>
-</section>
 <section id="reading-fastq-or-fasta-sequences">
 <h2>Reading fastq or fasta sequences<a class="headerlink" href="#reading-fastq-or-fasta-sequences" title="Permalink to this heading"></a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">fileIO</span></code> module contains functions for reading compressed or uncompressed fasta or fastq files. These functions take a filename and returns the contents as a pandas dataframe for processing in python.</p>
@@ -1159,7 +1147,7 @@ ATACTTCATTTTTTGATCCTGCTGGGGGTGGGGATCCTATTTTATACCAGCATTTATTT 659 seq1
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="primer_design.html" class="btn btn-neutral float-left" title="Designing primers with Plasmid" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="primer_design.html" class="btn btn-neutral float-left" title="Designing primers" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

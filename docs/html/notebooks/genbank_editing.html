@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Manipulating genbank records with Plasmid &mdash; Plasmid: A python library for gene editing 2023.06.29 documentation</title>
+  <title>Manipulating genbank records &mdash; Plasmid: A python library for gene editing 2023.06.29 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" type="text/css" />
@@ -22,7 +22,7 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Designing primers with Plasmid" href="primer_design.html" />
+    <link rel="next" title="Designing primers" href="primer_design.html" />
     <link rel="prev" title="Installation" href="../installation.html" /> 
 </head>
 
@@ -51,8 +51,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">How-to guides &amp; Examples</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Manipulating genbank records with Plasmid</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#table-of-contents">Table of Contents</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Manipulating genbank records</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#reading-genbank-or-fasta-files-a-class-anchor-id-reading-genbank-a">Reading genbank or fasta files <a class="anchor" id="reading_genbank"></a></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#visualizing-the-genbank-record-a-class-anchor-id-visualizing-genbank-a">Visualizing the genbank record <a class="anchor" id="visualizing_genbank"></a></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#selecting-and-filtering-for-genomic-features-a-class-anchor-id-filtering-genbank-a">Selecting and filtering for genomic features  <a class="anchor" id="filtering_genbank"></a></a></li>
@@ -70,8 +69,8 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="primer_design.html">Designing primers with Plasmid</a></li>
-<li class="toctree-l1"><a class="reference internal" href="clustering.html">Aligning and clustering sequences with Plasmid</a></li>
+<li class="toctree-l1"><a class="reference internal" href="primer_design.html">Designing primers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clustering.html">Aligning and clustering sequences</a></li>
 </ul>
 
         </div>
@@ -88,7 +87,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Manipulating genbank records with Plasmid</li>
+      <li class="breadcrumb-item active">Manipulating genbank records</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/notebooks/genbank_editing.ipynb.txt" rel="nofollow"> View page source</a>
       </li>
@@ -98,27 +97,9 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="manipulating-genbank-records-with-plasmid">
-<h1>Manipulating genbank records with Plasmid<a class="headerlink" href="#manipulating-genbank-records-with-plasmid" title="Permalink to this heading"></a></h1>
+  <section id="manipulating-genbank-records">
+<h1>Manipulating genbank records<a class="headerlink" href="#manipulating-genbank-records" title="Permalink to this heading"></a></h1>
 <p>This notebook illustrates the various functions contained in the <code class="docutils literal notranslate"><span class="pre">plasmid</span></code> class, which can be used to read and manipulate genbank files.</p>
-<section id="table-of-contents">
-<h2>Table of Contents<a class="headerlink" href="#table-of-contents" title="Permalink to this heading"></a></h2>
-<ol class="arabic simple">
-<li><p><span class="xref myst">Reading and viewing genbank files</span></p>
-<ol class="arabic simple">
-<li><p><span class="xref myst">Visualizing genbank records</span></p></li>
-<li><p><span class="xref myst">Selecting and filtering for genomic features</span></p></li>
-<li><p><span class="xref myst">Gene translation to amino acids</span></p></li>
-</ol>
-</li>
-<li><p><span class="xref myst">Creating new genbank records</span></p>
-<ol class="arabic simple">
-<li><p><span class="xref myst">Writing genbank files</span></p></li>
-<li><p><span class="xref myst">Sequence annotation</span></p></li>
-<li><p><span class="xref myst">Searching for open reading frames</span></p></li>
-</ol>
-</li>
-</ol>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">plasmid</span> <span class="k">as</span> <span class="nn">pge</span>
@@ -133,7 +114,6 @@
 </div>
 </div>
 </div>
-</section>
 <section id="reading-genbank-or-fasta-files-a-class-anchor-id-reading-genbank-a">
 <h2>Reading genbank or fasta files <a class="anchor" id="reading_genbank"></a><a class="headerlink" href="#reading-genbank-or-fasta-files-a-class-anchor-id-reading-genbank-a" title="Permalink to this heading"></a></h2>
 <p>Genbank, fasta, and text files can be read using <code class="docutils literal notranslate"><span class="pre">read_genbank</span></code>. This function loads genbank information via <code class="docutils literal notranslate"><span class="pre">biopython</span></code> into a pandas like dataframe called <code class="docutils literal notranslate"><span class="pre">Plasmid</span></code>. This is analogous to <code class="docutils literal notranslate"><span class="pre">read_csv</span></code> in pandas. The underlying data in Biopython can be sliced, sorted, filtered, and concatenated like a string.</p>
@@ -788,7 +768,7 @@ total length:1000
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="../installation.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="primer_design.html" class="btn btn-neutral float-right" title="Designing primers with Plasmid" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="primer_design.html" class="btn btn-neutral float-right" title="Designing primers" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
