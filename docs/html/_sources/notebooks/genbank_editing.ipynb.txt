@@ -1,0 +1,983 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "e0c986a8-9997-42ed-9b87-aae8b0243866",
+   "metadata": {
+    "editable": true,
+    "slideshow": {
+     "slide_type": ""
+    },
+    "tags": []
+   },
+   "source": [
+    "# Manipulating genbank records with Plasmid\n",
+    "This notebook illustrates the various functions contained in the `plasmid` class, which can be used to read and manipulate genbank files."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "39155250-5c25-48da-80d2-4f74b16b5151",
+   "metadata": {},
+   "source": [
+    "## Table of Contents\n",
+    "1. [Reading and viewing genbank files](#reading_genbank)\n",
+    "    1. [Visualizing genbank records](#visualizing_genbank)\n",
+    "    1. [Selecting and filtering for genomic features](#filtering_genbank)   \n",
+    "    1. [Gene translation to amino acids](#gene_translation)   \n",
+    "1. [Creating new genbank records](#gene_concat)\n",
+    "    1. [Writing genbank files](#genbank_write)\n",
+    "    1. [Sequence annotation](#gene_annotation)\n",
+    "    1. [Searching for open reading frames](#gene_ORF_search)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "6615ef09-9e39-4b29-9886-fe81c402b715",
+   "metadata": {
+    "editable": true,
+    "slideshow": {
+     "slide_type": ""
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<module 'plasmid' from '/home/zchen/Public/python/lib/python3.11/site-packages/plasmid/__init__.py'>"
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "import plasmid as pge\n",
+    "import importlib\n",
+    "importlib.reload(pge)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "ebfb4d40-230d-465f-986e-6884c9597492",
+   "metadata": {},
+   "source": [
+    "## Reading genbank or fasta files <a class=\"anchor\" id=\"reading_genbank\"></a>"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "4c6e0c6a-05c1-4fcf-bd48-5076f2e69de7",
+   "metadata": {},
+   "source": [
+    "Genbank, fasta, and text files can be read using `read_genbank`. This function loads genbank information via `biopython` into a pandas like dataframe called `Plasmid`. This is analogous to `read_csv` in pandas. The underlying data in Biopython can be sliced, sorted, filtered, and concatenated like a string."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "1833f906-c33c-4dc5-8f01-12f554f9643c",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Help on function read_genbank in module plasmid.plasmid:\n",
+      "\n",
+      "read_genbank(fname)\n",
+      "    Reads a genbank file into plasmid class object\n",
+      "    fname = genbank file to read\n",
+      "    returns Plasmid object with data loaded\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "help(pge.read_genbank)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "282f9174-ce6a-48d2-a258-a0899edeeeaf",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "reading  ../data/xRFP.gb  as genbank file\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "<class 'plasmid.plasmid.Plasmid'> at 0x7f443caa33d0\n",
+       "molecule_type:DNA\n",
+       "topology:circular\n",
+       "data_file_division:   \n",
+       "date:05-DEC-2022\n",
+       "accessions:['<unknown', 'id>']\n",
+       "keywords:['']\n",
+       "source:\n",
+       "organism:. .\n",
+       "taxonomy:[]\n",
+       "comment:\n",
+       "ApEinfo:methylated:1\n",
+       "                              locus_tag          type        location  length   \n",
+       "0                         AmpR promoter      promoter       [0:29](+)      29  \\\n",
+       "1                              AmpR RBS           RBS      [29:70](+)      41   \n",
+       "2                          SpectomycinR           CDS     [70:868](+)     798   \n",
+       "3                             BBa_B0053    terminator    [878:948](+)      70   \n",
+       "4   J23108, 0.51, Constitutive Promoter      promoter  [1032:1067](+)      35   \n",
+       "5          RBS 1.00 strength, BBa_B0034           RBS  [1086:1098](+)      12   \n",
+       "6                       LacI, BBa_C0012           CDS  [1104:2196](+)    1092   \n",
+       "7                             Esp3I_fix  misc_feature  [2072:2078](+)       6   \n",
+       "8         Forward Terminator, BBa_B1002    terminator  [2196:2230](+)      34   \n",
+       "9   pLacO2, single operon pLac ZC082818      promoter  [2230:2268](+)      38   \n",
+       "10                                LacO2  protein_bind  [2238:2255](+)      17   \n",
+       "11                 RFP targeting region  misc_binding  [2268:2288](+)      20   \n",
+       "12         spec/1_xRFPg1_0_xRFPg1_0_.gb       unknown  [2268:2371](+)     103   \n",
+       "13      dCas9 handle conserved region A  protein_bind  [2288:2300](+)      12   \n",
+       "14     dCas9 handle conserved region A'  protein_bind  [2304:2318](+)      14   \n",
+       "15      dCas9 handle conserved region B  protein_bind  [2318:2330](+)      12   \n",
+       "16                   S. pyog terminator    terminator  [2330:2371](+)      41   \n",
+       "17        Forward Terminator, BBa_B1010    terminator  [2371:2411](+)      40   \n",
+       "18                               pSC101    rep_origin  [2411:4448](+)    2037   \n",
+       "19                        T0 terminator    terminator  [2435:2541](+)     106   \n",
+       "20                      repA101 protein           CDS  [3296:4247](+)     951   \n",
+       "\n",
+       "      color  \n",
+       "0   \u001b[38;2;15;127;254m#0f7ffe\u001b[39m  \n",
+       "1      \u001b[38;2;0;255;255mcyan\u001b[39m  \n",
+       "2   \u001b[38;2;212;0;55m#d40037\u001b[39m  \n",
+       "3   \u001b[38;2;157;27;28m#9d1b1c\u001b[39m  \n",
+       "4   \u001b[38;2;64;128;0m#408000\u001b[39m  \n",
+       "5      \u001b[38;2;0;255;255mcyan\u001b[39m  \n",
+       "6   \u001b[38;2;252;102;101m#fc6665\u001b[39m  \n",
+       "7      \u001b[38;2;0;255;255mcyan\u001b[39m  \n",
+       "8   \u001b[38;2;128;64;0m#804000\u001b[39m  \n",
+       "9   \u001b[38;2;0;128;128m#008080\u001b[39m  \n",
+       "10  \u001b[38;2;7;63;128m#073f80\u001b[39m  \n",
+       "11  \u001b[38;2;255;0;0m#ff0000\u001b[39m  \n",
+       "12     \u001b[38;2;0;255;255mcyan\u001b[39m  \n",
+       "13  \u001b[38;2;0;128;255m#0080ff\u001b[39m  \n",
+       "14  \u001b[38;2;0;128;255m#0080ff\u001b[39m  \n",
+       "15  \u001b[38;2;0;64;128m#004080\u001b[39m  \n",
+       "16  \u001b[38;2;128;64;0m#804000\u001b[39m  \n",
+       "17  \u001b[38;2;128;64;0m#804000\u001b[39m  \n",
+       "18  \u001b[38;2;180;171;172m#b4abac\u001b[39m  \n",
+       "19  \u001b[38;2;128;64;0m#804000\u001b[39m  \n",
+       "20  \u001b[38;2;212;0;55m#d40037\u001b[39m  \n",
+       "total length:4465"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df = pge.read_genbank('../data/xRFP.gb')\n",
+    "df"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "bf1c37d3-4873-4eb5-9552-f24574fd85d1",
+   "metadata": {},
+   "source": [
+    "### Visualizing the genbank record <a class=\"anchor\" id=\"visualizing_genbank\"></a>"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "dda430d1-7388-43db-976b-cea77afd4e77",
+   "metadata": {},
+   "source": [
+    "The raw sequence with color annotations can be displayed with `.get_colored()`, which generates a string containing colorization flags that can be interpreted by a bash terminal. The dataframe can also be sliced or cast as a string to obtain the raw sequence."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "a8e0f423-2b61-4828-9e6d-5824bd7e97b5",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Help on method get_colored in module plasmid.plasmid:\n",
+      "\n",
+      "get_colored(width=0) method of plasmid.plasmid.Plasmid instance\n",
+      "    Print out colored representation of Plasmid\n",
+      "    width = number of characters per line\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "help(df.get_colored)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "344fded9-4aea-4b40-9601-ff16a842bd5b",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "<class 'plasmid.plasmid.Plasmid'> at 0x7f4455a3f950\n",
+      "molecule_type:DNA\n",
+      "topology:circular\n",
+      "data_file_division:   \n",
+      "date:05-DEC-2022\n",
+      "accessions:['<unknown', 'id>']\n",
+      "keywords:['']\n",
+      "source:\n",
+      "organism:. .\n",
+      "taxonomy:[]\n",
+      "comment:\n",
+      "ApEinfo:methylated:1\n",
+      "                   locus_tag        type      location  length    color\n",
+      "0  AmpR promoter subsequence    promoter     [0:29](+)      29  \u001b[38;2;15;127;254m#0f7ffe\u001b[39m\n",
+      "1       AmpR RBS subsequence         RBS    [29:70](+)      41     \u001b[38;2;0;255;255mcyan\u001b[39m\n",
+      "2   SpectomycinR subsequence         CDS   [70:868](+)     798  \u001b[38;2;212;0;55m#d40037\u001b[39m\n",
+      "3      BBa_B0053 subsequence  terminator  [878:948](+)      70  \u001b[38;2;157;27;28m#9d1b1c\u001b[39m\n",
+      "total length:1000\n",
+      "\n",
+      "\u001b[38;2;15;127;254mTTCAAATATCTATCCGCTCATGAGACAAT\u001b[39m\u001b[38;2;0;255;255mAACCCTGATAAATGCTTCAATAATATTGAAAAAGGAAGAAT\u001b[39m\u001b[38;2;212;0;55mATGAGTGAAAAAGTGCCCGCCGAGATTTCGGTGCAACTATCACAAGCACTCAACGTCATCGGGCGCCACTTGGAGTCGACGTTGCTGGCCGTGCATTTGTACGGCTCCGCACTGGATGGCGGATTGAAACCGTACAGTGATATTGATTTGCTGGTGACTGTAGCTGCACCGCTCAATGATGCCGTGCGGCAAGCCCTGCTCGTCGATCTCTTGGAGGTTTCAGCTTCCCCTGGCCAAAACAAGGCACTCCGCGCCTTGGAAGTGACCATCGTCGTGCACAGTGACATCGTACCTTGGCGTTATCCGGCCAGGCGGGAACTGCAGTTCGGAGAGTGGCAGCGCAAAGACATCCTTGCGGGCATCTTCGAGCCCGCCACAACCGATTCTGACTTGGCGATTCTGCTAACAAAGGCAAAGCAACATAGCGTCGTCTTGGCAGGTTCAGCAGCGAAGGATCTCTTCAGCTCAGTCCCAGAAAGCGATCTATTCAAGGCACTGGCCGATACTCTGAAGCTATGGAACTCGCCGCCAGATTGGGCGGGCGATGAGCGGAATGTAGTGCTTACTTTGTCTCGTATCTGGTACACCGCAGCAACCGGCAAGATCGCGCCAAAGGATGTTGCTGCCACTTGGGCAATGGCACGCTTGCCAGCTCAACATCAGCCCATCCTGTTGAATGCCAAGCGGGCTTATCTTGGGCAAGAAGAAGATTATTTGCCCGCTCGTGCGGATCAGGTGGCGGCGCTCATTAAATTCGTGAAGTATGAAGCAGTTAAACTGCTTGGTGCCAGCCAATGA\u001b[39mTAATACTAGC\u001b[38;2;157;27;28mTCCGGCAAAAAAACGGGCAAGGTGTCACCACCCTGCCCTTTTTCTTTAAAACCGAAAAGATTACTTCGCG\u001b[39mAAATAGGCGTATCACGAGGCAGAATTTCAGATAAAAAAAATCCTTAGCTTTC\n"
+     ]
+    }
+   ],
+   "source": [
+    "# displays the first 1000bp of the plasmid\n",
+    "x = df[0:1000]\n",
+    "print(x.__repr__())\n",
+    "out = x.get_colored()\n",
+    "print(out)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "6c146f33-06f9-4259-8069-341d99bf636b",
+   "metadata": {},
+   "source": [
+    "### Selecting and filtering for genomic features  <a class=\"anchor\" id=\"filtering_genbank\"></a>"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "362a43e5-70eb-4d95-bf8d-6b5458931e49",
+   "metadata": {},
+   "source": [
+    "Genes can also be selected and sliced out of the dataframe via boolean selection like in pandas."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "b3527272-baff-484e-afe8-0bc0d804699f",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Help on method __getitem__ in module plasmid.plasmid:\n",
+      "\n",
+      "__getitem__(key) method of plasmid.plasmid.Plasmid instance\n",
+      "    Splice Plasmid sequence with range or filter through features on the Plasmid\n",
+      "    key = if key is a range or slice, then slice using base pair index from start to end\n",
+      "          if key is a str, then return the column values of pandas dataframe\n",
+      "          if key is an int, then return feature at the feature index\n",
+      "          if key is a list of integers, then return features only at the indexes in the list \n",
+      "          if key is a boolean array, then return features only at indexes which evaluate True\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "help(df.__getitem__)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "f83b2d8f-0b89-4215-a0dc-f6cf2a755b3d",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "<class 'plasmid.plasmid.Plasmid'> at 0x7f4455b62ad0\n",
+      "molecule_type:DNA\n",
+      "topology:circular\n",
+      "data_file_division:   \n",
+      "date:05-DEC-2022\n",
+      "accessions:['<unknown', 'id>']\n",
+      "keywords:['']\n",
+      "source:\n",
+      "organism:. .\n",
+      "taxonomy:[]\n",
+      "comment:\n",
+      "ApEinfo:methylated:1\n",
+      "                                   locus_tag        type        location   \n",
+      "0                      BBa_B0053 subsequence  terminator     [78:148](+)  \\\n",
+      "1  Forward Terminator, BBa_B1002 subsequence  terminator  [1396:1430](+)   \n",
+      "2             S. pyog terminator subsequence  terminator  [1530:1571](+)   \n",
+      "3  Forward Terminator, BBa_B1010 subsequence  terminator  [1571:1611](+)   \n",
+      "4                  T0 terminator subsequence  terminator  [1635:1700](+)   \n",
+      "\n",
+      "   length    color  \n",
+      "0      70  \u001b[38;2;157;27;28m#9d1b1c\u001b[39m  \n",
+      "1      34  \u001b[38;2;128;64;0m#804000\u001b[39m  \n",
+      "2      41  \u001b[38;2;128;64;0m#804000\u001b[39m  \n",
+      "3      40  \u001b[38;2;128;64;0m#804000\u001b[39m  \n",
+      "4      65  \u001b[38;2;128;64;0m#804000\u001b[39m  \n",
+      "total length:1700\n",
+      "\n",
+      "ATCAGGTGGCGGCGCTCATTAAATTCGTGAAGTATGAAGCAGTTAAACTGCTTGGTGCCAGCCAATGATAATACTAGC\u001b[38;2;157;27;28mTCCGGCAAAAAAACGGGCAAGGTGTCACCACCCTGCCCTTTTTCTTTAAAACCGAAAAGATTACTTCGCG\u001b[39mAAATAGGCGTATCACGAGGCAGAATTTCAGATAAAAAAAATCCTTAGCTTTCGCTAAGGATGATTTCTGGAATTCGCGGCCGCTCTGACAGCTAGCTCAGTCCTAGGTATAATGCTAGCAAAAGAATTCAAAAGATCTAAAGAGGAGAAAGGATCTATGGTGAATGTGAAACCAGTAACGTTATACGATGTCGCAGAGTATGCCGGTGTCTCTTATCAGACCGTTTCCCGCGTGGTGAACCAGGCCAGCCACGTTTCTGCGAAAACGCGGGAAAAAGTGGAAGCGGCGATGGCGGAGCTGAATTACATTCCCAACCGCGTGGCACAACAACTGGCGGGCAAACAGTCGTTGCTGATTGGCGTTGCCACCTCCAGTCTGGCCCTGCACGCGCCGTCGCAAATTGTCGCGGCGATTAAATCTCGCGCCGATCAACTGGGTGCCAGCGTGGTGGTGTCGATGGTAGAACGAAGCGGCGTCGAAGCCTGTAAAGCGGCGGTGCACAATCTTCTCGCGCAACGCGTCAGTGGGCTGATCATTAACTATCCGCTGGATGACCAGGATGCCATTGCTGTGGAAGCTGCCTGCACTAATGTTCCGGCGTTATTTCTTGATGTCTCTGACCAGACACCCATCAACAGTATTATTTTCTCCCATGAAGACGGTACGCGACTGGGCGTGGAGCATCTGGTCGCATTGGGTCACCAGCAAATCGCGCTGTTAGCGGGCCCATTAAGTTCTGTCTCGGCGCGTCTGCGTCTGGCTGGCTGGCATAAATATCTCACTCGCAATCAAATTCAGCCGATAGCGGAACGGGAAGGCGACTGGAGTGCCATGTCCGGTTTTCAACAAACCATGCAAATGCTGAATGAGGGCATCGTTCCCACTGCGATGCTGGTTGCCAACGATCAGATGGCGCTGGGCGCAATGCGCGCCATTACCGAGTCCGGGCTGCGCGTTGGTGCGGATATCTCGGTAGTGGGATACGACGATACCGAAGACAGCTCATGTTATATCCCGCCGTTAACCACCATCAAACAGGATTTTCGCCTGCTGGGGCAAACCAGCGTGGACCGCTTGCTGCAACTCTCTCAGGGCCAGGCGGTGAAGGGCAATCAGCTGTTGCCCGTTTCACTGGTGAAAAGAAAAACCACCCTGGCGCCCAATACGCGAACCGCCTCTCCCCGCGCGTTGGCCGATTCATTAATGCAGCTGGCACGACAGGTTTCCCGACTGGAAAGCGGGCAGTAA\u001b[38;2;128;64;0mCGCAAAAAACCCCGCTTCGGCGGGGTTTTTTCGC\u001b[39mAATTGACAATGTGAGCGAGTAACAAGATACTGAGCACAAACTTTCAGTTTAGCGGTCTGTTTTAGAGCTAGAAATAGCAAGTTAAAATAAGGCTAGTCCG\u001b[38;2;128;64;0mTTATCAACTTGAAAAAGTGGCACCGAGTCGGTGCTTTTTTTCGCCGCAAACCCCGCCCCTGACAGGGCGGGGTTTCGCCGC\u001b[39mCTGTCAGACCAAGTTTACGAGCTC\u001b[38;2;128;64;0mGCTTGGACTCCTGTTGATAGATCCAGTAATGACCTCAGAACTCCATCTGGATTTGTTCAGAACGC\u001b[39m\n"
+     ]
+    }
+   ],
+   "source": [
+    "# select all genes which are terminator sequences\n",
+    "x = df[800:2500]\n",
+    "y = x[x['type']=='terminator']\n",
+    "print(y.__repr__())\n",
+    "print(y.get_colored())"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "e87425de-cf2b-4b29-b2db-dde291007847",
+   "metadata": {
+    "tags": []
+   },
+   "source": [
+    "### Filtering by keyword <a class=\"anchor\" id=\"filtering_keyword\"></a>\n",
+    "Keyword selection is also possible because of the compatibility with pandas. In the following, we create a boolean array by looking for all strings in the `locus_tag` column which contains `LacI`. We use the boolean array to filter for genomic features satisfying this keyword. `.splice()` is used to slice out the gene sequence from the parent plasmid."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "5c5117df-f243-47d9-84bc-87c536bf8d21",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Help on method splice in module plasmid.plasmid:\n",
+      "\n",
+      "splice(inplace=False) method of plasmid.plasmid.Plasmid instance\n",
+      "    Get a slice sequence from start of all features to end of all features\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "help(df.splice)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "42bb6ff7-9b22-4585-9ea9-2184c727bc66",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "<class 'plasmid.plasmid.Plasmid'> at 0x7f443dba6590\n",
+      "molecule_type:DNA\n",
+      "topology:circular\n",
+      "data_file_division:   \n",
+      "date:05-DEC-2022\n",
+      "accessions:['<unknown', 'id>']\n",
+      "keywords:['']\n",
+      "source:\n",
+      "organism:. .\n",
+      "taxonomy:[]\n",
+      "comment:\n",
+      "ApEinfo:methylated:1\n",
+      "                     locus_tag type     location  length    color\n",
+      "0  LacI, BBa_C0012 subsequence  CDS  [0:1092](+)    1092  \u001b[38;2;252;102;101m#fc6665\u001b[39m\n",
+      "total length:1092\n",
+      "\n",
+      "\u001b[38;2;252;102;101mATGGTGAATGTGAAACCAGTAACGTTATACGATGTCGCAGAGTATGCCGGTGTCTCTTATCAGACCGTTTCCCGCGTGGTGAACCAGGCCAGCCACGTTTCTGCGAAAACGCGGGAAAAAGTGGAAGCGGCGATGGCGGAGCTGAATTACATTCCCAACCGCGTGGCACAACAACTGGCGGGCAAACAGTCGTTGCTGATTGGCGTTGCCACCTCCAGTCTGGCCCTGCACGCGCCGTCGCAAATTGTCGCGGCGATTAAATCTCGCGCCGATCAACTGGGTGCCAGCGTGGTGGTGTCGATGGTAGAACGAAGCGGCGTCGAAGCCTGTAAAGCGGCGGTGCACAATCTTCTCGCGCAACGCGTCAGTGGGCTGATCATTAACTATCCGCTGGATGACCAGGATGCCATTGCTGTGGAAGCTGCCTGCACTAATGTTCCGGCGTTATTTCTTGATGTCTCTGACCAGACACCCATCAACAGTATTATTTTCTCCCATGAAGACGGTACGCGACTGGGCGTGGAGCATCTGGTCGCATTGGGTCACCAGCAAATCGCGCTGTTAGCGGGCCCATTAAGTTCTGTCTCGGCGCGTCTGCGTCTGGCTGGCTGGCATAAATATCTCACTCGCAATCAAATTCAGCCGATAGCGGAACGGGAAGGCGACTGGAGTGCCATGTCCGGTTTTCAACAAACCATGCAAATGCTGAATGAGGGCATCGTTCCCACTGCGATGCTGGTTGCCAACGATCAGATGGCGCTGGGCGCAATGCGCGCCATTACCGAGTCCGGGCTGCGCGTTGGTGCGGATATCTCGGTAGTGGGATACGACGATACCGAAGACAGCTCATGTTATATCCCGCCGTTAACCACCATCAAACAGGATTTTCGCCTGCTGGGGCAAACCAGCGTGGACCGCTTGCTGCAACTCTCTCAGGGCCAGGCGGTGAAGGGCAATCAGCTGTTGCCCGTTTCACTGGTGAAAAGAAAAACCACCCTGGCGCCCAATACGCGAACCGCCTCTCCCCGCGCGTTGGCCGATTCATTAATGCAGCTGGCACGACAGGTTTCCCGACTGGAAAGCGGGCAGTAA\u001b[39m\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Select all genes containing LacI in the locus_tag column\n",
+    "filt = df['locus_tag'].str.contains('LacI')\n",
+    "y = df[filt]\n",
+    "y = y.splice()\n",
+    "print(y.__repr__())\n",
+    "print(y.get_colored())"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "ff867e1c-36b4-49f9-93d5-0830dcce0d53",
+   "metadata": {},
+   "source": [
+    "### Sequence translation  <a class=\"anchor\" id=\"gene_translation\"></a>"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "34ae073c-12ae-457e-99b7-e528b3137561",
+   "metadata": {},
+   "source": [
+    "DNA sequences can be translated to amino acid sequences via `.translate()`"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "44e1517a-1ef9-4e98-94ee-80ec7826eb5a",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Help on method translate in module plasmid.plasmid:\n",
+      "\n",
+      "translate(strand=None, frame=0, table='Standard') method of plasmid.plasmid.Plasmid instance\n",
+      "    Translate the DNA sequence to amino acids\n",
+      "    frame = codon reading frame such as 0, 1, or 2\n",
+      "    table = codon table to use. Standard codon table is used by default\n",
+      "    return a string\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "help(df.translate)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "id": "0f7f77d2-b284-4af9-a633-d6b0da8b8ff6",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "This is the DNA sequence\n",
+      "\u001b[38;2;252;102;101mATGGTGAATGTGAAACCAGTAACGTTATACGATGTCGCAGAGTATGCCGGTGTCTCTTATCAGACCGTTTCCCGCGTGGTGAACCAGGCCAGCCACGTTTCTGCGAAAACGCGGGAAAAAGTGGAAGCGGCGATGGCGGAGCTGAATTACATTCCCAACCGCGTGGCACAACAACTGGCGGGCAAACAGTCGTTGCTGATTGGCGTTGCCACCTCCAGTCTGGCCCTGCACGCGCCGTCGCAAATTGTCGCGGCGATTAAATCTCGCGCCGATCAACTGGGTGCCAGCGTGGTGGTGTCGATGGTAGAACGAAGCGGCGTCGAAGCCTGTAAAGCGGCGGTGCACAATCTTCTCGCGCAACGCGTCAGTGGGCTGATCATTAACTATCCGCTGGATGACCAGGATGCCATTGCTGTGGAAGCTGCCTGCACTAATGTTCCGGCGTTATTTCTTGATGTCTCTGACCAGACACCCATCAACAGTATTATTTTCTCCCATGAAGACGGTACGCGACTGGGCGTGGAGCATCTGGTCGCATTGGGTCACCAGCAAATCGCGCTGTTAGCGGGCCCATTAAGTTCTGTCTCGGCGCGTCTGCGTCTGGCTGGCTGGCATAAATATCTCACTCGCAATCAAATTCAGCCGATAGCGGAACGGGAAGGCGACTGGAGTGCCATGTCCGGTTTTCAACAAACCATGCAAATGCTGAATGAGGGCATCGTTCCCACTGCGATGCTGGTTGCCAACGATCAGATGGCGCTGGGCGCAATGCGCGCCATTACCGAGTCCGGGCTGCGCGTTGGTGCGGATATCTCGGTAGTGGGATACGACGATACCGAAGACAGCTCATGTTATATCCCGCCGTTAACCACCATCAAACAGGATTTTCGCCTGCTGGGGCAAACCAGCGTGGACCGCTTGCTGCAACTCTCTCAGGGCCAGGCGGTGAAGGGCAATCAGCTGTTGCCCGTTTCACTGGTGAAAAGAAAAACCACCCTGGCGCCCAATACGCGAACCGCCTCTCCCCGCGCGTTGGCCGATTCATTAATGCAGCTGGCACGACAGGTTTCCCGACTGGAAAGCGGGCAGTAA\u001b[39m\n",
+      "This is the amino acid sequence\n",
+      "MVNVKPVTLYDVAEYAGVSYQTVSRVVNQASHVSAKTREKVEAAMAELNYIPNRVAQQLAGKQSLLIGVATSSLALHAPSQIVAAIKSRADQLGASVVVSMVERSGVEACKAAVHNLLAQRVSGLIINYPLDDQDAIAVEAACTNVPALFLDVSDQTPINSIIFSHEDGTRLGVEHLVALGHQQIALLAGPLSSVSARLRLAGWHKYLTRNQIQPIAEREGDWSAMSGFQQTMQMLNEGIVPTAMLVANDQMALGAMRAITESGLRVGADISVVGYDDTEDSSCYIPPLTTIKQDFRLLGQTSVDRLLQLSQGQAVKGNQLLPVSLVKRKTTLAPNTRTASPRALADSLMQLARQVSRLESGQ*\n"
+     ]
+    }
+   ],
+   "source": [
+    "y = x[x['locus_tag'].str.contains('LacI')].splice()\n",
+    "print('This is the DNA sequence')\n",
+    "print(y.get_colored())\n",
+    "print('This is the amino acid sequence')\n",
+    "print(y.translate())"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "882e0b26-3da2-4769-ad46-08953c052db0",
+   "metadata": {
+    "tags": []
+   },
+   "source": [
+    "## Creating new genbank records <a id='gene_concat'></a>\n",
+    "### Concatenating genomic features\n",
+    "New genes and constructs can be generated by combining genetic parts via concatenation. The following extracts the RFP fluorescent reporter, ribosome binding site, and pLac promoter genes from existing genbank records and concatenates the components to form a new genbank record."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "85e0fca6-c42d-49cf-82c3-4b44ea99bcc3",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "reading  ../data/dcas9_RFP.gb  as genbank file\n",
+      "reading  ../data/xRFP.gb  as genbank file\n",
+      "reading  ../data/xRFP.gb  as genbank file\n",
+      "<class 'plasmid.plasmid.Plasmid'> at 0x7f44941fc350\n",
+      "molecule_type:DNA\n",
+      "topology:circular\n",
+      "                                         locus_tag      type     location   \n",
+      "0  pLacO2, single operon pLac ZC082818 subsequence  promoter    [0:38](+)  \\\n",
+      "1         RBS 1.00 strength, BBa_B0034 subsequence       RBS   [44:56](+)   \n",
+      "2      mRFP, uniprot drFP583, pdb 2H5O subsequence       CDS  [62:740](+)   \n",
+      "\n",
+      "   length    color  \n",
+      "0      38  \u001b[38;2;0;128;128m#008080\u001b[39m  \n",
+      "1      12     \u001b[38;2;0;255;255mcyan\u001b[39m  \n",
+      "2     678  \u001b[38;2;128;0;64m#800040\u001b[39m  \n",
+      "total length:740\n",
+      "\n",
+      "\u001b[38;2;0;128;128mAATTGACAATGTGAGCGAGTAACAAGATACTGAGCACA\u001b[39mgagacc\u001b[38;2;0;255;255mAAAGAGGAGAAA\u001b[39mggtctc\u001b[38;2;128;0;64mATGGCGAGTAGCGAAGACGTTATCAAAGAGTTCATGCGTTTCAAAGTTCGTATGGAAGGTTCCGTTAACGGTCACGAGTTCGAAATCGAAGGTGAAGGTGAAGGTCGTCCGTACGAAGGTACCCAGACCGCTAAACTGAAAGTTACCAAAGGTGGTCCGCTGCCGTTCGCTTGGGACATCCTGTCCCCGCAGTTCCAGTACGGTTCCAAAGCTTACGTTAAACACCCGGCTGACATCCCGGACTACCTGAAACTGTCCTTCCCGGAAGGTTTCAAATGGGAACGTGTTATGAACTTCGAAGACGGTGGTGTTGTTACCGTTACCCAGGACTCCTCCCTGCAAGACGGTGAGTTCATCTACAAAGTTAAACTGCGTGGTACCAACTTCCCGTCCGACGGTCCGGTTATGCAGAAAAAAACCATGGGTTGGGAAGCTTCCACCGAACGTATGTACCCGGAAGACGGTGCTCTGAAAGGTGAAATCAAAATGCGTCTGAAACTGAAAGACGGTGGTCACTACGACGCTGAAGTTAAAACCACCTACATGGCTAAAAAACCGGTTCAGCTGCCGGGTGCTTACAAAACCGACATCAAACTGGACATCACCTCCCACAACGAAGACTACACCATCGTTGAACAGTACGAACGTGCTGAAGGTCGTCACTCCACCGGTGCTTAA\u001b[39m\n"
+     ]
+    }
+   ],
+   "source": [
+    "# slice out the RFP gene\n",
+    "RFP = pge.read_genbank('../data/dcas9_RFP.gb')\n",
+    "RFP = RFP[RFP['locus_tag'].str.contains('mRFP')].splice()\n",
+    "# slice out the ribosome binding site\n",
+    "RBS = pge.read_genbank('../data/xRFP.gb')\n",
+    "RBS = RBS[RBS['locus_tag'].str.contains('BBa_B0034')].splice()\n",
+    "# slice out the promoter\n",
+    "pLac = pge.read_genbank('../data/xRFP.gb')\n",
+    "pLac = pLac[pLac['locus_tag'].str.contains('pLac')].splice()\n",
+    "\n",
+    "# assemble the promoter, rbs, and mRFP, adds spacer sequences between promoter, rbs, and rfp\n",
+    "df = pLac + 'gagacc' + RBS + 'ggtctc' + RFP\n",
+    "print(df.__repr__())\n",
+    "print(df.get_colored())"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "789fa3ec-f56b-4f9d-a2f7-71080bc07f84",
+   "metadata": {},
+   "source": [
+    "### Writing genbank records  <a class=\"anchor\" id=\"genbank_write\"></a>\n",
+    "We can write new gene products to genbank records with the `.to_genbank` function."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "id": "069be35c-4546-4e09-aadd-becaa444c1ad",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Help on method to_genbank in module plasmid.plasmid:\n",
+      "\n",
+      "to_genbank(filename, timestamp=False) method of plasmid.plasmid.Plasmid instance\n",
+      "    Writes the Plasmid SeqRecord to a filename\n",
+      "    filename = filename of output file\n",
+      "    timestamp = adds a timestamp to the output file\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "help(df.to_genbank)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "id": "312afc8c-82d1-4010-b8d4-b40cd9146398",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "<class 'plasmid.plasmid.Plasmid'> at 0x7f443caf8750\n",
+      "molecule_type:DNA\n",
+      "topology:circular\n",
+      "                                         locus_tag      type     location   \n",
+      "0  pLacO2, single operon pLac ZC082818 subsequence  promoter    [0:38](+)  \\\n",
+      "1         RBS 1.00 strength, BBa_B0034 subsequence       RBS   [44:56](+)   \n",
+      "2      mRFP, uniprot drFP583, pdb 2H5O subsequence       CDS  [62:740](+)   \n",
+      "\n",
+      "   length    color  \n",
+      "0      38  \u001b[38;2;0;128;128m#008080\u001b[39m  \n",
+      "1      12     \u001b[38;2;0;255;255mcyan\u001b[39m  \n",
+      "2     678  \u001b[38;2;128;0;64m#800040\u001b[39m  \n",
+      "total length:740\n",
+      "\n",
+      "\u001b[38;2;0;128;128mAATTGACAATGTGAGCGAGTAACAAGATACTGAGCACA\u001b[39mgagacc\u001b[38;2;0;255;255mAAAGAGGAGAAA\u001b[39mggtctc\u001b[38;2;128;0;64mATGGCGAGTAGCGAAGACGTTATCAAAGAGTTCATGCGTTTCAAAGTTCGTATGGAAGGTTCCGTTAACGGTCACGAGTTCGAAATCGAAGGTGAAGGTGAAGGTCGTCCGTACGAAGGTACCCAGACCGCTAAACTGAAAGTTACCAAAGGTGGTCCGCTGCCGTTCGCTTGGGACATCCTGTCCCCGCAGTTCCAGTACGGTTCCAAAGCTTACGTTAAACACCCGGCTGACATCCCGGACTACCTGAAACTGTCCTTCCCGGAAGGTTTCAAATGGGAACGTGTTATGAACTTCGAAGACGGTGGTGTTGTTACCGTTACCCAGGACTCCTCCCTGCAAGACGGTGAGTTCATCTACAAAGTTAAACTGCGTGGTACCAACTTCCCGTCCGACGGTCCGGTTATGCAGAAAAAAACCATGGGTTGGGAAGCTTCCACCGAACGTATGTACCCGGAAGACGGTGCTCTGAAAGGTGAAATCAAAATGCGTCTGAAACTGAAAGACGGTGGTCACTACGACGCTGAAGTTAAAACCACCTACATGGCTAAAAAACCGGTTCAGCTGCCGGGTGCTTACAAAACCGACATCAAACTGGACATCACCTCCCACAACGAAGACTACACCATCGTTGAACAGTACGAACGTGCTGAAGGTCGTCACTCCACCGGTGCTTAA\u001b[39m\n",
+      "LOCUS       .                        740 bp    DNA     circular UNK 01-JAN-1980\n",
+      "DEFINITION  .\n",
+      "ACCESSION   <unknown id>\n",
+      "VERSION     <unknown id>\n",
+      "KEYWORDS    .\n",
+      "SOURCE      .\n",
+      "  ORGANISM  .\n",
+      "            .\n",
+      "FEATURES             Location/Qualifiers\n",
+      "     promoter        1..38\n",
+      "                     /locus_tag=\"pLacO2, single operon pLac ZC082818\n",
+      "                     subsequence\"\n",
+      "                     /ApEinfo_label=\"pLacO2, single operon pLac ZC082818\n",
+      "                     subsequence\"\n",
+      "                     /ApEinfo_fwdcolor=\"#008080\"\n",
+      "                     /ApEinfo_revcolor=\"#008080\"\n",
+      "     RBS             45..56\n",
+      "                     /locus_tag=\"RBS 1.00 strength, BBa_B0034 subsequence\"\n",
+      "                     /ApEinfo_label=\"RBS 1.00 strength, BBa_B0034 subsequence\"\n",
+      "                     /ApEinfo_fwdcolor=\"cyan\"\n",
+      "                     /ApEinfo_revcolor=\"cyan\"\n",
+      "     CDS             63..740\n",
+      "                     /locus_tag=\"mRFP, uniprot drFP583, pdb 2H5O subsequence\"\n",
+      "                     /ApEinfo_label=\"mRFP, uniprot drFP583, pdb 2H5O\n",
+      "                     subsequence\"\n",
+      "                     /ApEinfo_fwdcolor=\"#800040\"\n",
+      "                     /ApEinfo_revcolor=\"#800040\"\n",
+      "ORIGIN\n",
+      "        1 aattgacaat gtgagcgagt aacaagatac tgagcacaga gaccaaagag gagaaaggtc\n",
+      "       61 tcatggcgag tagcgaagac gttatcaaag agttcatgcg tttcaaagtt cgtatggaag\n",
+      "      121 gttccgttaa cggtcacgag ttcgaaatcg aaggtgaagg tgaaggtcgt ccgtacgaag\n",
+      "      181 gtacccagac cgctaaactg aaagttacca aaggtggtcc gctgccgttc gcttgggaca\n",
+      "      241 tcctgtcccc gcagttccag tacggttcca aagcttacgt taaacacccg gctgacatcc\n",
+      "      301 cggactacct gaaactgtcc ttcccggaag gtttcaaatg ggaacgtgtt atgaacttcg\n",
+      "      361 aagacggtgg tgttgttacc gttacccagg actcctccct gcaagacggt gagttcatct\n",
+      "      421 acaaagttaa actgcgtggt accaacttcc cgtccgacgg tccggttatg cagaaaaaaa\n",
+      "      481 ccatgggttg ggaagcttcc accgaacgta tgtacccgga agacggtgct ctgaaaggtg\n",
+      "      541 aaatcaaaat gcgtctgaaa ctgaaagacg gtggtcacta cgacgctgaa gttaaaacca\n",
+      "      601 cctacatggc taaaaaaccg gttcagctgc cgggtgctta caaaaccgac atcaaactgg\n",
+      "      661 acatcacctc ccacaacgaa gactacacca tcgttgaaca gtacgaacgt gctgaaggtc\n",
+      "      721 gtcactccac cggtgcttaa\n",
+      "//\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "# create a new gene\n",
+    "df = pLac + 'gagacc' + RBS + 'ggtctc' + RFP\n",
+    "print(df.__repr__())\n",
+    "print(df.get_colored())\n",
+    "# write the gene to genbank\n",
+    "df.to_genbank('test.gb')\n",
+    "# read the raw genbank file\n",
+    "with open('test.gb','r') as f:\n",
+    "    print(f.read())"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1b53991d-6174-47de-8f9d-214b90101203",
+   "metadata": {},
+   "source": [
+    "### Adding new annotations to genbank records  <a class=\"anchor\" id=\"gene_annotation\"></a>\n",
+    "Annotation of new genes or features can be done with the `.annotate` function. In the following, we annotate BsaI restriction enzyme sites in a new construct we just generated."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "id": "b446e236-3fe0-41bf-af4b-249d39b1945a",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Help on method annotate in module plasmid.plasmid:\n",
+      "\n",
+      "annotate(name, sequence, feature='unknown', color=None, circular=True, inplace=False) method of plasmid.plasmid.Plasmid instance\n",
+      "    Adds annotations to a plasmid using sequence information\n",
+      "    name = name of the gene\n",
+      "    sequence = DNA or amino acid sequence of the feature\n",
+      "    feature = type of genetic feature such as cds, mRNA, primer_bind\n",
+      "    color = [fwd_color, rev_color] to use\n",
+      "    circular = search as though sequence is a circular construct\n",
+      "    inplace = performs modifications inplace\n",
+      "    returns a modified plasmid dataframe\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "help(df.annotate)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "id": "b04088d4-41ca-4777-afef-c46796bda880",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "<class 'plasmid.plasmid.Plasmid'> at 0x7f443caba710\n",
+      "molecule_type:DNA\n",
+      "topology:circular\n",
+      "                                         locus_tag          type     location   \n",
+      "0  pLacO2, single operon pLac ZC082818 subsequence      promoter    [0:38](+)  \\\n",
+      "1                                             BsaI  protein_bind   [38:44](-)   \n",
+      "2         RBS 1.00 strength, BBa_B0034 subsequence           RBS   [44:56](+)   \n",
+      "3                                             BsaI  protein_bind   [56:62](+)   \n",
+      "4      mRFP, uniprot drFP583, pdb 2H5O subsequence           CDS  [62:740](+)   \n",
+      "\n",
+      "   length    color  \n",
+      "0      38  \u001b[38;2;0;128;128m#008080\u001b[39m  \n",
+      "1       6   \u001b[38;2;255;165;0morange\u001b[39m  \n",
+      "2      12     \u001b[38;2;0;255;255mcyan\u001b[39m  \n",
+      "3       6      \u001b[38;2;255;0;0mred\u001b[39m  \n",
+      "4     678  \u001b[38;2;128;0;64m#800040\u001b[39m  \n",
+      "total length:740\n",
+      "\n",
+      "\u001b[38;2;0;128;128mAATTGACAATGTGAGCGAGTAACAAGATACTGAGCACA\u001b[39m\u001b[38;2;255;165;0mgagacc\u001b[39m\u001b[38;2;0;255;255mAAAGAGGAGAAA\u001b[39m\u001b[38;2;255;0;0mggtctc\u001b[39m\u001b[38;2;128;0;64mATGGCGAGTAGCGAAGACGTTATCAAAGAGTTCATGCGTTTCAAAGTTCGTATGGAAGGTTCCGTTAACGGTCACGAGTTCGAAATCGAAGGTGAAGGTGAAGGTCGTCCGTACGAAGGTACCCAGACCGCTAAACTGAAAGTTACCAAAGGTGGTCCGCTGCCGTTCGCTTGGGACATCCTGTCCCCGCAGTTCCAGTACGGTTCCAAAGCTTACGTTAAACACCCGGCTGACATCCCGGACTACCTGAAACTGTCCTTCCCGGAAGGTTTCAAATGGGAACGTGTTATGAACTTCGAAGACGGTGGTGTTGTTACCGTTACCCAGGACTCCTCCCTGCAAGACGGTGAGTTCATCTACAAAGTTAAACTGCGTGGTACCAACTTCCCGTCCGACGGTCCGGTTATGCAGAAAAAAACCATGGGTTGGGAAGCTTCCACCGAACGTATGTACCCGGAAGACGGTGCTCTGAAAGGTGAAATCAAAATGCGTCTGAAACTGAAAGACGGTGGTCACTACGACGCTGAAGTTAAAACCACCTACATGGCTAAAAAACCGGTTCAGCTGCCGGGTGCTTACAAAACCGACATCAAACTGGACATCACCTCCCACAACGAAGACTACACCATCGTTGAACAGTACGAACGTGCTGAAGGTCGTCACTCCACCGGTGCTTAA\u001b[39m\n"
+     ]
+    }
+   ],
+   "source": [
+    "# assemble the promoter, rbs, and mRFP, adds spacer sequences between promoter, rbs, and rfp\n",
+    "df = pLac + 'gagacc' + RBS + 'ggtctc' + RFP\n",
+    "# annotate BsaI sites\n",
+    "df = df.annotate(name='BsaI', sequence='GGTCTC', color=['red','orange'], feature='protein_bind')\n",
+    "print(df.__repr__())\n",
+    "print(df.get_colored())"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1a045a08-923c-44e5-b8d1-aa6109ccdbae",
+   "metadata": {},
+   "source": [
+    "### Annotation via amino acid search\n",
+    "Annotations can also be done via searching for amino acid sequences. In the following, we search for a short amino acid sequence in the LacI gene and annotate it. Exact amino acid search is performed in both forward and reverse orientations for the given gene."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "id": "64da7ef4-d638-4351-bb2d-dbd8d8f72046",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "MASSEDVIKEFMRFKVRMEGSVNGHEFEIEGEGEGRPYEGTQTAKLKVTKGGPLPFAWDILSPQFQYGSKAYVKHPADIPDYLKLSFPEGFKWERVMNFEDGGVVTVTQDSSLQDGEFIYKVKLRGTNFPSDGPVMQKKTMGWEASTERMYPEDGALKGEIKMRLKLKDGGHYDAEVKTTYMAKKPVQLPGAYKTDIKLDITSHNEDYTIVEQYERAEGRHSTGA*\n",
+      "\u001b[38;2;0;128;128mAATTGACAATGTGAGCGAGTAACAAGATACTGAGCACA\u001b[39mgagacc\u001b[38;2;0;255;255mAAAGAGGAGAAA\u001b[39mggtctc\u001b[38;2;128;0;64mATGGCGAGTAGCGAAGACGTTATCAAAGAGTTCATGCGTTTCAAAGTTCGTATGGAAGGTTCCGTTAACGGTCACGAGTTCGAAATCGAAGGTGAAGGTGAAGGTCGTCCGTACGAAGGTACCCAGACCGCTAAACTGAAAGTTACCAAAGGTGGTCCGCTGCCGTTCGCTTGGGACATCCTGTCCCCGCAGTTCCAGTACGGTTCCAAAGCTTACGTTAAACACCCGGCTGACATCCCGGACTACCTGAAACTGTCCTTCCCGGAAGGTTTCAAATGGGAACGTGTTATGAACTTCGAAGACGGTGGTGTTGTTACCGTTACCCAGGACTCCTCCCTGCAAGACGGTGAGTTCATCTACAAAGTTAAACTGCGTGGTACCAACTTCCCGTCCGACGGTCCGGTTATGCAGAAAAAAACCATGGGTTGGGAAGCTTCCACCGAACGTATGTACCCGGAA\u001b[39m\u001b[38;2;255;165;0mGACGGTGCTCTGAAAGGTGAAATCAAAATGCGTCTGAAACTGAAAGACGGT\u001b[39m\u001b[38;2;128;0;64mGGTCACTACGACGCTGAAGTTAAAACCACCTACATGGCTAAAAAACCGGTTCAGCTGCCGGGTGCTTACAAAACCGACATCAAACTGGACATCACCTCCCACAACGAAGACTACACCATCGTTGAACAGTACGAACGTGCTGAAGGTCGTCACTCCACCGGTGCTTAA\u001b[39m\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/home/zchen/Public/python/lib/python3.11/site-packages/Bio/Seq.py:2804: BiopythonWarning: Partial codon, len(sequence) not a multiple of three. Explicitly trim the sequence or add trailing N before translation. This may become an error in future.\n",
+      "  warnings.warn(\n",
+      "/home/zchen/Public/python/lib/python3.11/site-packages/Bio/Seq.py:2804: BiopythonWarning: Partial codon, len(sequence) not a multiple of three. Explicitly trim the sequence or add trailing N before translation. This may become an error in future.\n",
+      "  warnings.warn(\n",
+      "/home/zchen/Public/python/lib/python3.11/site-packages/Bio/Seq.py:2804: BiopythonWarning: Partial codon, len(sequence) not a multiple of three. Explicitly trim the sequence or add trailing N before translation. This may become an error in future.\n",
+      "  warnings.warn(\n",
+      "/home/zchen/Public/python/lib/python3.11/site-packages/Bio/Seq.py:2804: BiopythonWarning: Partial codon, len(sequence) not a multiple of three. Explicitly trim the sequence or add trailing N before translation. This may become an error in future.\n",
+      "  warnings.warn(\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(RFP.translate())\n",
+    "df = pLac + 'gagacc' + RBS + 'ggtctc' + RFP\n",
+    "aaseq = 'DGALKGEIKMRLKLKDG'\n",
+    "df = df.annotate(name='peptide', sequence=aaseq, color='orange')\n",
+    "df = df.drop_duplicates()\n",
+    "print(df.get_colored())"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "7ec7049a-6aa6-4091-a32c-47a4019200ae",
+   "metadata": {},
+   "source": [
+    "### Searching for open reading frames  <a class=\"anchor\" id=\"gene_ORF_search\"></a>\n",
+    "Genbank records may sometimes contain unannotated genes. In these situations, we can perform a search of open reading frames in the sequence to help identify hidden genomic features of plasmid. In the following, we will load an annotated genbank record of a plasmid and delete the antibiotic resistance gene. We can search for the open reading frames with `Aligner.search_ORF` to recover some missing annotations."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "id": "9dc411d7-1dca-4a1c-9e9f-60cc62b1d2f3",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Help on function search_ORF in module plasmid.aligner:\n",
+      "\n",
+      "search_ORF(seq, table='Standard', fwd_only=False)\n",
+      "    Generates a dataframe of open reading frames for a given sequence\n",
+      "    seq = input sequence\n",
+      "    table = codon table to use\n",
+      "    return pandas Dataframe with columns\n",
+      "        [name, start, stop, orientation, amino acid sequence]\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "help(pge.Aligner.search_ORF)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "id": "8f4d516e-35be-42dc-a3b7-1978a1c80d52",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "reading  ../data/xRFP.gb  as genbank file\n",
+      "<class 'plasmid.plasmid.Plasmid'> at 0x7f445487f3d0\n",
+      "molecule_type:DNA\n",
+      "topology:circular\n",
+      "data_file_division:   \n",
+      "date:05-DEC-2022\n",
+      "accessions:['<unknown', 'id>']\n",
+      "keywords:['']\n",
+      "source:\n",
+      "organism:. .\n",
+      "taxonomy:[]\n",
+      "comment:\n",
+      "ApEinfo:methylated:1\n",
+      "      locus_tag type     location  length    color\n",
+      "0  SpectomycinR  CDS  [70:868](+)     798  \u001b[38;2;212;0;55m#d40037\u001b[39m\n",
+      "total length:4465\n",
+      "\n",
+      "<class 'plasmid.plasmid.Plasmid'> at 0x7f443d447690\n",
+      "molecule_type:DNA\n",
+      "topology:circular\n",
+      "data_file_division:   \n",
+      "date:05-DEC-2022\n",
+      "accessions:['<unknown', 'id>']\n",
+      "keywords:['']\n",
+      "source:\n",
+      "organism:. .\n",
+      "taxonomy:[]\n",
+      "comment:\n",
+      "ApEinfo:methylated:1\n",
+      "                   locus_tag        type      location  length    color\n",
+      "0  AmpR promoter subsequence    promoter     [0:29](+)      29  \u001b[38;2;15;127;254m#0f7ffe\u001b[39m\n",
+      "1       AmpR RBS subsequence         RBS    [29:70](+)      41     \u001b[38;2;0;255;255mcyan\u001b[39m\n",
+      "2      BBa_B0053 subsequence  terminator  [878:948](+)      70  \u001b[38;2;157;27;28m#9d1b1c\u001b[39m\n",
+      "total length:1000\n",
+      "\n",
+      "  start stop length                                           sequence\n",
+      "2    70  868    798  MSEKVPAEISVQLSQALNVIGRHLESTLLAVHLYGSALDGGLKPYS...\n",
+      "4    45  357    312  MSLCTTMVTSKARSALFWPGEAETSKRSTSRACRTASLSGAATVTS...\n",
+      "5    45  339    294  MVTSKARSALFWPGEAETSKRSTSRACRTASLSGAATVTSKSISLY...\n",
+      "7   833  995    162  MKQLNCLVPANDNTSSGKKTGKVSPPCPFSLKPKRLLREIGVSRGR...\n",
+      "3   706  868    162  MARLPAQHQPILLNAKRAYLGQEEDYLPARADQVAALIKFVKYEAV...\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/home/zchen/Public/python/lib/python3.11/site-packages/Bio/Seq.py:2804: BiopythonWarning: Partial codon, len(sequence) not a multiple of three. Explicitly trim the sequence or add trailing N before translation. This may become an error in future.\n",
+      "  warnings.warn(\n",
+      "/home/zchen/Public/python/lib/python3.11/site-packages/Bio/Seq.py:2804: BiopythonWarning: Partial codon, len(sequence) not a multiple of three. Explicitly trim the sequence or add trailing N before translation. This may become an error in future.\n",
+      "  warnings.warn(\n",
+      "/home/zchen/Public/python/lib/python3.11/site-packages/Bio/Seq.py:2804: BiopythonWarning: Partial codon, len(sequence) not a multiple of three. Explicitly trim the sequence or add trailing N before translation. This may become an error in future.\n",
+      "  warnings.warn(\n",
+      "/home/zchen/Public/python/lib/python3.11/site-packages/Bio/Seq.py:2804: BiopythonWarning: Partial codon, len(sequence) not a multiple of three. Explicitly trim the sequence or add trailing N before translation. This may become an error in future.\n",
+      "  warnings.warn(\n"
+     ]
+    }
+   ],
+   "source": [
+    "# load a genbank record and delete the antibiotic resistance gene\n",
+    "df = pge.read_genbank('../data/xRFP.gb')\n",
+    "print(df[2].__repr__())\n",
+    "del(df[2])\n",
+    "print(df[:1000].__repr__())\n",
+    "# generate list of open reading frames\n",
+    "seq = str(df[:1000])\n",
+    "x = pge.Aligner.search_ORF(seq)\n",
+    "# compute length of the sequence\n",
+    "x['length'] = x['stop'] - x['start']\n",
+    "# get the top 5 longest sequences\n",
+    "x = x.sort_values(by=['length','orientation','start']).iloc[::-1]\n",
+    "col = ['start','stop','length','sequence']\n",
+    "print(x[col].iloc[:5])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d3ff90e9-aeb2-4cec-b9a1-23e02269f7f1",
+   "metadata": {},
+   "source": [
+    "In the above, the longest sequence is likely the missing genes. We can search on NCBI blast to see if this matches any missing genes."
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.11.4"
+  },
+  "toc-autonumbering": true,
+  "toc-showtags": false
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

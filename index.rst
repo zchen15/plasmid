@@ -11,7 +11,6 @@ Welcome to Plasmid's documentation!
    :caption: Contents:
 
 
-
 Indices and tables
 ==================
 

@@ -18,7 +18,13 @@ release = '2023.06.29'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['sphinx.ext.napoleon','sphinx.ext.autosummary','sphinx.ext.todo','sphinx.ext.viewcode','sphinx.ext.autodoc']
+extensions = ['myst_nb',
+              'nbsphinx',
+              'sphinx.ext.napoleon',
+              'sphinx.ext.autosummary',
+              'sphinx.ext.todo',
+              'sphinx.ext.viewcode',
+              'sphinx.ext.autodoc']
 
 templates_path = ['_templates']
 exclude_patterns = ['setup.py','_build', 'Thumbs.db', '.DS_Store']
@@ -28,3 +34,28 @@ exclude_patterns = ['setup.py','_build', 'Thumbs.db', '.DS_Store']
 
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
+
+nbsphinx_custom_formats = {
+    ".mystnb": ["jupytext.reads", {"fmt": "mystnb"}],
+}
+
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.ipynb': 'myst-nb',
+    '.myst': 'myst-nb',
+}
+
+# sphinx-autoapi configuration
+autoapi_type = "python"
+autoapi_dirs = ["../src/"]
+autoapi_options = [
+    "members",
+    "undoc-members",
+    "show-inheritance",
+    "show-module-summary",
+    "special-members",
+    "inherited-members",
+]
+
+autoapi_add_toctree_entry = False
+

@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aligning and clustering sequences with Plasmid &mdash; Plasmid: A python library for gene editing 2023.06.29 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Designing primers with Plasmid" href="primer_design.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Plasmid: A python library for gene editing
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to guides &amp; Examples</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="genbank_editing.html">Manipulating genbank records with Plasmid</a></li>
+<li class="toctree-l1"><a class="reference internal" href="primer_design.html">Designing primers with Plasmid</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Aligning and clustering sequences with Plasmid</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#table-of-contents">Table of Contents</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#reading-fastq-or-fasta-sequences">Reading fastq or fasta sequences</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#aligning-ngs-reads">Aligning NGS reads</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#running-minimap2-to-compute-alignment-to-reference-sequences">Running minimap2 to compute alignment to reference sequences</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#computing-pairwise-distance-between-sequences">Computing pairwise distance between sequences</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#clustering-sequences">Clustering sequences</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#running-optics-sequence-clustering">Running optics sequence clustering</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#performing-multi-sequence-alignment">Performing multi-sequence alignment</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#visualizing-multi-alignments">Visualizing multi-alignments</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#obtaining-highly-accurate-nanopore-reads-via-multi-alignment">Obtaining highly accurate nanopore reads via multi-alignment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#visualizing-cigar-alignment-strings">Visualizing cigar alignment strings</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Plasmid: A python library for gene editing</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Aligning and clustering sequences with Plasmid</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/notebooks/clustering.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="aligning-and-clustering-sequences-with-plasmid">
+<h1>Aligning and clustering sequences with Plasmid<a class="headerlink" href="#aligning-and-clustering-sequences-with-plasmid" title="Permalink to this heading"></a></h1>
+<p>This notebook illustrates the various functions contained in the <code class="docutils literal notranslate"><span class="pre">aligner</span></code>, <code class="docutils literal notranslate"><span class="pre">cluster</span></code>, and <code class="docutils literal notranslate"><span class="pre">fileIO</span></code> modules, which can be used to read, align, cluster sequences, and search databases.</p>
+<section id="table-of-contents">
+<h2>Table of Contents<a class="headerlink" href="#table-of-contents" title="Permalink to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><span class="xref myst">Reading fastq or fasta files</span></p></li>
+<li><p><span class="xref myst">Aligning NGS reads against reference sequences</span></p></li>
+<li><p><span class="xref myst">Computing pairwise distance between sequences</span></p></li>
+<li><p><span class="xref myst">Clustering sequences</span></p></li>
+<li><p><span class="xref myst">Performing Multi-alignment</span></p></li>
+<li><p><span class="xref myst">Viewing CIGAR alignments</span></p></li>
+</ol>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">plasmid</span> <span class="k">as</span> <span class="nn">pge</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p><a class="anchor" id="read_fastq"></a></p>
+</section>
+<section id="reading-fastq-or-fasta-sequences">
+<h2>Reading fastq or fasta sequences<a class="headerlink" href="#reading-fastq-or-fasta-sequences" title="Permalink to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">fileIO</span></code> module contains functions for reading compressed or uncompressed fasta or fastq files. These functions take a filename and returns the contents as a pandas dataframe for processing in python.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">help</span><span class="p">(</span><span class="n">pge</span><span class="o">.</span><span class="n">fileIO</span><span class="o">.</span><span class="n">read_fastx</span><span class="p">)</span>
+<span class="n">help</span><span class="p">(</span><span class="n">pge</span><span class="o">.</span><span class="n">fileIO</span><span class="o">.</span><span class="n">read_fasta</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Help on function read_fastx in module plasmid.fileIO:
+
+read_fastx(fname)
+    Reads data from fasta or fastq
+    returns filename
+
+Help on function read_fasta in module plasmid.fileIO:
+
+read_fasta(fname)
+    Reads list of sequences from a fasta file format
+    fname = file to read the information
+    returns list of sequence and names
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># Loads raw nanopore fastq reads
+x = pge.fileIO.read_fastx(&#39;../data/pseudo_ref.fq.bz2&#39;)
+print(&#39;These are nanopore reads&#39;)
+print(x.iloc[:5])
+
+ref = pge.fileIO.read_fasta(&#39;../data/ref_db.fa&#39;)¶
+# Selections for only sequences with HAP in the header
+ref = ref[ref[&#39;name&#39;].str.contains(&#39;HAP&#39;)]
+print(&#39;These are reference sequences in a fasta file&#39;)
+print(ref.iloc[:5])
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output traceback highlight-ipythontb notranslate"><div class="highlight"><pre><span></span>  Cell In[3], line 6
+    ref = pge.fileIO.read_fasta(&#39;../data/ref_db.fa&#39;)¶
+                                                    ^
+SyntaxError: invalid character &#39;¶&#39; (U+00B6)
+</pre></div>
+</div>
+</div>
+</div>
+<p><a class="anchor" id="read_alignment"></a></p>
+</section>
+<section id="aligning-ngs-reads">
+<h2>Aligning NGS reads<a class="headerlink" href="#aligning-ngs-reads" title="Permalink to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">Aligner</span></code> module contains many wrapper functions for running popular alignment tools such as <a class="reference external" href="https://github.com/lh3/bwa">bwa</a>, <a class="reference external" href="https://lh3.github.io/minimap2/minimap2.html">minimap2</a>, and <a class="reference external" href="https://github.com/BenLangmead/bowtie2">bowtie2</a> from jupyter notebook. Indices are stored in temporary directories. The alignment results are written to disk, executed with subprocess calls, and results read back into pandas dataframe. The purpose of the wrapper functions is to accelerate prototyping of custom analysis methods for sequence data.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">help</span><span class="p">(</span><span class="n">pge</span><span class="o">.</span><span class="n">Aligner</span><span class="o">.</span><span class="n">minimap2</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Alignment parameters for minimap2&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">pge</span><span class="o">.</span><span class="n">Aligner</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Help on function minimap2 in module plasmid.aligner:
+
+minimap2(self, query, query2=None, database=None)
+    This is a wrapper for the minimap2 aligner.
+    This aligner is better suited for long reads (&gt;100bp) from nanopore sequencing
+    
+    query = list of sequences to search for in database
+    query2 = reverse pair of paired end read
+    
+    query and query2 must be in pandas dataframe format with columns:
+    [name, sequence] or [name, sequence, quality]
+    
+    database = database of sequences being search through
+    
+    database must be in pandas dataframe format with columns:
+    [name, sequence] or [name, sequence, quality]
+    or a string containing the filename of the fn_index
+    
+    returns a pandas dataframe of alignment results from the paf file
+
+Alignment parameters for minimap2
+{&#39;k&#39;: 7, &#39;w&#39;: 1, &#39;config&#39;: &#39;-x map-ont -P&#39;, &#39;cigar&#39;: True}
+</pre></div>
+</div>
+</div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">k</span></code> kmer size for the kmer computation. Smaller is better for sensitivity at the cost of speed.</p>
+<p><code class="docutils literal notranslate"><span class="pre">w</span></code> window stride for the kmer computation. Smaller is better for sensitivity at the cost of speed.</p>
+<p><code class="docutils literal notranslate"><span class="pre">config</span></code> defines other parameters to pass to the minimap2 commandline application.</p>
+<p><code class="docutils literal notranslate"><span class="pre">cigar</span></code> boolean flag to compute the cigar string.</p>
+<p>These above parameters affect the alignment results obtained with minimap2.</p>
+<section id="running-minimap2-to-compute-alignment-to-reference-sequences">
+<h3>Running minimap2 to compute alignment to reference sequences<a class="headerlink" href="#running-minimap2-to-compute-alignment-to-reference-sequences" title="Permalink to this heading"></a></h3>
+<p>The following code blocks compute the accuracy of nanopore reads aligned against reference sequences. Minimap2 is used to perform the alignment.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">getacc</span><span class="p">(</span><span class="n">qry</span><span class="p">,</span> <span class="n">ref</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Computes the accuracy of reads relative to the reference sequences they were derived from</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c1"># initialize the aligner</span>
+    <span class="n">aln</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Aligner</span><span class="p">()</span>
+    <span class="c1"># all minimap2</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">aln</span><span class="o">.</span><span class="n">minimap2</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="n">qry</span><span class="p">,</span> <span class="n">database</span><span class="o">=</span><span class="n">ref</span><span class="p">)</span>
+    <span class="c1"># filter alignments to the best matching results for each pair of reads</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Aligner</span><span class="o">.</span><span class="n">filter_idx</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;query_id&#39;</span><span class="p">],</span> <span class="s1">&#39;AS&#39;</span><span class="p">,</span> <span class="s1">&#39;idxmax&#39;</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;query_id&#39;</span><span class="p">:</span><span class="s1">&#39;name&#39;</span><span class="p">})</span>
+    <span class="c1"># merge sequences to the query reads</span>
+    <span class="n">qry</span> <span class="o">=</span> <span class="n">qry</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">df</span><span class="p">[[</span><span class="s1">&#39;name&#39;</span><span class="p">,</span><span class="s1">&#39;database_id&#39;</span><span class="p">,</span><span class="s1">&#39;match_score&#39;</span><span class="p">,</span><span class="s1">&#39;similarity&#39;</span><span class="p">]],</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s1">&#39;name&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">qry</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">x</span><span class="p">[</span><span class="s1">&#39;length&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">x</span><span class="o">.</span><span class="n">sequence</span><span class="p">]</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">getacc</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">ref</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[M::mm_idx_gen::0.002*1.30] collected minimizers
+[M::mm_idx_gen::0.003*1.88] sorted minimizers
+[M::main::0.003*1.88] loaded/built the index for 50 target sequence(s)
+[M::mm_mapopt_update::0.004*1.83] mid_occ = 88
+[M::mm_idx_stat] kmer size: 7; skip: 1; is_hpc: 0; #seq: 50
+[M::mm_idx_stat::0.004*1.80] distinct minimizers: 5565 (26.92% are singletons); average occurrences: 5.830; average spacing: 1.011; total length: 32786
+[M::worker_pipeline::20.086*2.97] mapped 5601 sequences
+[M::main] Version: 2.24-r1122
+[M::main] CMD: minimap2 -x map-ont -P -c -k 7 -w 1 -o /tmp/aligner_ru_npx36/results.paf /tmp/aligner_ru_npx36/database.fa /tmp/aligner_ru_npx36/read1.fq
+[M::main] Real time: 20.090 sec; CPU: 59.609 sec; Peak RSS: 0.240 GB
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+<span class="n">df</span><span class="p">[</span><span class="s1">&#39;error&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="o">-</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;similarity&#39;</span><span class="p">]</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;database_id&#39;</span><span class="p">])</span>
+<span class="n">df</span><span class="p">[</span><span class="s1">&#39;h&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;HAP&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">database_id</span><span class="p">]</span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;h&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">25</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">7</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Accuracy of raw nanopore reads&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">violinplot</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="o">~</span><span class="n">c</span><span class="p">],</span> <span class="n">x</span><span class="o">=</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;data¶base_id&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mf">0.5</span><span class="p">])</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">violinplot</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="n">c</span><span class="p">],</span> <span class="n">x</span><span class="o">=</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;database_id&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mf">0.5</span><span class="p">])</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="c1">#plt.savefig(&#39;error.png&#39;)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/tmp/ipykernel_2025802/669087145.py:9: MatplotlibDeprecationWarning: Auto-removal of overlapping axes is deprecated since 3.6 and will be removed two minor releases later; explicitly call ax.remove() as needed.
+  plt.subplot(1,2,1)
+</pre></div>
+</div>
+<img alt="../_images/6f8e087e3b6931f5be87cbbd32a0d6f95ef098116356b94e8dc8500f30cde313.png" src="../_images/6f8e087e3b6931f5be87cbbd32a0d6f95ef098116356b94e8dc8500f30cde313.png" />
+</div>
+</div>
+<p><a class="anchor" id="raw_read_error"></a>
+The above plot shows the raw error rate of nanopore reads computed by aligning the reads against their reference sequences. This was possible because the references are at least 15% divergent from each other, which is at the limit of sequence corruption for nanopore reads.</p>
+<p><a class="anchor" id="distance_matrix"></a></p>
+</section>
+</section>
+<section id="computing-pairwise-distance-between-sequences">
+<h2>Computing pairwise distance between sequences<a class="headerlink" href="#computing-pairwise-distance-between-sequences" title="Permalink to this heading"></a></h2>
+<p>The following code blocks can be used to compute the pairwise distance between a set of sequences. In this example, we use functions contained within the <code class="docutils literal notranslate"><span class="pre">Clust</span></code> module.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">help</span><span class="p">(</span><span class="n">pge</span><span class="o">.</span><span class="n">Clust</span><span class="o">.</span><span class="n">get_distance_matrix</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Help on function get_distance_matrix in module plasmid.cluster:
+
+get_distance_matrix(self, query, database)
+    Compute the distance matrix for a set of sequences
+    query = dataframe with columns [name, sequence]
+    database = dataframe with columns [name, sequence]
+    return dictionary with 
+            &#39;matrix&#39; as adjacency matrix of sequence similarity
+            &#39;columns&#39; names of sequences representing each column
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">clst</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Clust</span><span class="p">()</span>
+<span class="n">clst</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">][</span><span class="s1">&#39;config&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;-x map-ont -P&#39;</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">clst</span><span class="o">.</span><span class="n">get_distance_matrix</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="n">ref</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[M::mm_idx_gen::0.006*1.32] collected minimizers
+[M::mm_idx_gen::0.007*1.58] sorted minimizers
+[M::main::0.007*1.58] loaded/built the index for 50 target sequence(s)
+[M::mm_mapopt_update::0.008*1.56] mid_occ = 88
+[M::mm_idx_stat] kmer size: 7; skip: 1; is_hpc: 0; #seq: 50
+[M::mm_idx_stat::0.008*1.55] distinct minimizers: 5565 (26.92% are singletons); average occurrences: 5.830; average spacing: 1.011; total length: 32786
+[M::worker_pipeline::0.214*2.85] mapped 50 sequences
+[M::main] Version: 2.24-r1122
+[M::main] CMD: minimap2 -x map-ont -P -c -k 7 -w 1 -o /tmp/clust_cltu_36t/results.paf /tmp/clust_cltu_36t/database.fa /tmp/clust_cltu_36t/read1.fa
+[M::main] Real time: 0.214 sec; CPU: 0.610 sec; Peak RSS: 0.707 GB
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Converting paired list to adjacency matrix
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
+<span class="c1"># display only first 30 columns</span>
+<span class="n">ylabel</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;columns&#39;</span><span class="p">]</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">clustermap</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="mi">1</span><span class="o">-</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;matrix&#39;</span><span class="p">],</span> <span class="n">yticklabels</span><span class="o">=</span><span class="n">ylabel</span><span class="p">)</span>
+<span class="c1">#plt.savefig(&#39;dendrogram.png&#39;)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;Figure size 500x300 with 0 Axes&gt;
+</pre></div>
+</div>
+<img alt="../_images/417b536d0d3fff23309d3df091a23f6ea7dc10f3bb052f9bad282e1ff2ab2a2c.png" src="../_images/417b536d0d3fff23309d3df091a23f6ea7dc10f3bb052f9bad282e1ff2ab2a2c.png" />
+</div>
+</div>
+<p>The above clustermap shows the degree of similar between each reference sequence. We can use the <code class="docutils literal notranslate"><span class="pre">Aligner</span></code> module to compute pairwise distances and plot their distribution.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">aln</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Aligner</span><span class="p">()</span>
+<span class="n">aln</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">][</span><span class="s1">&#39;config&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;-x map-ont -P&#39;</span>
+<span class="n">aln</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">][</span><span class="s1">&#39;k&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">7</span>
+<span class="n">aln</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">][</span><span class="s1">&#39;w&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">aln</span><span class="o">.</span><span class="n">minimap2</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="n">ref</span><span class="p">,</span> <span class="n">database</span><span class="o">=</span><span class="n">ref</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[M::mm_idx_gen::0.002*1.29] collected minimizers
+[M::mm_idx_gen::0.003*1.87] sorted minimizers
+[M::main::0.003*1.87] loaded/built the index for 50 target sequence(s)
+[M::mm_mapopt_update::0.004*1.82] mid_occ = 88
+[M::mm_idx_stat] kmer size: 7; skip: 1; is_hpc: 0; #seq: 50
+[M::mm_idx_stat::0.004*1.78] distinct minimizers: 5565 (26.92% are singletons); average occurrences: 5.830; average spacing: 1.011; total length: 32786
+[M::worker_pipeline::0.209*2.89] mapped 50 sequences
+[M::main] Version: 2.24-r1122
+[M::main] CMD: minimap2 -x map-ont -P -c -k 7 -w 1 -o /tmp/aligner_0fioablb/results.paf /tmp/aligner_0fioablb/database.fa /tmp/aligner_0fioablb/read1.fa
+[M::main] Real time: 0.209 sec; CPU: 0.603 sec; Peak RSS: 0.707 GB
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">histplot</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s1">&#39;match_score&#39;</span><span class="p">)</span>
+<span class="c1">#plt.savefig(&#39;histogram.jpg&#39;)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/12030f9b1832bda8dfdaa4fd6b1a496eceff8ffd88636579fa27b398ae2ad3fe.png" src="../_images/12030f9b1832bda8dfdaa4fd6b1a496eceff8ffd88636579fa27b398ae2ad3fe.png" />
+</div>
+</div>
+<p>The plot above shows how the reference sequences are at least 15% divergent from each other. Samples with 100% match_score are sequences aligned to themselves.</p>
+<p><a class="anchor" id="clustering"></a></p>
+</section>
+<section id="clustering-sequences">
+<h2>Clustering sequences<a class="headerlink" href="#clustering-sequences" title="Permalink to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">Clust</span></code> module contains a novel method for clustering sequences based on density. This algorithm is called optics. It can compute sequence cluster using pairwise distance information. This function combines functionality from <code class="docutils literal notranslate"><span class="pre">Aligner.minimap</span></code> to compute pairwise distances and <code class="docutils literal notranslate"><span class="pre">sklearn</span></code> to compute clusters using the optics density based clustering algorithm.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">help</span><span class="p">(</span><span class="n">pge</span><span class="o">.</span><span class="n">Clust</span><span class="o">.</span><span class="n">optics_sequence</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Parameters associated with optics&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">pge</span><span class="o">.</span><span class="n">Clust</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;optics&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Help on function optics_sequence in module plasmid.cluster:
+
+optics_sequence(self, qry)
+    Find cluster centers for a set of sequences using OPTICS
+    qry = dataframe of query sequences to search for cluster centers
+           Must have at least the following columns:
+           [name, sequence]
+    csize = number of sequences to take from cluster center for multi-seq alignment
+
+Parameters associated with optics
+{&#39;min_samples&#39;: None, &#39;min_cluster_size&#39;: None, &#39;xi&#39;: 0.05, &#39;max_eps&#39;: None, &#39;cluster_method&#39;: &#39;dbscan&#39;, &#39;n_jobs&#39;: None, &#39;alt_label&#39;: False}
+</pre></div>
+</div>
+</div>
+</div>
+<section id="running-optics-sequence-clustering">
+<h3>Running optics sequence clustering<a class="headerlink" href="#running-optics-sequence-clustering" title="Permalink to this heading"></a></h3>
+<p>The following code blocks loads raw nanopore reads and clusters the reads using optics.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Read nanopore data</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">fileIO</span><span class="o">.</span><span class="n">read_fastx</span><span class="p">(</span><span class="s1">&#39;../data/pseudo_ref.fq.bz2&#39;</span><span class="p">)</span>
+
+<span class="n">clst</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Clust</span><span class="p">()</span>
+<span class="n">aln</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">][</span><span class="s1">&#39;config&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;-x map-ont -P&#39;</span>
+<span class="n">aln</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">][</span><span class="s1">&#39;k&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">15</span>
+<span class="n">aln</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">][</span><span class="s1">&#39;w&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">clst</span><span class="o">.</span><span class="n">optics_sequence</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>cluster_compute: computing pairwise distance matrix
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[M::mm_idx_gen::0.141*1.00] collected minimizers
+[M::mm_idx_gen::0.214*1.68] sorted minimizers
+[M::main::0.214*1.68] loaded/built the index for 5601 target sequence(s)
+[M::mm_mapopt_update::0.229*1.64] mid_occ = 435
+[M::mm_idx_stat] kmer size: 15; skip: 2; is_hpc: 0; #seq: 5601
+[M::mm_idx_stat::0.238*1.61] distinct minimizers: 880857 (78.60% are singletons); average occurrences: 3.113; average spacing: 1.506; total length: 4130106
+[M::worker_pipeline::16.225*2.97] mapped 5601 sequences
+[M::main] Version: 2.24-r1122
+[M::main] CMD: minimap2 -D --dual=no --for-only -c -k 15 -w 2 -o /tmp/clust_4nmg8s0c/results.paf /tmp/clust_4nmg8s0c/database.fq /tmp/clust_4nmg8s0c/read1.fq
+[M::main] Real time: 16.233 sec; CPU: 48.213 sec; Peak RSS: 0.707 GB
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Converting paired list to adjacency matrix
+Running clust_OPTICS
+max_eps = 0.5
+clust_OPTICS: iter=0 using min_samples=2783
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/home/zchen/Public/python/lib/python3.11/site-packages/sklearn/cluster/_optics.py:598: UserWarning: All reachability values are inf. Set a larger max_eps or all data will be considered outliers.
+  warnings.warn(
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>clust_OPTICS: clusters=0 outliers=5566 delta=1391.5
+clust_OPTICS: iter=1 using min_samples=1392
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/home/zchen/Public/python/lib/python3.11/site-packages/sklearn/cluster/_optics.py:598: UserWarning: All reachability values are inf. Set a larger max_eps or all data will be considered outliers.
+  warnings.warn(
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>clust_OPTICS: clusters=0 outliers=5566 delta=1391
+clust_OPTICS: iter=2 using min_samples=697
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/home/zchen/Public/python/lib/python3.11/site-packages/sklearn/cluster/_optics.py:598: UserWarning: All reachability values are inf. Set a larger max_eps or all data will be considered outliers.
+  warnings.warn(
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>clust_OPTICS: clusters=0 outliers=5566 delta=695
+clust_OPTICS: iter=3 using min_samples=350
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/home/zchen/Public/python/lib/python3.11/site-packages/sklearn/cluster/_optics.py:598: UserWarning: All reachability values are inf. Set a larger max_eps or all data will be considered outliers.
+  warnings.warn(
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>clust_OPTICS: clusters=0 outliers=5566 delta=347
+clust_OPTICS: iter=4 using min_samples=177
+clust_OPTICS: clusters=4 outliers=4644 delta=173
+clust_OPTICS: iter=5 using min_samples=91
+clust_OPTICS: clusters=9 outliers=3221 delta=86
+clust_OPTICS: iter=6 using min_samples=48
+clust_OPTICS: clusters=15 outliers=1852 delta=43
+clust_OPTICS: iter=7 using min_samples=27
+clust_OPTICS: clusters=18 outliers=570 delta=21
+clust_OPTICS: iter=8 using min_samples=17
+clust_OPTICS: clusters=13 outliers=240 delta=10
+clust_OPTICS: iter=9 using min_samples=32
+clust_OPTICS: clusters=17 outliers=728 delta=5
+clust_OPTICS: iter=10 using min_samples=39
+clust_OPTICS: clusters=17 outliers=1260 delta=-7
+clust_OPTICS: iter=11 using min_samples=39
+clust_OPTICS: clusters=17 outliers=1260 delta=-7
+clust_OPTICS: iter=12 using min_samples=42
+clust_OPTICS: clusters=16 outliers=1318 delta=-3
+clust_OPTICS: iter=13 using min_samples=37
+clust_OPTICS: clusters=16 outliers=1031 delta=-2
+clust_OPTICS: iter=14 using min_samples=35
+clust_OPTICS: clusters=17 outliers=839 delta=2
+clust_OPTICS: iter=15 using min_samples=34
+clust_OPTICS: clusters=17 outliers=794 delta=1
+n_clusters=18 n_unclustered=570 N=5566
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">&#39;clusters.csv.gz&#39;</span><span class="p">,</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">df</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>name</th>
+      <th>labels</th>
+      <th>ordering</th>
+      <th>reachability</th>
+      <th>sequence</th>
+      <th>quality</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0009eaed-04ca-48d8-9942-8ec3eec3582e_rs145_908</td>
+      <td>-1</td>
+      <td>0</td>
+      <td>0.423341</td>
+      <td>GGCTCGGTGTCTCAATGATGGAGATTACTGTAAACTTCAGGGTGAC...</td>
+      <td>'($%')1141.+-3/-52455132/-.,)*((.)')'%')1,'**,...</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>00178678-f672-4093-aaf0-d7ba9f30619a_rs103_887</td>
+      <td>-1</td>
+      <td>1</td>
+      <td>0.423341</td>
+      <td>TGGCTCGGGTGTCTCAATGATGGAGATTACTGTAAACTCAGGGTGA...</td>
+      <td>$/13&amp;&amp;(,'/341)(.-),/.01-*+*'-,+/.55*).+,/7424,...</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>001cfb60-9530-4ef5-afe3-ca652fd4afa1_rs84_864</td>
+      <td>-1</td>
+      <td>2</td>
+      <td>0.423341</td>
+      <td>TGGCTCAGGTGTCTCAATGATGAAGTGGAGATTACTGTAAACTTCA...</td>
+      <td>/353-+*)&amp;,)---+.*($&amp;($'&amp;&amp;',0)&amp;(+)*+,*224/,...,...</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0040c447-47cc-4c26-8b77-341cd361ad4e_rs214_998</td>
+      <td>-1</td>
+      <td>3</td>
+      <td>0.423341</td>
+      <td>TGGCTCGGGTGTCTCAATGATGGAGATTACTGTAAACTCTGTGGGT...</td>
+      <td>/55/'%().)-+-+*1.**)*3,+)),()'*+('0.*)'(&amp;&amp;+432...</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0050ef5b-3d85-4985-b1f9-77044e482836_rs277_1015</td>
+      <td>-1</td>
+      <td>4</td>
+      <td>0.423341</td>
+      <td>TGGCTCCGGGTAGTGTCTCAATGATGGAGTGCTGTAAGCTTCAGGG...</td>
+      <td>%&amp;0***/+0('$$%%+))+%**'(***'&amp;'&amp;),--..(,.12/04-...</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>5561</th>
+      <td>ffe46913-9afb-4fa5-b8c7-5ec012b66fb6_rs176_967</td>
+      <td>13</td>
+      <td>5119</td>
+      <td>0.152284</td>
+      <td>TGGCTCAGGTGCTCTCAATGATGGAGATTACTGTAAACTTCAGGGT...</td>
+      <td>,+6221--,*))-,-)+('&amp;%%'%%%%-&amp;()..,,/),,0-(/0+)...</td>
+    </tr>
+    <tr>
+      <th>5562</th>
+      <td>ffedc494-0b0e-4576-82af-4394fc8aba7a_rs81_839</td>
+      <td>9</td>
+      <td>4181</td>
+      <td>0.179198</td>
+      <td>TGGCTCAGGGTGTCTCAGTGGGAATTACTATAAACTTCAGGGTGAC...</td>
+      <td>'&amp;*-,.&amp;+)+,3340)&amp;%&amp;&amp;&amp;%%#-$$$&amp;%).+))--0,-2.+-.1...</td>
+    </tr>
+    <tr>
+      <th>5563</th>
+      <td>fff6cc1e-a41d-4e5f-9719-b8baf12f84ee_rs211_939</td>
+      <td>-1</td>
+      <td>5565</td>
+      <td>0.423341</td>
+      <td>TGGCTCGGGTGTCTCAATGATGGAGATTACTGTAAACTTAGGTGAC...</td>
+      <td>,0/,**)3*01/..-0,*-**1/.+,+2*)'%%,0*(,&amp;%&amp;,'+-*...</td>
+    </tr>
+    <tr>
+      <th>5564</th>
+      <td>fff87e67-f753-4f13-89d8-ef784a673e81_rs225_997</td>
+      <td>8</td>
+      <td>3864</td>
+      <td>0.129353</td>
+      <td>TGGCTCGTGTCTCAATGATGGAGATTGATTGTAAACTTCAGGGTGA...</td>
+      <td>)2.(&amp;%.*40++*-&amp;'-+,,/,+*+)&amp;(%'%%04.))/(*)2+)(&amp;...</td>
+    </tr>
+    <tr>
+      <th>5565</th>
+      <td>ffff1b5d-c8cf-4e09-bf22-7cf4ce9dab86_rs196_945</td>
+      <td>1</td>
+      <td>564</td>
+      <td>0.156489</td>
+      <td>TGGCTCGGGTGTCTCAATGATGGAGAGATTACTGTAAACTTCAGGG...</td>
+      <td>))+*..&amp;10//15500.-+,-++,+)')++)*+--.,&amp;&amp;*43/32,...</td>
+    </tr>
+  </tbody>
+</table>
+<p>5566 rows × 6 columns</p>
+</div></div></div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># get accuracy of the raw reads by aligning against the reference sequences</span>
+<span class="n">aln</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Aligner</span><span class="p">()</span>
+<span class="n">aln</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">][</span><span class="s1">&#39;config&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;-x map-ont&#39;</span>
+<span class="n">aln</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">][</span><span class="s1">&#39;k&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">7</span>
+<span class="n">aln</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;minimap&#39;</span><span class="p">][</span><span class="s1">&#39;w&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">acc</span> <span class="o">=</span> <span class="n">aln</span><span class="o">.</span><span class="n">minimap2</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">database</span><span class="o">=</span><span class="n">ref</span><span class="p">)</span>
+<span class="n">acc</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Aligner</span><span class="o">.</span><span class="n">filter_idx</span><span class="p">(</span><span class="n">acc</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;query_id&#39;</span><span class="p">,</span><span class="s1">&#39;database_id&#39;</span><span class="p">],</span><span class="s1">&#39;AS&#39;</span><span class="p">,</span><span class="s1">&#39;idxmax&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[M::mm_idx_gen::0.002*1.30] collected minimizers
+[M::mm_idx_gen::0.003*1.88] sorted minimizers
+[M::main::0.003*1.88] loaded/built the index for 50 target sequence(s)
+[M::mm_mapopt_update::0.004*1.84] mid_occ = 88
+[M::mm_idx_stat] kmer size: 7; skip: 1; is_hpc: 0; #seq: 50
+[M::mm_idx_stat::0.004*1.81] distinct minimizers: 5565 (26.92% are singletons); average occurrences: 5.830; average spacing: 1.011; total length: 32786
+[M::worker_pipeline::8.181*2.99] mapped 5566 sequences
+[M::main] Version: 2.24-r1122
+[M::main] CMD: minimap2 -x map-ont -c -k 7 -w 1 -o /tmp/aligner_syjvq8s6/results.paf /tmp/aligner_syjvq8s6/database.fa /tmp/aligner_syjvq8s6/read1.fq
+[M::main] Real time: 8.181 sec; CPU: 24.496 sec; Peak RSS: 1.251 GB
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">acc</span> <span class="o">=</span> <span class="n">acc</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;query_id&#39;</span><span class="p">:</span><span class="s1">&#39;name&#39;</span><span class="p">})</span>
+<span class="n">df2</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">acc</span><span class="p">[[</span><span class="s1">&#39;name&#39;</span><span class="p">,</span><span class="s1">&#39;match_score&#39;</span><span class="p">,</span><span class="s1">&#39;database_id&#39;</span><span class="p">]],</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s1">&#39;name&#39;</span><span class="p">)</span>
+<span class="n">df2</span><span class="p">[</span><span class="s1">&#39;error&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="o">-</span><span class="n">df2</span><span class="p">[</span><span class="s1">&#39;match_score&#39;</span><span class="p">]</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">7</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">scatterplot</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">df2</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s1">&#39;ordering&#39;</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="s1">&#39;reachability&#39;</span><span class="p">,</span> <span class="n">hue</span><span class="o">=</span><span class="s1">&#39;database_id&#39;</span><span class="p">,</span> <span class="n">palette</span><span class="o">=</span><span class="s1">&#39;Set1&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">get_legend</span><span class="p">()</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">scatterplot</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">df2</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s1">&#39;ordering&#39;</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="n">hue</span><span class="o">=</span><span class="s1">&#39;database_id&#39;</span><span class="p">,</span> <span class="n">palette</span><span class="o">=</span><span class="s1">&#39;Set1&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">get_legend</span><span class="p">()</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/771bebf93bc2adc9ebd3a8eb351cb756df0fc0b6a1dcc1978a1d8b5c20a645ea.png" src="../_images/771bebf93bc2adc9ebd3a8eb351cb756df0fc0b6a1dcc1978a1d8b5c20a645ea.png" />
+</div>
+</div>
+<p>The top plot shows the ordering produced by optics vs reachability. Reachability is a measure of the density at a data point within a cluster. Each of the curves represents an individual sequence cluster found via optics density based clustering. The data points are colorized by the true haplotype identity, which was determined via alignment of the raw reads against the reference sequences from which the dataset was derived.</p>
+<p>The bottom plot shows the error relative to the reference sequences vs optics ordering. From comparing the top and bottom plots, we can see there is a strong correlation between the reachability metric and error relative to reference sequences. This means the optics clustering algorithm was able to cluster and order highly errored nanopore reads in such a way that highly accurate reads end up in the cluster centers.</p>
+<p><a class="anchor" id="multi_alignment"></a></p>
+</section>
+</section>
+<section id="performing-multi-sequence-alignment">
+<h2>Performing multi-sequence alignment<a class="headerlink" href="#performing-multi-sequence-alignment" title="Permalink to this heading"></a></h2>
+<p>The following section shows how multi-sequence alignment can be performed on a set of sequences. In nanopore sequencing, multi-sequence alignment can be used to average out sequencing errors and recover a high fidelity measure of the originating amplicon.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">help</span><span class="p">(</span><span class="n">pge</span><span class="o">.</span><span class="n">Aligner</span><span class="o">.</span><span class="n">spoa</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Parameters for multi-alignment with spoa&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">pge</span><span class="o">.</span><span class="n">Aligner</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;spoa&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Help on function spoa in module plasmid.aligner:
+
+spoa(self, seq)
+    Runs multi-sequence alignment on provided sequences with spoa
+    seq = list of sequences
+    returns dictionary containing {&#39;consensus&#39;:sequence, &#39;msa&#39;:&lt;list of sequences&gt;}
+
+Parameters for multi-alignment with spoa
+{&#39;algorithm&#39;: 2, &#39;genmsa&#39;: True, &#39;m&#39;: 5, &#39;n&#39;: -4, &#39;g&#39;: -8, &#39;e&#39;: -6, &#39;q&#39;: -10, &#39;c&#39;: -4}
+</pre></div>
+</div>
+</div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">Aligner</span></code> module can use spoa to perform multi-sequence alignment. Details on the parameters associated with the spoa algorithm can be found on the <a class="reference external" href="https://github.com/rvaser/spoa">spoa</a> github page. The code below perform multi-sequence alignment on one single cluster from the optics algorithm.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># initialize aligner object</span>
+<span class="n">aln</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Aligner</span><span class="p">()</span>
+<span class="n">aln</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;spoa&#39;</span><span class="p">][</span><span class="s1">&#39;algorithm&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
+
+<span class="c1"># load data from optics and perform multi-alignment via spoa</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;clusters.csv.gz&#39;</span><span class="p">)</span>
+<span class="c1"># selection cluster 0</span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="s1">&#39;labels&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span>
+
+<span class="c1"># perform multi-alignment on sequences</span>
+<span class="n">msa</span> <span class="o">=</span> <span class="n">aln</span><span class="o">.</span><span class="n">spoa</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">c</span><span class="p">][</span><span class="s1">&#39;sequence&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<section id="visualizing-multi-alignments">
+<h3>Visualizing multi-alignments<a class="headerlink" href="#visualizing-multi-alignments" title="Permalink to this heading"></a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">.colorize_msa</span></code> can also be used to visualize minor variants in the multi-alignment that differe from the consensus sequence.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">help</span><span class="p">(</span><span class="n">pge</span><span class="o">.</span><span class="n">Aligner</span><span class="o">.</span><span class="n">colorize_msa</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Help on function colorize_msa in module plasmid.aligner:
+
+colorize_msa(msa, width=100, cmap=None)
+    Returns a multi-sequence alignment formatted 
+    to a certain width
+    msa = list of sequences
+    width = characters per line
+    cmap = colormap from characters to colors
+    returns a string output
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Visualize the multi-alignment of the first 75bp of the first 10 sequences</span>
+<span class="n">L</span> <span class="o">=</span> <span class="mi">75</span>
+<span class="n">seqlist</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span><span class="p">[:</span><span class="n">L</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">msa</span><span class="p">[</span><span class="s1">&#39;msa&#39;</span><span class="p">]]</span>
+<span class="n">out</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Aligner</span><span class="o">.</span><span class="n">colorize_msa</span><span class="p">(</span><span class="n">seqlist</span><span class="p">[:</span><span class="mi">10</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;visualizing the multi-alignment&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;this is the consensus sequence&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">msa</span><span class="p">[</span><span class="s1">&#39;consensus&#39;</span><span class="p">][:</span><span class="n">L</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>visualizing the multi-alignment
+TGGCTC-G-GGTGT-TC-----AATG-AT-GAG--A-CATT-GT---AAACTT--CAG-GGTGA--CC-AAAGA- 75 seq0
+TGGCTC-A-GGTGTCTC-----AATG-ATGGAG--ATTACT-GT---AAACTT--CAG-GGTGA---C-AA--A- 75 seq1
+TGGCTC---GGTGTCTC----AAATG-AT-GAG--ATTACT-GT---AAACTT--CAG-GGTGACTCC-AAAGA- 75 seq2
+TGGCTC-A-GGTGTCTC-----AATG-ATGGA---ATTACT-GT---AAACTT--CAG-GGTGA--CC-AAA-A- 75 seq3
+TGGCTC---GGTGTCTC-----AATG-ATGGAG--ATTACT-GT---AAACTT--CA--TAAGA--CC-AAA-A- 75 seq4
+TGGCTC-A-GGTGTCTC-T--CAATG-ATGGGGA-ATTACT-GT---AAGC----CAG-GGTGA--CC-AAAGA- 75 seq5
+TGGCTC-G-GGTGTCTC-----AATG-ATGGAG--ATTAT---C---AAACTC--TAG-GGTGA--CC-AAA-A- 75 seq6
+TGGCTC-A-GGTGTCTC----CAATG-ATGGA---ATTACT-GT---AAACTT--CAG-GGTGA--CC-AAAGG- 75 seq7
+TGGCTC----GCGTCTC-----AATG-ATGGAG--ATTAC--GTA--AAACTC--TGT-AGTGA--CC-AA--A- 75 seq8
+TGGCTC-G-GGTGTCTC-TAACAATG-ATGGAG--ATTACT-GT---AAACTC--TA--GGTGA--CC-AAAAA- 75 seq9
+
+this is the consensus sequence
+TGGCTCAGGTGTCTCAATGATGGAGATTACTGTAAACTTCAGGGTGACCAAAGAATCAAAATAAGTGTTGATAAA
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="obtaining-highly-accurate-nanopore-reads-via-multi-alignment">
+<h3>Obtaining highly accurate nanopore reads via multi-alignment<a class="headerlink" href="#obtaining-highly-accurate-nanopore-reads-via-multi-alignment" title="Permalink to this heading"></a></h3>
+<p>The code below illustrates how the basic tools in this library can be used to prototype a bioinformatic algorithm or pipeline. Here, errors from individual nanopore reads will be averaged out via multi-alignment of sequences obtained via optics <span class="xref myst">clustering</span> to recover a highly accurate approximation of the originating amplicon.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># load data from clustering</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;clusters.csv.gz&#39;</span><span class="p">)</span>
+
+<span class="c1"># initialize the aligner</span>
+<span class="n">aln</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Aligner</span><span class="p">()</span>
+<span class="n">aln</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;spoa&#39;</span><span class="p">][</span><span class="s1">&#39;algorithm&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
+
+<span class="c1"># compute multi-alignment for each cluster for the first 30 sequences</span>
+<span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">L</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;labels&#39;</span><span class="p">])</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">L</span><span class="p">):</span>
+    <span class="c1"># select sequences from each cluster</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;labels&#39;</span><span class="p">]</span><span class="o">==</span><span class="n">i</span><span class="p">]</span>
+    <span class="n">seq</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="s1">&#39;sequence&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+    <span class="c1"># perform multi-alignment on first 30 sequences</span>
+    <span class="n">seq</span> <span class="o">=</span> <span class="n">seq</span><span class="p">[:</span><span class="mi">40</span><span class="p">]</span>
+    <span class="n">msa</span> <span class="o">=</span> <span class="n">aln</span><span class="o">.</span><span class="n">spoa</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+    <span class="n">val</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;cluster_&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">msa</span><span class="p">[</span><span class="s1">&#39;consensus&#39;</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)]</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+<span class="c1"># format into a dataframe</span>
+<span class="n">col</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">,</span><span class="s1">&#39;sequence&#39;</span><span class="p">,</span><span class="s1">&#39;N&#39;</span><span class="p">]</span>
+<span class="n">qry</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">col</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># compute accuracy relative to the reference</span>
+<span class="n">ref</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">fileIO</span><span class="o">.</span><span class="n">read_fasta</span><span class="p">(</span><span class="s1">&#39;../data/ref_db.fa&#39;</span><span class="p">)</span>
+<span class="c1"># Selections for only sequences with HAP in the header</span>
+<span class="n">ref</span> <span class="o">=</span> <span class="n">ref</span><span class="p">[</span><span class="n">ref</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s1">&#39;HAP&#39;</span><span class="p">)]</span>
+
+<span class="c1"># initialize the aligner</span>
+<span class="n">aln</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Aligner</span><span class="p">()</span>
+<span class="c1"># align against the reference</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">aln</span><span class="o">.</span><span class="n">minimap2</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="n">qry</span><span class="p">,</span> <span class="n">database</span><span class="o">=</span><span class="n">ref</span><span class="p">)</span>
+<span class="c1"># filter alignments to the best matching results for each pair of reads</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Aligner</span><span class="o">.</span><span class="n">filter_idx</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;query_id&#39;</span><span class="p">],</span> <span class="s1">&#39;AS&#39;</span><span class="p">,</span> <span class="s1">&#39;idxmax&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[M::mm_idx_gen::0.002*1.29] collected minimizers
+[M::mm_idx_gen::0.004*1.86] sorted minimizers
+[M::main::0.004*1.86] loaded/built the index for 50 target sequence(s)
+[M::mm_mapopt_update::0.004*1.81] mid_occ = 88
+[M::mm_idx_stat] kmer size: 7; skip: 1; is_hpc: 0; #seq: 50
+[M::mm_idx_stat::0.004*1.78] distinct minimizers: 5565 (26.92% are singletons); average occurrences: 5.830; average spacing: 1.011; total length: 32786
+[M::worker_pipeline::0.083*2.67] mapped 17 sequences
+[M::main] Version: 2.24-r1122
+[M::main] CMD: minimap2 -x map-ont -P -c -k 7 -w 1 -o /tmp/aligner_e8py3asx/results.paf /tmp/aligner_e8py3asx/database.fa /tmp/aligner_e8py3asx/read1.fa
+[M::main] Real time: 0.084 sec; CPU: 0.223 sec; Peak RSS: 0.356 GB
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">qry</span> <span class="o">=</span> <span class="n">qry</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span><span class="s1">&#39;query_id&#39;</span><span class="p">})</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">qry</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s1">&#39;query_id&#39;</span><span class="p">,</span><span class="n">how</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;database_id&#39;</span><span class="p">])</span>
+<span class="n">df</span><span class="p">[[</span><span class="s1">&#39;query_id&#39;</span><span class="p">,</span><span class="s1">&#39;N&#39;</span><span class="p">,</span><span class="s1">&#39;database_id&#39;</span><span class="p">,</span><span class="s1">&#39;orientation&#39;</span><span class="p">,</span><span class="s1">&#39;match_score&#39;</span><span class="p">,</span><span class="s1">&#39;CIGAR&#39;</span><span class="p">]]</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>query_id</th>
+      <th>N</th>
+      <th>database_id</th>
+      <th>orientation</th>
+      <th>match_score</th>
+      <th>CIGAR</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>8</th>
+      <td>cluster_16</td>
+      <td>15</td>
+      <td>HAP07</td>
+      <td>-</td>
+      <td>0.986425</td>
+      <td>149M1D118M1D98M1D24M4I205M1I61M</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>cluster_13</td>
+      <td>40</td>
+      <td>HAP08</td>
+      <td>-</td>
+      <td>0.995441</td>
+      <td>234M1D260M1D129M1D32M</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>cluster_7</td>
+      <td>40</td>
+      <td>HAP10</td>
+      <td>-</td>
+      <td>0.992401</td>
+      <td>216M1D77M1D186M2D175M</td>
+    </tr>
+    <tr>
+      <th>0</th>
+      <td>cluster_0</td>
+      <td>40</td>
+      <td>HAP12</td>
+      <td>-</td>
+      <td>0.990881</td>
+      <td>178M1D55M1D135M1D236M1D17M1D8M1D23M</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>cluster_14</td>
+      <td>40</td>
+      <td>HAP13</td>
+      <td>-</td>
+      <td>0.986364</td>
+      <td>47M1D49M1D51M1D51M1D16M1I66M1I337M1D36M</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>cluster_9</td>
+      <td>40</td>
+      <td>HAP17</td>
+      <td>-</td>
+      <td>0.998480</td>
+      <td>471M1D186M</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>cluster_11</td>
+      <td>40</td>
+      <td>HAP19</td>
+      <td>-</td>
+      <td>0.957252</td>
+      <td>144M1I320M1I138M1D13M1D36M</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>cluster_2</td>
+      <td>40</td>
+      <td>HAP23</td>
+      <td>-</td>
+      <td>0.993921</td>
+      <td>268M1D44M1D52M2D290M</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>cluster_10</td>
+      <td>40</td>
+      <td>HAP35</td>
+      <td>-</td>
+      <td>0.987441</td>
+      <td>47M1D130M1D55M1D33M2D69M1D266M1I19M1D10M</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>cluster_1</td>
+      <td>40</td>
+      <td>HAP36</td>
+      <td>-</td>
+      <td>0.990881</td>
+      <td>234M1D33M1D142M1D83M1D129M1D7M1D24M</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>cluster_8</td>
+      <td>40</td>
+      <td>HAP38</td>
+      <td>-</td>
+      <td>0.993930</td>
+      <td>149M1I71M1D34M1D402M</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>cluster_5</td>
+      <td>40</td>
+      <td>HAP39</td>
+      <td>-</td>
+      <td>0.984894</td>
+      <td>85M1D63M1I135M1I118M2I17M1D238M</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>cluster_6</td>
+      <td>40</td>
+      <td>HAP41</td>
+      <td>-</td>
+      <td>0.993837</td>
+      <td>29M1I99M1D193M2D324M</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>cluster_4</td>
+      <td>40</td>
+      <td>HAP44</td>
+      <td>-</td>
+      <td>0.989011</td>
+      <td>116M1D70M1I409M2D5M1D32M</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>cluster_12</td>
+      <td>40</td>
+      <td>HAP58</td>
+      <td>-</td>
+      <td>0.746667</td>
+      <td>29M1D56M2I3M4I59M1D30M1D95M4D15M2I5M1I52M2D2M1...</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>cluster_15</td>
+      <td>32</td>
+      <td>HAP58</td>
+      <td>-</td>
+      <td>0.998480</td>
+      <td>149M1D508M</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>cluster_3</td>
+      <td>40</td>
+      <td>HAP62</td>
+      <td>-</td>
+      <td>0.962064</td>
+      <td>189M1D98M2D251M1I66M1D50M</td>
+    </tr>
+  </tbody>
+</table>
+</div></div></div>
+</div>
+<p>The table above shows that the consensus sequences obtained via multi-alignment are now almost 99% match to the reference sequences from which they were derived. This is a great improvement in error rate compared to the raw error rate from <span class="xref myst">before</span>.</p>
+<p><a class="anchor" id="cigar_alignment"></a></p>
+</section>
+<section id="visualizing-cigar-alignment-strings">
+<h3>Visualizing cigar alignment strings<a class="headerlink" href="#visualizing-cigar-alignment-strings" title="Permalink to this heading"></a></h3>
+<p>To view how good the consensus sequences look relative to the reference, we can format the alignments from CIGAR format to pairwise alignments with <code class="docutils literal notranslate"><span class="pre">.cigar_to_alignment</span></code></p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">help</span><span class="p">(</span><span class="n">pge</span><span class="o">.</span><span class="n">Aligner</span><span class="o">.</span><span class="n">cigar_to_alignment</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Help on function cigar_to_alignment in module plasmid.aligner:
+
+cigar_to_alignment(query: str, ref: str, cigar: str) -&gt; list
+    Function to align query and reference strings based on CIGAR string
+    
+    Args:
+        query = query sequence --&gt; this must be relative to how it was used in aligner
+        ref = reference sequence
+        cigar = CIGAR string from aligner
+    
+    Returns:
+        return [aligned query, aligned reference, alignment ticks]
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># load sequence for HAP58</span>
+<span class="n">ref_seq</span> <span class="o">=</span> <span class="n">ref</span><span class="p">[</span><span class="n">ref</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;HAP62&#39;</span><span class="p">][[</span><span class="s1">&#39;sequence&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="c1"># load sequence for cluster_15</span>
+<span class="n">col</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;sequence&#39;</span><span class="p">,</span><span class="s1">&#39;CIGAR&#39;</span><span class="p">,</span><span class="s1">&#39;q_start&#39;</span><span class="p">,</span><span class="s1">&#39;q_end&#39;</span><span class="p">]</span>
+<span class="n">clst_seq</span><span class="p">,</span> <span class="n">cigar</span><span class="p">,</span> <span class="n">s1</span><span class="p">,</span> <span class="n">s2</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;query_id&#39;</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;cluster_3&#39;</span><span class="p">][</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">clst_seq</span> <span class="o">=</span> <span class="n">clst_seq</span><span class="p">[</span><span class="n">s1</span><span class="p">:</span><span class="n">s2</span><span class="p">]</span>
+<span class="n">rev_seq</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">misc</span><span class="o">.</span><span class="n">revcomp</span><span class="p">(</span><span class="n">clst_seq</span><span class="p">)</span>
+
+<span class="c1"># get sequences formatted via cigar strings</span>
+<span class="n">out</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Aligner</span><span class="o">.</span><span class="n">cigar_to_alignment</span><span class="p">(</span><span class="n">rev_seq</span><span class="p">,</span> <span class="n">ref_seq</span><span class="p">,</span> <span class="n">cigar</span><span class="p">)</span>
+<span class="n">out</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Aligner</span><span class="o">.</span><span class="n">colorize_msa</span><span class="p">(</span><span class="n">out</span><span class="p">[:</span><span class="mi">2</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>TACTTTATATTTCATTTTTGGTGCTTGATCAGGTATGGTAGGGACTTCATTAAGACTTTTAATTCGAGCCGAGTTAGGTAACCTGGGTTCATTAATTGGG 100 seq0
+TACTCTATATTTCATTTTTGGTGCTTGGGCAGGTATGGTAGGGACCTCATTAAGACTTTTAATTCGAGCCGAGTTGGGTAACCCGGGTTCATTAATTGGG 100 seq1
+GACGATCAAATTTATAACGTAATCGTAACTGCTCATGCCTTTATTATGATTTTCTTTATAGTGATACCTATTATAATTGGTGGTTTTGG-AATTGGTTAG 200 seq0
+GACGATCAAATTTATAACGTAATCGTAACTGCTCATGCCTTTATTATGATTTTTTTTATAGTGATACCTATTATAATTGGGGGTTTTGGAAATTGGTTAG 200 seq1
+TCCCTCTGATGTTAGGTGCTCCAGATATAGCATTCCCTCGAATAAACAACATAAGTTTTTGGTTATTGCCTCCTTCTTTAACACTTTT--AGTCTAGAAG 300 seq0
+TCCCTCTGATGTTAGGTGCTCCAGATATAGCATTCCCTCGTATAAACAACATAAGTTTTTGGTTATTGCCTCCTTCTTTAACACTTCTCGTGTCTAGAAG 300 seq1
+AATTGTTGACGTAGGTGCTGGTACTGGTTGAACTGTTTATCCTCCTTTCGCCGCAAATATCGCCCACGGAGGGTCTTCGGTTGATTTCGCAATTTTTTCT 400 seq0
+AATTGTTGACGTAGGTGCTGGTACTGGTTGAACTGTTTATCCTCCTCTCGCCGCAAATATCGCCCACGGAGGGTCTTCGGTTGATTTCGCAATTTTTTCT 400 seq1
+TTACACTTGGCTGGTATTTCTTCGATTTTAGGTGCAGTTAATTTTATTACTACAACTATTAATATGCGTAGCCCTGGTATAACCCTAGACCGGATACCAT 500 seq0
+TTACACTTGGCTGGTATTTCTTCGATTTTAGGTGCAGTTAATTTTATTACTACAGTTGTTAATATGCGTAGCCCTGGAATAACCCTAGACCGGATACCAT 500 seq1
+TATTTGTTTGATCTGTAGTTATTACTGCTGTTTTACTGCTTATTATCGCTGCCAGTCTTAGCTGGTGCAATTACGATACTATTAACTGACCGAAATTTAA 600 seq0
+TATTTGTTTGATCTGTAGTTATTACGGCTGTGTTACTGCTT-TTATCGTTGCCAGTCTTAGCTGGTGCAATTACGATACTATTAACTGACCGAAATTTAA 600 seq1
+ATACTTCA-TTTTTGATCCTGCTGGGGGAGGGGATCCTATTTTATACCAGCATTTATTT 659 seq0
+ATACTTCATTTTTTGATCCTGCTGGGGGTGGGGATCCTATTTTATACCAGCATTTATTT 659 seq1
+</pre></div>
+</div>
+</div>
+</div>
+<p>The above alignment shows there is high frequency of C-T transitions. This may indicate the nanopore basecaller has greater difficulty distinguishing between the electrical signals of cytosine and thymidine bases. Another possibility is the <a class="reference external" href="https://en.wikipedia.org/wiki/Deamination">degradation</a> of cytosine to uracil, which can be mistaken for thymidine during DNA replication.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="primer_design.html" class="btn btn-neutral float-left" title="Designing primers with Plasmid" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Zhewei Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

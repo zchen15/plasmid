@@ -4,21 +4,25 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome to Plasmid’s documentation! &mdash; Plasmid: A python library for gene editing 2023.06.29 documentation</title>
+  <title>Plasmid - A python library for gene editing &mdash; Plasmid: A python library for gene editing 2023.06.29 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-        <script src="_static/jquery.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
         <script src="_static/sphinx_highlight.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" /> 
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="installation.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -40,12 +44,17 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <!-- Local TOC -->
-              <div class="local-toc"><ul>
-<li><a class="reference internal" href="#">Welcome to Plasmid’s documentation!</a></li>
-<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+              <p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 </ul>
-</div>
+<p class="caption" role="heading"><span class="caption-text">How-to guides &amp; Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/genbank_editing.html">Manipulating genbank records with Plasmid</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/primer_design.html">Designing primers with Plasmid</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/clustering.html">Aligning and clustering sequences with Plasmid</a></li>
+</ul>
+
         </div>
       </div>
     </nav>
@@ -60,9 +69,9 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Welcome to Plasmid’s documentation!</li>
+      <li class="breadcrumb-item active">Plasmid - A python library for gene editing</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/index.md.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -70,24 +79,61 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="welcome-to-plasmid-s-documentation">
-<h1>Welcome to Plasmid’s documentation!<a class="headerlink" href="#welcome-to-plasmid-s-documentation" title="Permalink to this heading"></a></h1>
+  <section id="plasmid-a-python-library-for-gene-editing">
+<h1>Plasmid - A python library for gene editing<a class="headerlink" href="#plasmid-a-python-library-for-gene-editing" title="Permalink to this heading"></a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">Plasmid</span></code> is a library for reading, annotating, and editing genbank records in Jupyter Notebooks or ipython shell. This project was inspired by <a class="reference external" href="https://jorgensen.biology.utah.edu/wayned/ape/">ApE</a> and <a class="reference external" href="https://pandas.pydata.org/">pandas</a>. The goal of the project was to address the lack of cross platform support provided by <code class="docutils literal notranslate"><span class="pre">ApE</span></code> and make the functionalities of <code class="docutils literal notranslate"><span class="pre">Biopython</span></code> more user friendly. This project is meant to serve as an open source interface for manipulating genbank records, querying genes, and manipulating NGS data in a programmable and user friendly manner that is cross compatible across all operating systems.</p>
+<section id="contents">
+<h2>Contents<a class="headerlink" href="#contents" title="Permalink to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#installing-via-pypi">Installing via PyPI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#installing-from-github">Installing from github</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#problems-and-suggestions">Problems and suggestions</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">How-to guides &amp; Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/genbank_editing.html">Manipulating genbank records with Plasmid</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/genbank_editing.html#table-of-contents">Table of Contents</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/genbank_editing.html#reading-genbank-or-fasta-files-a-class-anchor-id-reading-genbank-a">Reading genbank or fasta files <a class="anchor" id="reading_genbank"></a></a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/genbank_editing.html#creating-new-genbank-records-a-id-gene-concat-a">Creating new genbank records <a id='gene_concat'></a></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/primer_design.html">Designing primers with Plasmid</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/primer_design.html#table-of-contents">Table of Contents</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/primer_design.html#extension-pcr">Extension PCR</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/primer_design.html#gibson-assembly">Gibson Assembly</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/primer_design.html#goldengate-assembly">Goldengate Assembly</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/clustering.html">Aligning and clustering sequences with Plasmid</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/clustering.html#table-of-contents">Table of Contents</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/clustering.html#reading-fastq-or-fasta-sequences">Reading fastq or fasta sequences</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/clustering.html#aligning-ngs-reads">Aligning NGS reads</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/clustering.html#computing-pairwise-distance-between-sequences">Computing pairwise distance between sequences</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/clustering.html#clustering-sequences">Clustering sequences</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/clustering.html#performing-multi-sequence-alignment">Performing multi-sequence alignment</a></li>
+</ul>
+</li>
+</ul>
+</div>
 <div class="toctree-wrapper compound">
 </div>
 </section>
-<section id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this heading"></a></h1>
-<ul class="simple">
-<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
-<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
-<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
-</ul>
 </section>
 
 
            </div>
           </div>
-          <footer>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
 
   <hr/>
 

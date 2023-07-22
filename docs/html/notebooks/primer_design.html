@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Designing primers with Plasmid &mdash; Plasmid: A python library for gene editing 2023.06.29 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Aligning and clustering sequences with Plasmid" href="clustering.html" />
+    <link rel="prev" title="Manipulating genbank records with Plasmid" href="genbank_editing.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Plasmid: A python library for gene editing
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to guides &amp; Examples</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="genbank_editing.html">Manipulating genbank records with Plasmid</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Designing primers with Plasmid</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#table-of-contents">Table of Contents</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#extension-pcr">Extension PCR</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#running-extension-pcr">Running extension PCR</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#gibson-assembly">Gibson Assembly</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#running-gibson-assembly">Running gibson assembly</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#goldengate-assembly">Goldengate Assembly</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#running-golden-gate-assembly">Running golden gate assembly</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="clustering.html">Aligning and clustering sequences with Plasmid</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Plasmid: A python library for gene editing</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Designing primers with Plasmid</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/notebooks/primer_design.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="designing-primers-with-plasmid">
+<h1>Designing primers with Plasmid<a class="headerlink" href="#designing-primers-with-plasmid" title="Permalink to this heading"></a></h1>
+<p>This notebook illustrates the various functions contained in the <code class="docutils literal notranslate"><span class="pre">designer</span></code> class, which can be used to generate primers for extension PCR and DNA assembly.</p>
+<section id="table-of-contents">
+<h2>Table of Contents<a class="headerlink" href="#table-of-contents" title="Permalink to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><span class="xref myst">Extension PCR</span></p></li>
+<li><p><span class="xref myst">Gibson Assembly</span></p></li>
+<li><p><span class="xref myst">Goldengate Assembly</span></p></li>
+</ol>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">plasmid</span> <span class="k">as</span> <span class="nn">pge</span>
+<span class="kn">import</span> <span class="nn">importlib</span>
+<span class="n">importlib</span><span class="o">.</span><span class="n">reload</span><span class="p">(</span><span class="n">pge</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;module &#39;plasmid&#39; from &#39;/home/peguin/python/lib/python3.9/site-packages/plasmid/__init__.py&#39;&gt;
+</pre></div>
+</div>
+</div>
+</div>
+<p><a class="anchor" id="xtPCR"></a></p>
+</section>
+<section id="extension-pcr">
+<h2>Extension PCR<a class="headerlink" href="#extension-pcr" title="Permalink to this heading"></a></h2>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/Overlap_extension_polymerase_chain_reaction">Extension PCR</a> uses primers with overlapping annealing sites to assemble a larger DNA fragment. This method is useful for adding promoters, ribosome binding sites, or cloning overhangs onto a larger gene fragment.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">Designer</span></code> class has the following parameters and functions associated with extension PCR.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">pcr</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Designer</span><span class="p">()</span>
+<span class="n">help</span><span class="p">(</span><span class="n">pcr</span><span class="o">.</span><span class="n">xtPCR</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;parameters for extension PCR&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;xtPCR&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Help on method xtPCR in module plasmid.designer:
+
+xtPCR(fL, seq, fR=None, padding=[2, 2], niter=3, w=[10, 100, 1, 1, 2], get_cost=False) method of plasmid.designer.Designer instance
+    Find primers which can seed and extend a PCR fragment
+    fL = flanking sequence on 5&#39; end
+    seq = sequence on 3&#39; end which gets amplified
+    fR = flanking sequence on 3&#39; end
+    padding = number of extra primers to try
+    w = weights for cost function
+    method = optimization method
+    returns list of primers
+
+parameters for extension PCR
+{&#39;Tm&#39;: 50, &#39;len&#39;: [15, 60], &#39;nM&#39;: [20, 500], &#39;Na&#39;: 50}
+</pre></div>
+</div>
+</div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">Tm</span></code> is the target melting temperature for all primers.</p>
+<p><code class="docutils literal notranslate"><span class="pre">len</span></code> is min and max primer lengths allowed in the design.</p>
+<p><code class="docutils literal notranslate"><span class="pre">nM</span></code> is the concentration of seed and finishing primers used in the reaction.</p>
+<p><code class="docutils literal notranslate"><span class="pre">Na</span></code> is the salt concentration of the PCR reaction.</p>
+<p>These parameters are used to compute the thermodynamic properties of the PCR reaction such as annealing temperature. In the backend, several optimization algorithms can be used to find the optimal primer sequences that minimize deviation from the target annealing temperature and off target binding.</p>
+<p><a class="anchor" id="running_xtPCR"></a></p>
+<section id="running-extension-pcr">
+<h3>Running extension PCR<a class="headerlink" href="#running-extension-pcr" title="Permalink to this heading"></a></h3>
+<p>The following code blocks generate a generic gene fragment from RFP, RBS, and pLac promoters. Extension PCR is used to add the pLac promoter and ribosome binding site sequences onto the RFP gene.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># slice out the RFP gene</span>
+<span class="n">RFP</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">read_genbank</span><span class="p">(</span><span class="s1">&#39;../data/dcas9_RFP.gb&#39;</span><span class="p">)</span>
+<span class="n">RFP</span> <span class="o">=</span> <span class="n">RFP</span><span class="p">[</span><span class="n">RFP</span><span class="p">[</span><span class="s1">&#39;locus_tag&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s1">&#39;mRFP&#39;</span><span class="p">)]</span><span class="o">.</span><span class="n">splice</span><span class="p">()</span>
+<span class="c1"># slice out the ribosome binding site</span>
+<span class="n">RBS</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">read_genbank</span><span class="p">(</span><span class="s1">&#39;../data/xRFP.gb&#39;</span><span class="p">)</span>
+<span class="n">RBS</span> <span class="o">=</span> <span class="n">RBS</span><span class="p">[</span><span class="n">RBS</span><span class="p">[</span><span class="s1">&#39;locus_tag&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s1">&#39;BBa_B0034&#39;</span><span class="p">)]</span><span class="o">.</span><span class="n">splice</span><span class="p">()</span>
+<span class="c1"># slice out the promoter</span>
+<span class="n">pLac</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">read_genbank</span><span class="p">(</span><span class="s1">&#39;../data/xRFP.gb&#39;</span><span class="p">)</span>
+<span class="n">pLac</span> <span class="o">=</span> <span class="n">pLac</span><span class="p">[</span><span class="n">pLac</span><span class="p">[</span><span class="s1">&#39;locus_tag&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s1">&#39;pLac&#39;</span><span class="p">)]</span><span class="o">.</span><span class="n">splice</span><span class="p">()</span>
+
+<span class="c1"># assemble the promoter, rbs, and mRFP</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pLac</span> <span class="o">+</span> <span class="s1">&#39;gagacc&#39;</span> <span class="o">+</span> <span class="n">RBS</span> <span class="o">+</span> <span class="s1">&#39;ggtctc&#39;</span> <span class="o">+</span> <span class="n">RFP</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>reading  ../data/dcas9_RFP.gb  as genbank file
+reading  ../data/xRFP.gb  as genbank file
+reading  ../data/xRFP.gb  as genbank file
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">pcr</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Designer</span><span class="p">()</span>
+<span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;xtPCR&#39;</span><span class="p">][</span><span class="s1">&#39;Tm&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">55</span>         <span class="c1"># target annealing temperature for xtPCR</span>
+<span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;xtPCR&#39;</span><span class="p">][</span><span class="s1">&#39;len&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">15</span><span class="p">,</span> <span class="mi">60</span><span class="p">]</span>  <span class="c1"># defines the [min, max] primer lengths</span>
+<span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;xtPCR&#39;</span><span class="p">][</span><span class="s1">&#39;Nm&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">25</span><span class="p">,</span><span class="mi">500</span><span class="p">]</span>   <span class="c1"># defines the seed and finishing primer concentration in nM</span>
+<span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="n">insert</span> <span class="o">=</span> <span class="n">pLac</span> <span class="o">+</span> <span class="s1">&#39;gagacc&#39;</span> <span class="o">+</span> <span class="n">RBS</span> <span class="o">+</span> <span class="s1">&#39;ggtctc&#39;</span>
+<span class="n">res</span> <span class="o">=</span> <span class="n">pcr</span><span class="o">.</span><span class="n">xtPCR</span><span class="p">(</span><span class="n">insert</span><span class="p">,</span> <span class="n">RFP</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>running fwd
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>running rev
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>  locus_tag         Tm                                           sequence  \
+0       0_F  56.437456  ACAgagaccAAAGAGGAGAAAggtctc ATGGCGAGTAGCGAAGAC...   
+1     fin_F  55.207985  AATTGACAATGTGAGCGAGTAACAAGATACTGAGC ACAgagaccA...   
+0     fin_R  56.777386                                 TTAAGCACCGGTGGAGTG   
+
+                   annealed  strand  
+0  ATGGCGAGTAGCGAAGACGTTATC       1  
+1     ACAgagaccAAAGAGGAGAAA       1  
+0        TTAAGCACCGGTGGAGTG      -1  
+</pre></div>
+</div>
+</div>
+</div>
+<p>In the above output dataframe, <code class="docutils literal notranslate"><span class="pre">fin_F</span></code> and <code class="docutils literal notranslate"><span class="pre">fin_R</span></code> are the finishing primers (used at 500nM), which are the last set of primers to amplify in the PCR reaction. <code class="docutils literal notranslate"><span class="pre">0_F</span></code> is a forward primer (used at 25nM) associated with seeding and extending the sequence from the 5’ end of the oligo.</p>
+<p>In an extension PCR reaction, all these primers would be mixed together to generate the desired oligo at the target annealing tempertaure.</p>
+<p><a class="anchor" id="gibson"></a></p>
+</section>
+</section>
+<section id="gibson-assembly">
+<h2>Gibson Assembly<a class="headerlink" href="#gibson-assembly" title="Permalink to this heading"></a></h2>
+<p><a class="reference external" href="https://www.neb.com/applications/cloning-and-synthetic-biology/dna-assembly-and-cloning/nebuilder-hifi-dna-assembly">Gibson Assembly</a> uses exonucleases to reveal basepair overlaps between multiple DNA oligos. These overlaps can anneal and assemble into a longer DNA fragment. The following shows how to design primers for amplifying individual DNA fragments that can later be assembled into a longer construct.</p>
+<p>In the design process, optimal overlaps are first found via optimization. Next <span class="xref myst">xtPCR</span> is used to design primers which can add the proper overlaps to the DNA oligos.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">pcr</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Designer</span><span class="p">()</span>
+<span class="n">help</span><span class="p">(</span><span class="n">pcr</span><span class="o">.</span><span class="n">Gibson</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;gibson&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Help on method Gibson in module plasmid.designer:
+
+Gibson(seqlist, w=[10, 1], method=&#39;differential_evolution&#39;, circular=True) method of plasmid.designer.Designer instance
+    Design primers for gibson assembly
+    seqlist = list of sequences to assemble via gibson in order 
+    circular = assemble fragments into a circular construct
+    returns list of primers
+
+{&#39;Tm&#39;: 50, &#39;nM&#39;: 500, &#39;len&#39;: 30, &#39;window&#39;: 40}
+</pre></div>
+</div>
+</div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">Tm</span></code> is the target melting temperature of the overlaps.</p>
+<p><code class="docutils literal notranslate"><span class="pre">nM</span></code> is the concentration of the oligos.</p>
+<p><code class="docutils literal notranslate"><span class="pre">len</span></code> is the overlap length.</p>
+<p><code class="docutils literal notranslate"><span class="pre">window</span></code> is the window of sequences from the fragment edges from which to check for optimal overlaps.</p>
+<p>These parameters are used to compute the annealing temperature of the overlap such that the target annealing temperature can be reached and overlaps minimize off target binding.</p>
+<section id="running-gibson-assembly">
+<h3>Running gibson assembly<a class="headerlink" href="#running-gibson-assembly" title="Permalink to this heading"></a></h3>
+<p>The following code blocks generate a new construct from LacI, RFP, and plasmid vector. Gibson is used to generate primers and oligos with optimal annealing overlaps.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">get_parts</span><span class="p">():</span>
+    <span class="c1"># slice out the LacI gene</span>
+    <span class="n">LacI</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">read_genbank</span><span class="p">(</span><span class="s1">&#39;../data/xRFP.gb&#39;</span><span class="p">)</span>
+    <span class="n">LacI</span> <span class="o">=</span> <span class="n">LacI</span><span class="p">[</span><span class="n">LacI</span><span class="p">[</span><span class="s1">&#39;locus_tag&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s1">&#39;LacI&#39;</span><span class="p">)]</span><span class="o">.</span><span class="n">splice</span><span class="p">()</span>
+
+    <span class="c1"># slice out the RFP gene</span>
+    <span class="n">RFP</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">read_genbank</span><span class="p">(</span><span class="s1">&#39;../data/dcas9_RFP.gb&#39;</span><span class="p">)</span>
+    <span class="n">RFP</span> <span class="o">=</span> <span class="n">RFP</span><span class="p">[</span><span class="n">RFP</span><span class="p">[</span><span class="s1">&#39;locus_tag&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s1">&#39;mRFP&#39;</span><span class="p">)]</span><span class="o">.</span><span class="n">splice</span><span class="p">()</span>
+
+    <span class="c1"># slice out the origin of replication</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">read_genbank</span><span class="p">(</span><span class="s1">&#39;../data/xRFP.gb&#39;</span><span class="p">)</span>
+    <span class="n">vec</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;locus_tag&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s1">&#39;pSC101&#39;</span><span class="p">)]</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">vec</span><span class="p">[</span><span class="s1">&#39;start&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">stop</span> <span class="o">=</span> <span class="n">vec</span><span class="p">[</span><span class="s1">&#39;end&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">vec</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">LacI</span><span class="p">,</span> <span class="n">RFP</span><span class="p">,</span> <span class="n">vec</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Generate the parts which need to be combined</span>
+<span class="n">LacI</span><span class="p">,</span> <span class="n">RFP</span><span class="p">,</span> <span class="n">vec</span> <span class="o">=</span> <span class="n">get_parts</span><span class="p">()</span>
+<span class="n">seq</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">seq</span><span class="o">+=</span> <span class="p">[[</span><span class="s1">&#39; &#39;</span><span class="p">,</span><span class="n">LacI</span><span class="p">,</span><span class="s1">&#39;AAAActttt&#39;</span><span class="p">]]</span> <span class="c1"># add the LacI gene with 3&#39; flanking sequences</span>
+<span class="n">seq</span><span class="o">+=</span> <span class="p">[[</span><span class="s1">&#39; &#39;</span><span class="p">,</span><span class="n">RFP</span><span class="p">,</span><span class="s1">&#39;CGCCctttt&#39;</span><span class="p">]]</span>  <span class="c1"># add the RFP gene with 3&#39; flanking sequences </span>
+<span class="n">seq</span><span class="o">+=</span> <span class="p">[[</span><span class="s1">&#39;&#39;</span><span class="p">,</span><span class="n">vec</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">]]</span>  <span class="c1"># add the vector</span>
+
+<span class="n">pcr</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Designer</span><span class="p">()</span>
+<span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;gibson&#39;</span><span class="p">][</span><span class="s1">&#39;Tm&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">50</span>     <span class="c1"># target annealing temperature of gibson fragments    </span>
+<span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;gibson&#39;</span><span class="p">][</span><span class="s1">&#39;window&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">30</span> <span class="c1"># +/i window in bp around frag edges to look for gibson overlap</span>
+<span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;gibson&#39;</span><span class="p">][</span><span class="s1">&#39;len&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">20</span>    <span class="c1"># length of gibson overlap</span>
+
+<span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;xtPCR&#39;</span><span class="p">][</span><span class="s1">&#39;Tm&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">55</span>         <span class="c1"># target annealing temperature for xtPCR</span>
+<span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;xtPCR&#39;</span><span class="p">][</span><span class="s1">&#39;len&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">15</span><span class="p">,</span> <span class="mi">60</span><span class="p">]</span>  <span class="c1"># defines the [min, max] primer lengths</span>
+<span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;xtPCR&#39;</span><span class="p">][</span><span class="s1">&#39;nM&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">20</span><span class="p">,</span> <span class="mi">500</span><span class="p">]</span>  <span class="c1"># defines the [seed, finisher] primer conc in nM</span>
+<span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="n">res</span> <span class="o">=</span> <span class="n">pcr</span><span class="o">.</span><span class="n">Gibson</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>reading  ../data/xRFP.gb  as genbank file
+reading  ../data/dcas9_RFP.gb  as genbank file
+reading  ../data/xRFP.gb  as genbank file
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>res.x [10.60608033 14.38486143 23.88497503]
+res.fun -59.0
+exclude: []
+overlaps: [&#39;GCGGGCAGTAAAAAActttt&#39;, &#39;TGCTTAACGCCcttttCTGT&#39;, &#39;ATGTAAC ATGGTGAATGTG&#39;]
+Tm overlap: [49.290031925644485, 51.50908680175826, 44.26293101370322]
+processing primers for frag 0
+running fwd
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>running rev
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>processing primers for frag 1
+running fwd
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>running rev
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>processing primers for frag 2
+running fwd
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>running rev
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>     locus_tag         Tm                                           sequence  \
+0  frag0_fin_F  55.851352                   ATGTAAC  ATGGTGAATGTGAAACCAGTAAC   
+1  frag0_fin_R  56.106442                        aaaagTTTT TTACTGCCCGCTTTCCA   
+2  frag1_fin_F  55.335316            GCGGGCAGTAAAAAActttt  ATGGCGAGTAGCGAAGA   
+3  frag1_fin_R  56.777386                   ACAGaaaagGGCG TTAAGCACCGGTGGAGTG   
+4  frag2_fin_F  55.363272             TGCTTAACGCCctttt CTGTCAGACCAAGTTTACGAG   
+5  frag2_fin_R  54.627626              CACATTCACCAT  GTTACATTGTCGATCTGTTCATG   
+6         seq0        NaN  ATGTAAC ATGGTGAATGTGAAACCAGTAACGTTATACGATGTCGC...   
+7         seq1        NaN  GCGGGCAGTAAAAAActttt ATGGCGAGTAGCGAAGACGTTATCA...   
+8         seq2        NaN  TGCTTAACGCCcttttCTGTCAGACCAAGTTTACGAGCTCGCTTGG...   
+
+                  annealed  strand  
+0  ATGGTGAATGTGAAACCAGTAAC     1.0  
+1        TTACTGCCCGCTTTCCA    -1.0  
+2        ATGGCGAGTAGCGAAGA     1.0  
+3       TTAAGCACCGGTGGAGTG    -1.0  
+4    CTGTCAGACCAAGTTTACGAG     1.0  
+5  GTTACATTGTCGATCTGTTCATG    -1.0  
+6                      NaN     NaN  
+7                      NaN     NaN  
+8                      NaN     NaN  
+</pre></div>
+</div>
+</div>
+</div>
+<p>In the above output, <code class="docutils literal notranslate"><span class="pre">fin_F</span></code> and <code class="docutils literal notranslate"><span class="pre">fin_R</span></code> are the finishing primers (used at 500nM) for each gibson fragment. These are used independently in their own extension PCR reaction. After amplification, the PCR products are combined with gibson reaction mix to join the DNA oligos.</p>
+<p>seq0, seq1, and seq2 are full length fragments with the overlaps which can be order as gene fragments from vendors like Twist or IDT.</p>
+<p><a class="anchor" id="ggate"></a></p>
+</section>
+</section>
+<section id="goldengate-assembly">
+<h2>Goldengate Assembly<a class="headerlink" href="#goldengate-assembly" title="Permalink to this heading"></a></h2>
+<p><a class="reference external" href="https://www.neb.com/applications/cloning-and-synthetic-biology/dna-assembly-and-cloning/golden-gate-assembly">Goldengate</a> assembly is another method of DNA assembly which relies on restriction enzymes to generate overlaps that can be annealed and ligated. This assembly process is more efficient than gibson assembly, but requires that the DNA oligos do not contain the restriction enzyme sites. Only the edges of the DNA fragments can contain the restriction sites.</p>
+<p>The goal of primer design is to find a set of primers which can artificially add restriction enzyme sites and overlaps to a set of DNA oligos that need to be assembled.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">pcr</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Designer</span><span class="p">()</span>
+<span class="n">help</span><span class="p">(</span><span class="n">pcr</span><span class="o">.</span><span class="n">GoldenGate</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;goldengate&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Help on method GoldenGate in module plasmid.designer:
+
+GoldenGate(seqlist, exclude=[], w=[0, 1], circular=True) method of plasmid.designer.Designer instance
+    Design primers for goldengate assembly
+    seqlist = list of sequences to assemble
+    exclude = sites to exclude
+    circular = assemble fragments into a circular construct
+    returns list of primers
+
+{&#39;Tm&#39;: 50, &#39;nM&#39;: 20, &#39;padding&#39;: &#39;&#39;, &#39;ggsite&#39;: &#39;&#39;, &#39;ggN&#39;: 20, &#39;window&#39;: 30}
+</pre></div>
+</div>
+</div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">Tm</span></code> is the target melting temperature of the overlaps.</p>
+<p><code class="docutils literal notranslate"><span class="pre">nM</span></code> is the concentration of the oligos or DNA fragments.</p>
+<p><code class="docutils literal notranslate"><span class="pre">padding</span></code> the extra nucleotide sequence that needs to be added to the 5’ and 3’ ends of the oligo after the restriction site so the enzymes can cut DNA properly.</p>
+<p><code class="docutils literal notranslate"><span class="pre">ggsite</span></code> is the restriction enzyme to use.</p>
+<p><code class="docutils literal notranslate"><span class="pre">ggN</span></code> is the overlap length generated by the restriction enzyme.</p>
+<p><code class="docutils literal notranslate"><span class="pre">window</span></code> is the window of sequences from the fragment edges from which to check for optimal overlaps.</p>
+<p>These parameters are used to compute the annealing temperature of the overlap and primers such that oligos with the proper goldengate sites and overlaps can be generated for cloning.</p>
+<section id="running-golden-gate-assembly">
+<h3>Running golden gate assembly<a class="headerlink" href="#running-golden-gate-assembly" title="Permalink to this heading"></a></h3>
+<p>The following code blocks generate a new construct from LacI, RFP, and plasmid vector. Goldengate is used to generate primers that add goldengate sites to the flanks of the oligos. Optimization works by first finding optimal overlaps for annealing the oligos. xtPCR is then used to add the proper goldengate sites to the oligos.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">LacI</span><span class="p">,</span> <span class="n">RFP</span><span class="p">,</span> <span class="n">vec</span> <span class="o">=</span> <span class="n">get_parts</span><span class="p">()</span>
+<span class="n">seq</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">seq</span><span class="o">+=</span> <span class="p">[[</span><span class="s1">&#39;&#39;</span><span class="p">,</span><span class="n">LacI</span><span class="p">,</span><span class="s1">&#39;AAAActttt&#39;</span><span class="p">]]</span>
+<span class="n">seq</span><span class="o">+=</span> <span class="p">[[</span><span class="s1">&#39;&#39;</span><span class="p">,</span><span class="n">RFP</span><span class="p">,</span><span class="s1">&#39;CGCCctttt&#39;</span><span class="p">]]</span>
+<span class="n">seq</span><span class="o">+=</span> <span class="p">[[</span><span class="s1">&#39;&#39;</span><span class="p">,</span><span class="n">vec</span><span class="p">,</span><span class="s1">&#39;GGGGctttt&#39;</span><span class="p">]]</span>
+
+<span class="n">pcr</span> <span class="o">=</span> <span class="n">pge</span><span class="o">.</span><span class="n">Designer</span><span class="p">()</span>
+<span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;goldengate&#39;</span><span class="p">][</span><span class="s1">&#39;window&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">20</span> <span class="c1"># +/i window in bp around frag edges to look for overlap</span>
+<span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;goldengate&#39;</span><span class="p">][</span><span class="s1">&#39;ggN&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">4</span>     <span class="c1"># length of golden gate overlap</span>
+<span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;goldengate&#39;</span><span class="p">][</span><span class="s1">&#39;ggsite&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;GGTCTCc&#39;</span>     <span class="c1"># golden gate enzyme site</span>
+<span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;goldengate&#39;</span><span class="p">][</span><span class="s1">&#39;padding&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;atatatatgg&#39;</span> <span class="c1"># padding around the golden gate site</span>
+<span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;xtPCR&#39;</span><span class="p">][</span><span class="s1">&#39;len&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">15</span><span class="p">,</span> <span class="mi">60</span><span class="p">]</span>  <span class="c1"># defines the [min, max] primer lengths</span>
+<span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;xtPCR&#39;</span><span class="p">][</span><span class="s1">&#39;nM&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">20</span><span class="p">,</span> <span class="mi">500</span><span class="p">]</span> <span class="c1"># defines the [seed, finisher] primer conc in nM</span>
+<span class="n">pcr</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;xtPCR&#39;</span><span class="p">][</span><span class="s1">&#39;Tm&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">55</span> <span class="c1"># defines the [seed, finisher] primer conc in nM</span>
+
+<span class="n">res</span> <span class="o">=</span> <span class="n">pcr</span><span class="o">.</span><span class="n">GoldenGate</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>reading  ../data/xRFP.gb  as genbank file
+reading  ../data/dcas9_RFP.gb  as genbank file
+reading  ../data/xRFP.gb  as genbank file
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>res.x [27.17299802 32.32654129 12.23344284]
+res.fun -12.0
+exclude: []
+overlaps: [&#39;GTAG&#39;, &#39;GTTT&#39;, &#39;GGGc&#39;]
+Tm overlap: [-63.72743868625798, -67.45237457822893, -41.01531509599255]
+processing primers for frag 0
+running fwd
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/home/peguin/python/lib/python3.9/site-packages/scipy/optimize/_numdiff.py:576: RuntimeWarning: invalid value encountered in subtract
+  df = fun(x) - f0
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>running rev
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>processing primers for frag 1
+running fwd
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/home/peguin/python/lib/python3.9/site-packages/scipy/optimize/_numdiff.py:576: RuntimeWarning: invalid value encountered in subtract
+  df = fun(x) - f0
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>running rev
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/home/peguin/python/lib/python3.9/site-packages/scipy/optimize/_numdiff.py:576: RuntimeWarning: invalid value encountered in subtract
+  df = fun(x) - f0
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>processing primers for frag 2
+running fwd
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/home/peguin/python/lib/python3.9/site-packages/scipy/optimize/_numdiff.py:576: RuntimeWarning: invalid value encountered in subtract
+  df = fun(x) - f0
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>running rev
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>     locus_tag         Tm                                           sequence  \
+0  frag0_fin_F  55.851352  atatatatggGGTCTCcGGGctttt ATGGTGAATGTGAAACCAGTAAC   
+1  frag0_fin_R  56.106442  atatatatggGGTCTCcCTACTCGCCATaaaagTTTT TTACTGCC...   
+2  frag1_fin_F  55.129431           atatatatggGGTCTCc GTAGCGAAGACGTTATCAAAGA   
+3  frag1_fin_R  56.777386  atatatatggGGTCTCcAAACTTGGTCTGACAGaaaagGGCG TTA...   
+4  frag2_fin_F  56.144721               atatatatggGGTCTCc GTTTACGAGCTCGCTTGG   
+5  frag2_fin_R  54.627626     atatatatggGGTCTCcgCCCC GTTACATTGTCGATCTGTTCATG   
+6         seq0        NaN  atatatatggGGTCTCcGGGcttttATGGTGAATGTGAAACCAGTA...   
+7         seq1        NaN  atatatatggGGTCTCcGTAGCGAAGACGTTATCAAAGAGTTCATG...   
+8         seq2        NaN  atatatatggGGTCTCcGTTTACGAGCTCGCTTGGACTCCTGTTGA...   
+
+                  annealed  strand  
+0  ATGGTGAATGTGAAACCAGTAAC     1.0  
+1        TTACTGCCCGCTTTCCA    -1.0  
+2   GTAGCGAAGACGTTATCAAAGA     1.0  
+3       TTAAGCACCGGTGGAGTG    -1.0  
+4       GTTTACGAGCTCGCTTGG     1.0  
+5  GTTACATTGTCGATCTGTTCATG    -1.0  
+6                      NaN     NaN  
+7                      NaN     NaN  
+8                      NaN     NaN  
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/home/peguin/python/lib/python3.9/site-packages/scipy/optimize/_numdiff.py:576: RuntimeWarning: invalid value encountered in subtract
+  df = fun(x) - f0
+</pre></div>
+</div>
+</div>
+</div>
+<p>In the above output, <code class="docutils literal notranslate"><span class="pre">fin_F</span></code> and <code class="docutils literal notranslate"><span class="pre">fin_R</span></code> are the finishing primers (used at 500nM) for each goldengate fragment. These primers add BsaI sites to each gene fragment. These primers are used independently in their own extension PCR reaction. After amplification, the PCR products are combined with the golden gate enzyme and ligase to join the DNA oligos.</p>
+<p>seq0, seq1, and seq2 are full length fragments with the overlaps which can be order as gene fragments from vendors like Twist or IDT.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="genbank_editing.html" class="btn btn-neutral float-left" title="Manipulating genbank records with Plasmid" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="clustering.html" class="btn btn-neutral float-right" title="Aligning and clustering sequences with Plasmid" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Zhewei Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
