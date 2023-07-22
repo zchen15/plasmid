@@ -25,11 +25,11 @@ pip3 install .
 ## Usage 
 The `notebooks/` directory contains example jupyter notebooks that display some of functionality provided by `Plasmid`.
 
-[genbank_editing.ipynb](https://zchen15.github.io/pages/misc/genbank_editing.html) shows how the `plasmid` module can be used to view genbank records, search for genes, and add new gene annotations.
+[genbank_editing.ipynb](https://zchen15.github.io/plasmid/html/notebooks/genbank_editing.html) shows how the `plasmid` module can be used to view genbank records, search for genes, and add new gene annotations.
 
-[primer_design.ipynb](https://zchen15.github.io/pages/misc/primer_design.html) shows how the `designer` module can be used to generate primers for extension PCR, gibson assembly, and golden gate assembly.
+[primer_design.ipynb](https://zchen15.github.io/plasmid/html/notebooks/primer_design.html) shows how the `designer` module can be used to generate primers for extension PCR, gibson assembly, and golden gate assembly.
 
-[clustering.ipynb](https://zchen15.github.io/pages/misc/clustering.html) shows how the `aligner` and `cluster` modules can be used to align NGS reads, perform sequence clustering, multi-alignment, and database searches.
+[clustering.ipynb](https://zchen15.github.io/plasmid/html/notebooks/clustering.html) shows how the `aligner` and `cluster` modules can be used to align NGS reads, perform sequence clustering, multi-alignment, and database searches.
 
 More detailed documentation will be provided later.
 

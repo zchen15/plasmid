@@ -57,5 +57,4 @@ autoapi_options = [
     "inherited-members",
 ]
 
-autoapi_add_toctree_entry = False
-
+autoapi_add_toctree_entry = True
