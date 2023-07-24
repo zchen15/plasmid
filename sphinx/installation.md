@@ -27,7 +27,7 @@ Plasmid contains wrappers functions to a number of popular sequence alignment to
 - [bwa](https://github.com/lh3/bwa), for sequence alignment with short reads
 - [mmseq2](https://github.com/soedinglab/MMseqs2), for database search
 
-Plasmid is supported on Linux, macOS and Windows on Python 3.8 to 3.10.
+Plasmid is supported on Linux and MacOS which can run Python 3.8+.
 
 ## Installing via PyPI
 
@@ -48,7 +48,6 @@ pip3 install .
 ```
 
 This is useful if there is some feature that you want to try, but we did not release it yet as a stable version. Although you might find some unpolished details, these development installations should work without problems.
-If you find any, please open an issue in the [issue tracker](https://github.com/zchen15/plasmid/issues).
 
 ```{warning}
 It is recommended that you
