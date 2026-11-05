@@ -13,7 +13,7 @@
 project = 'Plasmid: A python library for gene editing'
 copyright = '2023, Zhewei Chen'
 author = 'Zhewei Chen'
-release = '2023.06.29'
+release = '2026.11.3'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -27,7 +27,7 @@ extensions = ['myst_nb',
               'sphinx.ext.autodoc']
 
 templates_path = ['_templates']
-exclude_patterns = ['setup.py','_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

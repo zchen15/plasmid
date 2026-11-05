@@ -1,0 +1,80 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "plasmid"
+description = "Plasmid: A python package for viewing, editing, and assembling DNA"
+readme = "README.md"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Zhewei Chen", email = "zchen15@github.com" },
+]
+maintainers = [
+    { name = "Zhewei Chen", email = "zchen15@github.com" },
+]
+requires-python = ">=3.10"
+keywords = [
+    "gene editor",
+    "plasmid",
+    "genbank",
+    "dna assembly",
+    "genomics",
+    "synthetic biology",
+]
+classifiers = [
+    "Environment :: Console",
+    "Framework :: Jupyter",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "biopython>=1.78",
+    "numpy",
+    "scipy",
+    "pandas",
+]
+optional = [
+    "misc",
+    "visualization",
+    "alignment",
+    "assembly",
+    "clustering",
+]
+[project.extras_require]
+misc = [
+    "sty",
+]
+visualization = [
+    "matplotlib",
+    "bokeh",
+]
+alignment = [
+    "parasail",
+    "mappy",
+]
+assembly = [
+    "scikit-learn",
+]
+clustering = [
+    "scikit-learn",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/zchen15/plasmid"
+Repository = "https://github.com/zchen15/plasmid"
+Issues = "https://github.com/zchen15/plasmid/issues"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+version = { attr = "plasmid.__version__" }

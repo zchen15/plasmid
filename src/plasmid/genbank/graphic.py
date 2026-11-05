@@ -1,18 +1,17 @@
 #!/usr/bin/env python
-# Class functions related to plotting
+"""Class functions related to plotting."""
 
 # computing libraries
 import numpy as np
 
 # plotting libraries
 import matplotlib as mpl
-import matplotlib.pyplot as plt
 import bokeh
 import bokeh.plotting
 import bokeh.palettes
 import sty
 
-from .misc import unpack_FeatureLocation
+from ..misc import unpack_FeatureLocation
 
 colormaps = {'nucleic':{'A':'green',
                         'T':'blue',
@@ -22,9 +21,9 @@ colormaps = {'nucleic':{'A':'green',
                         '-':'white'}}
 
 class Graphic:
-    '''
-    The class contains functions for drawing plasmids and plotting things
-    '''
+    """
+    The class contains functions for drawing plasmids and plotting things.
+    """
     params = {'colorlib':[mpl._color_data.XKCD_COLORS,
                           mpl._color_data.BASE_COLORS,
                           mpl._color_data.CSS4_COLORS],
@@ -39,9 +38,10 @@ class Graphic:
 
     def __init__(self, data=None):
         '''
-        Initializes graphic object
-        data = plasmid dataframe containing sequence and features
-        R = Radius of the plasmid. Default none
+        Initialize the Graphic object.
+
+        Args:
+            data: Plasmid dataframe containing sequence and features. Defaults to None.
         '''
         if data!=None:
             self.Plasmid = data
@@ -52,7 +52,11 @@ class Graphic:
 
     def auto_level(self):
         '''
-        Auto feature level sort and assign by overlap
+        Auto feature level sort and assign levels by overlap.
+
+        Features are sorted by length and overlapping features are assigned
+        to separate levels.
+
         # debug preserve feature order
         '''
         N = len(self.features)
@@ -73,9 +77,14 @@ class Graphic:
 
     def get_bp_overlap(loc1, loc2):
         '''
-        Get bp overlap between two features
-        loc1 = feature location of feature1
-        loc2 = feature location of feature2
+        Get the base pair overlap between two features.
+
+        Args:
+            loc1: Feature location of feature1.
+            loc2: Feature location of feature2.
+
+        Returns:
+            int: Number of overlapping base pairs.
         '''
         loc1 = unpack_FeatureLocation(loc1)
         loc2 = unpack_FeatureLocation(loc2)
@@ -100,24 +109,54 @@ class Graphic:
         return False
 
     def arc_x(self, t):
+        '''
+        Compute the x coordinate of a point on the plasmid arc.
+
+        Args:
+            t: Nucleotide position on the plasmid.
+
+        Returns:
+            float: X coordinate of the arc point.
+        '''
         return np.cos(t/self.nt*2*np.pi)
     
     def arc_y(self, t):
+        '''
+        Compute the y coordinate of a point on the plasmid arc.
+
+        Args:
+            t: Nucleotide position on the plasmid.
+
+        Returns:
+            float: Y coordinate of the arc point.
+        '''
         return np.sin(t/self.nt*2*np.pi)
 
     def arc_xy(self, t):
+        '''
+        Compute the x and y coordinates of a point on the plasmid arc.
+
+        Args:
+            t: Nucleotide position on the plasmid.
+
+        Returns:
+            numpy.ndarray: Array containing the x and y coordinates.
+        '''
         return np.transpose([self.arc_x(t), self.arc_y(t)])
 
     def arc_arrow(self, R, W, start, end, strand):
         '''
-        Compute arc arrow polygons
-        R = distance from center to draw the arc
-        W = width of arc
-        L = length of the arc in nucleotides
-        strand = direction of arrow
-        start = starting nucleotide position
-        end = end nucleotide position
-        return set of points defining arc arrow polygon
+        Compute the arc arrow polygon.
+
+        Args:
+            R: Distance from the center to draw the arc.
+            W: Width of the arc.
+            strand: Direction of the arrow.
+            start: Starting nucleotide position.
+            end: End nucleotide position.
+
+        Returns:
+            numpy.ndarray: Set of points defining the arc arrow polygon.
         '''
         # handle coordinates that wrap around the origin
         if end < start:
@@ -151,7 +190,13 @@ class Graphic:
 
     def add_arc_arrow(self, p):
         '''
-        Adds arc arrow glyph to current plot
+        Add the arc arrow glyph to the current plot.
+
+        Args:
+            p: Bokeh plot to add the arc arrow glyph to.
+
+        Returns:
+            The Bokeh plot with the arc arrow glyph added.
         '''
         data = self.features
         xs = []
@@ -171,12 +216,18 @@ class Graphic:
     
     def add_ticks(self):
         '''
-        Add tick marks
+        Add tick marks to the plot.
         '''
     
     def annotate(self, p):
         '''
-        annotate features
+        Annotate features on the plot.
+
+        Args:
+            p: Bokeh plot to add the annotation to.
+
+        Returns:
+            The Bokeh plot with the annotation added.
         '''
         data = self.features
         xs = []
@@ -222,8 +273,15 @@ class Graphic:
 
     def bokeh_plot(self, p=None, width=400, height=350):
         '''
-        Plot features using bokeh
-        p = bokeh plot reference
+        Plot features using Bokeh.
+
+        Args:
+            p: Bokeh plot reference. Defaults to None.
+            width: Plot width in pixels. Defaults to 400.
+            height: Plot height in pixels. Defaults to 350.
+
+        Returns:
+            The Bokeh plot with the features plotted.
         '''
         tooltips = [('locus_tag', '@label'),
                     ('type', '@type'),
@@ -242,8 +300,10 @@ class Graphic:
 
     def plot(self, p=None):
         '''
-        Plot features using matplotlib
-        p = matplotlib figure handle
+        Plot features using Matplotlib.
+
+        Args:
+            p: Matplotlib figure handle. Defaults to None.
         '''
         
 
@@ -254,7 +314,10 @@ class Graphic:
 
     def __str__(self):
         '''
-        Format graphic record text as string
+        Format the graphic record text as a string.
+
+        Returns:
+            str: The formatted plasmid graphic string.
         '''
         out = 'Colorized Plasmid \n'
         out+= self.colorize_plasmid()
@@ -262,8 +325,13 @@ class Graphic:
 
     def colorize_plasmid(self, width=0):
         '''
-        Return text denoting colored plasmid
-        width = chars per line
+        Return text denoting the colored plasmid.
+
+        Args:
+            width: Number of characters per line. Defaults to 0.
+
+        Returns:
+            str: Text denoting the colored plasmid.
         '''
         carr, cdict = self.get_color_array()
         seq = self.Plasmid.__str__()
@@ -284,7 +352,10 @@ class Graphic:
 
     def get_color_array(self):
         '''
-        Returns integer array and dictionary mapping integer to color values
+        Get the integer array and dictionary mapping integer to color values.
+
+        Returns:
+            tuple: Integer array of color values and dictionary mapping integers to colors.
         '''
         df = self.features.sort_values(by=['level','start'])
         cdict = {}
@@ -305,11 +376,16 @@ class Graphic:
 
     def color_by_array(self, text, colordict, fgarr=[], bgarr=[]):
         '''
-        Plot color text marked by an array
-        text = text to be colorized
-        colordict = dictionary mapping integers to colors
-        fgarr = integer array of text color
-        bgarr = integer array of text background color
+        Plot color text marked by an array.
+
+        Args:
+            text: Text to be colorized.
+            colordict: Dictionary mapping integers to colors.
+            fgarr: Integer array of text colors. Defaults to None.
+            bgarr: Integer array of text background colors. Defaults to None.
+
+        Returns:
+            str: Colorized text.
         '''
         if len(fgarr)==0:
             fgarr = np.zeros(len(text))
@@ -332,7 +408,14 @@ class Graphic:
     
     def split_carr(fgarr, bgarr):
         '''
-        Split up blocks of text by their coloring scheme
+        Split up blocks of text by their coloring scheme.
+
+        Args:
+            fgarr: Integer array of text colors.
+            bgarr: Integer array of text background colors.
+
+        Returns:
+            list: List of [start, stop] index pairs for each text block.
         '''
         start = 0
         val = (fgarr[1:]!=fgarr[:-1]) | (bgarr[1:]!=bgarr[:-1])
@@ -347,9 +430,15 @@ class Graphic:
 
     def get_colored_text(self, text, fg=None, bg=None):
         '''
-        Format string into colored text
-        fg = text color
-        bg = background color
+        Format string into colored text.
+
+        Args:
+            text: Text to format.
+            fg: Text color. Defaults to None.
+            bg: Background color. Defaults to None.
+
+        Returns:
+            str: Text with sty colored markup.
         '''
         sfg = self.get_sty_fg(fg)
         sbg = self.get_sty_bg(bg)
@@ -357,8 +446,13 @@ class Graphic:
     
     def get_sty_fg(self, cname):
         '''
-        Get sty fg markup
-        cname = name of color
+        Get the sty foreground markup.
+
+        Args:
+            cname: Name of the color.
+
+        Returns:
+            list: Opening and closing sty foreground markup. Empty if the color was not found.
         '''
         x = self.color_to_int(cname)
         if x==None:
@@ -368,8 +462,13 @@ class Graphic:
 
     def get_sty_bg(self, cname):
         '''
-        Get sty bg markup
-        cname = name of color
+        Get the sty background markup.
+
+        Args:
+            cname: Name of the color.
+
+        Returns:
+            list: Opening and closing sty background markup. Empty if the color was not found.
         '''
         x = self.color_to_int(cname)
         if x==None:
@@ -379,9 +478,13 @@ class Graphic:
 
     def color_to_int(self, cname):
         '''
-        Get color name to 24 bit values
-        cname = name of color
-        return integer array
+        Get the color name to 24-bit integer values.
+
+        Args:
+            cname: Name of the color.
+
+        Returns:
+            list: Integer RGB values. None if the color was not found.
         '''
         if type(cname)!=str:
             return None
@@ -391,7 +494,13 @@ class Graphic:
 
     def color_to_hex(self, cname):
         '''
-        Get hex color from color name
+        Get the hex color from the color name.
+
+        Args:
+            cname: Name of the color.
+
+        Returns:
+            str: Hex color string.
         '''
         colorlib = self.params['colorlib']
         for clib in colorlib:
@@ -400,7 +509,13 @@ class Graphic:
 
     def hex_to_int(self, cnum):
         '''
-        Convert hex color number to integers
+        Convert the hex color number to integers.
+
+        Args:
+            cnum: Hex color string.
+
+        Returns:
+            list: Integer RGB values.
         '''
         a = cnum[1:3]
         b = cnum[3:5]
@@ -409,10 +524,14 @@ class Graphic:
    
     def get_colormap(name, palette):
         '''
-        Generates a colormap for a set of dna features using colors from a palette
-        name = list of names of the features
-        palette = list of colors
-        return dictionary of {name:color}
+        Generate a colormap for a set of DNA features using colors from a palette.
+
+        Args:
+            name: List of names of the features.
+            palette: List of colors or name of the Bokeh palette.
+
+        Returns:
+            dict: Dictionary of {name: color}.
         '''
         if type(palette)==str:
             palette = bokeh.palettes.__dict__[palette]

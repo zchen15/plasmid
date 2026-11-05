@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Class function for aligners
+"""Class functions pertaining to sequence clustering."""
 
 # computing libraries
 import numpy as np
@@ -19,14 +19,20 @@ import subprocess
 from .misc import read_to_df
 from .misc import revcomp
 from .misc import load_args
-from .fileIO import fileIO
-from .aligner import Aligner
+from .genbank.fileIO import fileIO
+from ..aligners.aligner import Aligner
 
 class Clust(Aligner):
-    '''
-    This class holds functions pertaining to sequence clustering
-    '''
+    """
+    This class holds functions pertaining to sequence clustering.
+    """
     def __init__(self, args=None):
+        '''
+        Initialize the Clust object.
+
+        Args:
+            args: Command line arguments. Defaults to None.
+        '''
         if args!=None:
             self.params = load_args(args, self.params)
         if self.params['verbose']:
@@ -48,16 +54,20 @@ class Clust(Aligner):
     
     def create_tempdir(self):
         '''
-        Create a temporary working directory for aligners
+        Create a temporary working directory for the clusterer.
         '''
         self.params['work_dir'] = tempfile.TemporaryDirectory(prefix='clust_')
 
     def pairs_to_adjacency(x, sym_larger=False):
         '''
-        Converts a paired list into an adjacency matrix
-        x = numpy array with columns [query, database, values]
-        sym_larger = for symmetric matrices, favor the larger value
-        return dictionary with entries 'matrix' and 'columns'
+        Convert a paired list into an adjacency matrix.
+
+        Args:
+            x (numpy.ndarray): Array with columns [query, database, values].
+            sym_larger (bool): For symmetric matrices, favor the larger value. Defaults to False.
+
+        Returns:
+            dict: Dictionary with entries 'matrix' and 'columns'.
         '''
         cols = [i for i in x[:,0]] + [i for i in x[:,1]]
         cols = np.unique(cols)
@@ -95,7 +105,14 @@ class Clust(Aligner):
         
     def get_closest_points(self, df, N):
         '''
-        Get the N set of closest points
+        Get the N set of closest points.
+
+        Args:
+            df (pandas.DataFrame): Dataframe of points.
+            N (int): Number of closest points to return.
+
+        Returns:
+            list: List of the N closest points.
         '''
         
         

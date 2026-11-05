@@ -25,7 +25,7 @@ from .misc import translate
 from .misc import substring_search
 from .misc import isDNA
 from .misc import load_args
-from .fileIO import fileIO
+from .genbank.fileIO import fileIO
 from .graphic import Graphic
 from .graphic import colormaps
 

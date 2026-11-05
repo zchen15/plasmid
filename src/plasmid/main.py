@@ -2,8 +2,8 @@
 # Main function to execute commandline utilities
 
 # local libraries
-from .aligner import Aligner
-from .oligos import Oligos
+from .aligners.aligner import Aligner
+from .pcr.oligos import Oligos
 
 # system and time
 import argparse
