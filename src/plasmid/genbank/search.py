@@ -1,16 +1,12 @@
 #!/usr/bin/env python
-"""Sequence search and ORF-finding helpers.
 
-This module contains the sequence-search functions formerly defined in
-``plasmid.py``: DNA/amino-acid matching, substring search, and open
-reading frame detection.
-"""
-
-# science libs
 import Bio
 import Bio.Seq
 import pandas as pd
+import re
 
+# type hint imports
+from typing import Union
 
 def find_all_substrings(qry: str, ref: str) -> list[int]:
     """Find all (possibly overlapping) occurrences of ``qry`` in ``ref``.
@@ -28,7 +24,6 @@ def find_all_substrings(qry: str, ref: str) -> list[int]:
         out.append(i)
         i = ref.find(qry, i + 1)
     return out
-
 
 def match_DNA(
     qry: str,
@@ -51,39 +46,40 @@ def match_DNA(
     """
     qry = str(qry).upper().replace("-", "").replace(" ", "")
     ref = str(ref).upper()
+    
     if not qry:
         return pd.DataFrame(columns=["t_start", "t_end", "orientation"])
 
     seq_len = len(ref)
+    comp = str.maketrans("ACGTRYSWKMBVDHN", "TGCAYRSWMKVBHDN")
+    
+    hits = []
+    # Lookahead regex (?=...) finds overlapping matches without consuming characters
+    pattern = re.compile(f"(?={qry})")
+    
+    for seq, orient in [(ref, 1), (ref.translate(comp)[::-1], -1)]:
+        if orient == -1 and fwd_only:
+            break
+            
+        search_seq = seq + seq if circular else seq
+        
+        # Iterate through all regex matches
+        for m in pattern.finditer(search_seq):
+            idx = m.start()
+            
+            # Stop searching if we've wrapped around the circular genome
+            if circular and idx >= seq_len:
+                break
+            
+            end = idx + len(qry)
+            if circular:
+                end = end % seq_len or seq_len 
+                
+            # Adjust coordinates for the reverse strand
+            s, e = (idx, end) if orient == 1 else (seq_len - end, seq_len - idx)
+            hits.append([s, e, orient])
 
-    def _forward_hits(seq: str, is_circular: bool) -> list[list[int]]:
-        """Collect forward-orientation hits as ``[start, end, orientation]``."""
-        if is_circular:
-            seq = seq + seq
-        hits = []
-        for i in find_all_substrings(qry, seq):
-            if is_circular and i >= seq_len:
-                continue
-            end = i + len(qry)
-            if is_circular:
-                end = end % seq_len
-                if end == 0:
-                    end = seq_len
-            hits.append([i, end, 1])
-        return hits
-
-    fwd_out = pd.DataFrame(_forward_hits(ref, circular),
-                           columns=["t_start", "t_end", "orientation"])
-    if fwd_only:
-        return fwd_out
-
-    rev_hits = _forward_hits(str(Bio.Seq.Seq(ref).reverse_complement()), circular)
-    rev_out = pd.DataFrame(
-        [[seq_len - end, seq_len - start, -1] for start, end, _ in rev_hits],
-        columns=["t_start", "t_end", "orientation"],
-    )
-    return pd.concat([fwd_out, rev_out], ignore_index=True)
-
+    return pd.DataFrame(hits, columns=["t_start", "t_end", "orientation"])
 
 def match_AA(
     qry: str,
@@ -97,45 +93,64 @@ def match_AA(
         qry: Amino acid subsequence to find.
         ref: DNA sequence containing the query subsequence.
         fwd_only: Search in forward orientation only.
-        circular: Search string as though it's a circular genome.
+        circular: Treat the reference as a circular genome.
 
     Returns:
-        DataFrame with columns ``t_start``, ``t_end``, ``orientation``.
+        DataFrame with columns ``t_start``, ``t_end``, ``orientation``
+        (1 = forward, -1 = reverse complement), sorted by ``t_start``.
     """
+    empty = pd.DataFrame(columns=["t_start", "t_end", "orientation"])
+    
     qry = str(qry).upper().replace("-", "").replace(" ", "")
-    ref = str(ref).upper()
-
-    if fwd_only:
-        if circular:
-            out = match_AA(qry, ref + ref, fwd_only=True, circular=False)
-            L = len(ref)
-            out = out[out["t_start"] < L].copy()
-            out["t_end"] = out["t_end"] % L
-            out.loc[out["t_end"] == 0, "t_end"] = L
-            return out
-
-        seq = Bio.Seq.Seq(ref)
-        frames = []
-        for i in range(3):
-            aa = str(seq[i:].translate())
-            df = match_DNA(qry, aa, fwd_only=True, circular=False, exact=True)
-            if len(df) == 0:
+    ref = str(ref).upper().replace("-", "").replace(" ", "")
+    
+    if not qry or not ref:
+        return empty
+    
+    seq_len = len(ref)
+    results = []
+    
+    for strand, seq in [(1, ref), (-1, str(Seq(ref).reverse_complement()))]:
+        if strand == -1 and fwd_only:
+            break
+            
+        for frame in range(3):
+            search_seq = (seq + seq)[frame:] if circular else seq[frame:]
+            if not search_seq:
                 continue
-            df["t_start"] = df["t_start"] * 3 + i
-            df["t_end"] = df["t_start"] + len(qry) * 3
-            frames.append(df)
-        if not frames:
-            return pd.DataFrame(columns=["t_start", "t_end", "orientation"])
-        return pd.concat(frames, ignore_index=True)
-
-    fwd_out = match_AA(qry, ref, fwd_only=True, circular=circular)
-    rev_ref = str(Bio.Seq.Seq(ref).reverse_complement())
-    rev_out = match_AA(qry, rev_ref, fwd_only=True, circular=circular).copy()
-    rev_out["orientation"] = -1
-    rev_out["t_start"] = len(ref) - rev_out["t_start"]
-    rev_out["t_end"] = len(ref) - rev_out["t_end"]
-    rev_out = rev_out.rename(columns={"t_end": "t_start", "t_start": "t_end"})
-    return pd.concat([fwd_out, rev_out], ignore_index=True)
+                
+            translated = str(Seq(search_seq).translate())
+            if not translated:
+                continue
+                
+            hits = match_DNA(qry, translated, fwd_only=True, circular=False, exact=True)
+            if hits.empty:
+                continue
+            
+            # Convert to DNA coordinates
+            hits["t_start"] = hits["t_start"] * 3 + frame
+            hits["t_end"] = hits["t_end"] * 3 + frame
+            
+            # Handle circular
+            if circular:
+                hits = hits[hits["t_start"] < (seq_len - frame) // 3 * 3 + frame]
+                hits["t_end"] = hits["t_end"] % seq_len
+                hits.loc[hits["t_end"] == 0, "t_end"] = seq_len
+            
+            # Reverse strand
+            if strand == -1:
+                hits["t_start"] = (seq_len - hits["t_end"]) % seq_len
+                hits["t_end"] = (seq_len - hits["t_start"]) % seq_len
+                hits.loc[hits["t_start"] == 0, "t_start"] = seq_len
+                hits.loc[hits["t_end"] == 0, "t_end"] = seq_len
+            
+            hits["orientation"] = strand
+            results.append(hits)
+    
+    if not results:
+        return empty
+    
+    return pd.concat(results, ignore_index=True).sort_values("t_start", kind="stable").reset_index(drop=True)
 
 
 def get_ORF(seq: str, start: str = "M", stop: str = "*") -> pd.DataFrame:
@@ -149,62 +164,55 @@ def get_ORF(seq: str, start: str = "M", stop: str = "*") -> pd.DataFrame:
     Returns:
         DataFrame with columns ``start``, ``stop``, ``sequence``.
     """
-    seq = str(seq)
-    start_positions = [i for i, c in enumerate(seq) if c == start]
-    stop_positions = [i for i, c in enumerate(seq) if c == stop]
+    pattern = re.escape(start) + ".*?" + re.escape(stop)
+    matches = [
+        [m.start(), m.end(), m.group()]
+        for m in re.finditer(pattern, str(seq))
+    ]
+    return pd.DataFrame(matches, columns=["start", "stop", "sequence"])
 
-    out: list[list] = []
-    j = 0
-    n_stops = len(stop_positions)
-    for s1 in start_positions:
-        while j < n_stops and stop_positions[j] <= s1:
-            j += 1
-        if j >= n_stops:
-            break
-        s2 = stop_positions[j]
-        out.append([s1, s2 + 1, seq[s1 : s2 + 1]])
-    return pd.DataFrame(out, columns=["start", "stop", "sequence"])
-
-
-def search_ORF(seq: str, table: str = "Standard", fwd_only: bool = False) -> pd.DataFrame:
+def search_ORF(
+    seq: str,
+    table: Union[str, int] = "Standard",
+    fwd_only: bool = False,
+) -> pd.DataFrame:
     """Generate a dataframe of open reading frames for a nucleotide sequence.
 
     Args:
         seq: Input nucleotide sequence.
-        table: Codon table to use.
+        table: Codon table to use (name or NCBI index).
         fwd_only: If True, search only in forward orientation.
 
     Returns:
         DataFrame of ORFs with start/stop in nucleotide coordinates.
     """
+    cols = ["start", "stop", "sequence", "frame", "length", "orientation"]
     seq_str = str(seq)
-    seq_obj = Bio.Seq.Seq(seq_str)
+    seq_len = len(seq_str)
 
-    out = []
-    for i in range(3):
-        aa = str(seq_obj[i:].translate(table=table))
-        df = get_ORF(aa)
-        if len(df) == 0:
-            continue
-        df["start"] = df["start"] * 3 + i
-        df["stop"] = df["stop"] * 3 + i
-        df["frame"] = i
-        df["length"] = [len(s) for s in df["sequence"]]
-        out.append(df)
+    if seq_len < 3:
+        return pd.DataFrame(columns=cols)
 
-    if not out:
-        cols = ["start", "stop", "sequence", "frame", "length", "orientation"]
-        df = pd.DataFrame(columns=cols)
-    else:
-        df = pd.concat(out, ignore_index=True)
-    df["orientation"] = 1
-    if fwd_only:
-        return df
+    seq_obj = Seq(seq_str)
+    strands = [(1, seq_obj)]
+    if not fwd_only:
+        strands.append((-1, seq_obj.reverse_complement()))
 
-    rev_seq = str(seq_obj.reverse_complement())
-    df2 = search_ORF(rev_seq, table=table, fwd_only=True)
-    df2["orientation"] = -1
-    stop_vals = df2["stop"].values
-    df2["stop"] = len(seq_str) - df2["start"].values
-    df2["start"] = len(seq_str) - stop_vals
-    return pd.concat([df, df2], ignore_index=True)
+    results: list[tuple] = []
+
+    for orientation, strand_seq in strands:
+        for frame in range(3):
+            aa = str(strand_seq[frame:].translate(table=table))
+            orf_df = get_ORF(aa)
+
+            for m in orf_df.itertuples(index=False):
+                start_aa, stop_aa, sequence = m
+                start = start_aa * 3 + frame
+                stop = stop_aa * 3 + frame
+
+                if orientation == -1:
+                    start, stop = seq_len - stop, seq_len - start
+
+                results.append((start, stop, sequence, frame, stop - start, orientation))
+
+    return pd.DataFrame(results, columns=cols)

@@ -84,31 +84,24 @@ def update_dict(
         out.update({key: value for key, value in new.items() if value is not None})
     return out
 
-
 def isArrayType(x, dtype) -> bool:
     """Check whether every element of ``x`` is an instance of ``dtype``.
 
-    ``x`` may be any iterable (list, tuple, set, string, NumPy array,
-    pandas Series, ...). NumPy scalars are unwrapped with ``.item()``
-    before the type check, because e.g. ``np.int64`` is not an instance of
-    Python's ``int``.
+    Strings, bytes, and bytearrays are *not* considered arrays even though
+    they are iterable — they're treated as scalar values.
 
     Args:
-        x: Value to inspect. Non-iterables always return ``False``.
+        x: Value to inspect. Non-iterables (and strings/bytes) return ``False``.
         dtype: A type or tuple of types accepted by :func:`isinstance`.
 
     Returns:
-        ``True`` if ``x`` is iterable and every element matches ``dtype``
-        (vacuously ``True`` for an empty iterable), otherwise ``False``.
-
-    Examples:
-        >>> isArrayType([1, 2, 3], int)
-        True
-        >>> isArrayType([1, "2"], int)
-        False
-        >>> isArrayType(5, int)
-        False
+        ``True`` if ``x`` is a non-string iterable and every element matches
+        ``dtype`` (vacuously ``True`` for an empty iterable), otherwise ``False``.
     """
+    # Strings/bytes are iterable but should not be treated as arrays.
+    if isinstance(x, (str, bytes, bytearray)):
+        return False
+
     try:
         items = iter(x)
     except TypeError:
@@ -119,7 +112,6 @@ def isArrayType(x, dtype) -> bool:
         or (isinstance(item, np.generic) and isinstance(item.item(), dtype))
         for item in items
     )
-
 
 def search_key(data: dict, keyword: str, rev: bool = False) -> Optional[Any]:
     """Return the value of the first key that matches ``keyword``.
@@ -555,35 +547,45 @@ class Record:
         self.reset_index()
         return self
         
-    def annotate_by_location(self, name:str, start:int, stop:int, strand:int, feature:str="unknown", color:list=None, description:dict={}):
-        """
-        Add annotations using location information
-
+    def annotate_by_location(
+        self,
+        name: str,
+        start: int,
+        stop: int,
+        strand: int,
+        feature: str = "unknown",
+        color: Optional[list] = None,
+        description: Optional[dict] = None,
+    ) -> "Record":
+        """Add annotations using location information.
+    
         Args:
-            name: name of the gene
-            start: start location of feature
-            stop: stop location of feature
-            strand: orientation of feature. +1 is 5" -> 3"
-            feature: type of genetic feature such as cds, mRNA, primer_bind
-            color: [fwd_color, rev_color] to use
-            description: dictionary of other info about the gene
-
+            name: Name of the gene.
+            start: Start location of the feature (0-based).
+            stop: Stop location of the feature (exclusive).
+            strand: Orientation of the feature. ``+1`` is 5'→3', ``-1`` is 3'→5'.
+            feature: Type of genetic feature (e.g. ``'CDS'``, ``'mRNA'``,
+                ``'primer_bind'``).
+            color: ``[fwd_color, rev_color]`` pair, or ``None`` to use defaults.
+            description: Dictionary of extra qualifiers. ``None`` is treated as
+                an empty dict.
+    
         Returns:
-            modified copy of self
+            A modified copy of ``self``.
         """
         out = self.copy()
+        if description is None:
+            description = {}
         if color is None:
-            color = get_default_colors(name, feature)
+            color = list(get_default_colors(name, feature))
         
-        ref = out.sequence
-        pLlen = len(ref)
         loc = Location(start, stop, strand)
-        cols = ["name","feature","location","color","description"]
-        glist = [[name, feature, loc, color, description]]
-        glist = pd.DataFrame(glist, columns=cols)
-        
-        # update current dataframe
-        out.features = pd.concat([out.features, glist])
+        new_row = pd.DataFrame(
+            [[name, feature, loc, color, dict(description)]],
+            columns=FEATURE_COLS,
+        )
+    
+        out.features = pd.concat([out.features, new_row], ignore_index=True)
         out.reset_index()
         return out
 
@@ -612,6 +614,15 @@ class Record:
 
     def __str__(self) -> str:
         return self.sequence
+
+    def get_colored(self, width=0):
+        '''
+        Print out colored representation of Plasmid
+        width = number of characters per line
+        '''
+        rec = Graphic(data=self)
+        out = rec.colorize_plasmid(width=width)
+        return out
 
     def __repr__(self) -> str:
         """Return a human-readable multi-line summary of the record.
@@ -714,16 +725,16 @@ class Record:
         """
         if isinstance(key, slice):
             return self.slice(key.start, key.stop)
-
+        
         if isinstance(key, (int, np.integer)) and not isinstance(key, bool):
             loc = self.features.iloc[key]["location"]
-            return out.slice(loc.start(), loc.stop())
-
+            return self.slice(loc.start(), loc.end())
+        
         if isinstance(key, str) or isArrayType(key, str):
             if key in self.features.columns:
                 return self.features[key]
             return self.to_dataframe()[key]
-
+        
         if isinstance(key, tuple) and len(key) == 2 and isinstance(key[1], str):
             row, column = key
             return self.features.iloc[row][column]
@@ -1008,33 +1019,4 @@ class Record:
             out = out.annotate(name, seq, feature, color)
         out.reset_index()
         return out
-
-    def to_graphic(self):
-        """Build a :class:`Graphic` view of this record.
-
-        Returns:
-            Graphic: The graphic object initialized with ``self``.
-        """
-        rec = Graphic(data=self)
-        return rec
-
-    def get_table(self):
-        """Return a formatted feature table string.
-
-        Includes the GenBank annotation header, a feature table, and the
-        total sequence length. Colors in the table are rendered with ANSI
-        escape codes.
-
-        Returns:
-            str: The formatted table.
-        """
-        table = ''
-        for k in self.SeqRecord.annotations.keys():
-            table += str(k) + ':' + str(self.SeqRecord.annotations[k]) + '\n'
-        df = self.to_dataframe()
-        table += str(df[['locus_tag', 'type', 'location', 'length', 'color']]) + '\n'
-        for c in np.unique(df['color']):
-            val = Graphic().get_colored_text(c, fg=c)
-            table = table.replace(c, val)
-        table += 'total length:' + str(len(self.__str__())) + '\n'
-        return table
+        

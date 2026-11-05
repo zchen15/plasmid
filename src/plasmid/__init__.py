@@ -1,14 +1,9 @@
 #!/usr/bin/env python
-# This is a python library for editing and plotting genbank files
 
-# full in other libraries
-from .genbank.plasmid import Plasmid
-from .genbank.fileIO import fileIO
-from .pcr.designer import Designer
-from .pcr.oligos import Oligos
-from .aligners.aligner import Aligner
-from .cluster import Clust
-from .graphic import Graphic
+from .genbank.record import (
+    read_genbank,
+    read_snapgene,
+)
 
 __version__ = "2026.11.3"
 __author__ = "Zhewei Chen"
