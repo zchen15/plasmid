@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any, Optional, Union
 
 # location helpers (all wrap-aware)
-from .locations import Location
+from .locations import Location, SeqFeatureLocation_to_Location
 
 # sequence search helpers
 from .search import (
@@ -189,7 +189,7 @@ def read_snapgene(fname: str) -> "Record":
     return Record(rec, name=fname)
 
 
-def get_default_colors(name: str, feature: str, color: Optional[list] = None):
+def get_default_colors(name: str, feature: str, color: Optional[list] = None) -> list:
     """Get a set of default colors based on feature type.
 
     Args:
@@ -198,23 +198,23 @@ def get_default_colors(name: str, feature: str, color: Optional[list] = None):
         color: Current color value or None to use defaults.
 
     Returns:
-        Tuple ``(fwd_color, rev_color)``.
+        List ``[fwd_color, rev_color]``.
     """
     if color is not None:
         if isinstance(color, str):
-            return (color, color)
+            return [color, color]
         if len(color) == 1:
-            return (color[0], color[0])
-        return (color[0], color[-1])
+            return [color[0], color[0]]
+        return [color[0], color[-1]]
 
     found = search_key(DEFAULT_CMAP, feature)
     if found is None:
-        return (DEFAULT_COLOR, DEFAULT_COLOR)
+        return [DEFAULT_COLOR, DEFAULT_COLOR]
     if isinstance(found, str):
-        return (found, found)
+        return [found, found]
     if len(found) == 1:
-        return (found[0], found[0])
-    return (found[0], found[-1])
+        return [found[0], found[0]]
+    return [found[0], found[-1]]
 
 
 def get_feature_name(gene: Bio.SeqFeature.SeqFeature) -> str:
@@ -410,13 +410,18 @@ class Record:
         with open(filename, "w") as f:
             Bio.SeqIO.write(SeqRecord, f, "genbank")
 
-    def to_dataframe(self) -> pd.DataFrame:
+    def to_dataframe(self, str_only: bool = True) -> pd.DataFrame:
         """Generate a DataFrame of features with resolved start/end/strand.
+
+        Args:
+            str_only: When ``True`` (default), ``location`` and
+                ``description`` are serialized as strings. When ``False``,
+                ``location`` holds :class:`Location` objects and
+                ``description`` holds the qualifier dictionaries.
 
         Returns:
             Copy of ``self.features`` with added columns ``start``, ``end``,
-            ``strand``, ``sequence``, ``length`` (and ``location`` and
-            ``description`` serialized as strings).
+            ``strand``, ``sequence``, ``length``.
         """
         df = self.features.copy()
         if len(df) == 0:
@@ -430,8 +435,9 @@ class Record:
         df["strand"] = [v.strand() for v in df["location"].values]
         df["sequence"] = [loc.extract(self.sequence) for loc in df["location"].values]
         df["length"] = [len(s) for s in df["sequence"]]
-        df["location"] = [str(loc) for loc in df["location"].values]
-        df["description"] = [json.dumps(d, indent=4) for d in df["description"].values]
+        if str_only:
+            df["location"] = [str(loc) for loc in df["location"].values]
+            df["description"] = [json.dumps(d, indent=4) for d in df["description"].values]
         return df
 
     # -- copies -------------------------------------------------------------
@@ -471,7 +477,7 @@ class Record:
         if description is None:
             description = {}
         if color is None:
-            color = list(get_default_colors(name, feature))
+            color = get_default_colors(name, feature)
 
         out = self.copy()
         seq_u = seq.upper().replace("U", "T")
@@ -507,7 +513,7 @@ class Record:
         if description is None:
             description = {}
         if color is None:
-            color = list(get_default_colors(name, feature))
+            color = get_default_colors(name, feature)
 
         out = self.copy()
         pos = match_AA(seq, out.sequence, circular=circular)
@@ -518,7 +524,7 @@ class Record:
         pos: pd.DataFrame,
         name: str,
         feature: str,
-        color: tuple,
+        color: list,
         description: dict,
     ) -> "Record":
         """Append a feature for each row of a match table; mutate in place.
@@ -529,7 +535,7 @@ class Record:
                 :func:`match_AA`).
             name: Feature name/label.
             feature: Feature type (e.g. ``'CDS'``, ``'promoter'``).
-            color: ``[forward_color, reverse_color]`` pair.
+            color: ``[forward_color, reverse_color]`` list.
             description: Extra qualifier key/value pairs.
 
         Returns:
@@ -566,7 +572,7 @@ class Record:
             strand: Orientation of the feature. ``+1`` is 5'→3', ``-1`` is 3'→5'.
             feature: Type of genetic feature (e.g. ``'CDS'``, ``'mRNA'``,
                 ``'primer_bind'``).
-            color: ``[fwd_color, rev_color]`` pair, or ``None`` to use defaults.
+            color: ``[fwd_color, rev_color]`` list, or ``None`` to use defaults.
             description: Dictionary of extra qualifiers. ``None`` is treated as
                 an empty dict.
     
@@ -577,7 +583,7 @@ class Record:
         if description is None:
             description = {}
         if color is None:
-            color = list(get_default_colors(name, feature))
+            color = get_default_colors(name, feature)
         
         loc = Location(start, stop, strand)
         new_row = pd.DataFrame(
@@ -620,8 +626,9 @@ class Record:
         Print out colored representation of Plasmid
         width = number of characters per line
         '''
-        rec = Graphic(data=self)
-        out = rec.colorize_plasmid(width=width)
+        from .terminal import Viewer
+        rec = Viewer(self)
+        out = rec.colorize(width=width)
         return out
 
     def __repr__(self) -> str:
@@ -1019,4 +1026,3 @@ class Record:
             out = out.annotate(name, seq, feature, color)
         out.reset_index()
         return out
-        

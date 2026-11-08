@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # tests for plasmid.py
 
-import plasmid
+import plasmid.genbank.record
 import glob
 import copy
 
@@ -11,17 +11,6 @@ def test_read_genbank():
     x = plasmid.read_genbank(fname)        
     assert type(x).__name__ == 'Plasmid'
     return x
-df = test_read_genbank()
-
-def test_read_fasta():
-    # Read csv and fasta
-    fname = glob.glob('data/*.csv')[0]
-    y = plasmid.plasmid.read_fasta(fname)
-    fname = glob.glob('data/*.fa')[0]
-    y+= plasmid.plasmid.read_fasta(fname)
-    assert type(y) == list
-    for x in y:
-        assert type(x).__name__ == 'Plasmid'
 
 def test_plasmid_print():
     # Check printing

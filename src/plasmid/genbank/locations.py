@@ -21,9 +21,13 @@ def flatten_location(location: Union[SimpleLocation, CompoundLocation]) -> List[
     Returns:
         A list of :class:`SimpleLocation` objects in the original order.
     """
-    parts = getattr(location, "parts", None)
-    if parts is None:
+    if not isinstance(location, CompoundLocation):
+        # SimpleLocation has a single part; only CompoundLocation splits out
+        # a list of parts.
         return [location]
+    parts = location.parts
+    if not parts:
+        return []
     out: List[SimpleLocation] = []
     for p in parts:
         out.extend(flatten_location(p))

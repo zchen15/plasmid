@@ -15,6 +15,7 @@ maintainers = [
     { name = "Zhewei Chen", email = "zchen15@github.com" },
 ]
 requires-python = ">=3.10"
+dynamic = ["version"]
 keywords = [
     "gene editor",
     "plasmid",
@@ -38,14 +39,8 @@ dependencies = [
     "scipy",
     "pandas",
 ]
-optional = [
-    "misc",
-    "visualization",
-    "alignment",
-    "assembly",
-    "clustering",
-]
-[project.extras_require]
+
+[project.optional-dependencies]
 misc = [
     "sty",
 ]
@@ -60,10 +55,6 @@ alignment = [
 assembly = [
     "scikit-learn",
 ]
-clustering = [
-    "scikit-learn",
-]
-dynamic = ["version"]
 
 [project.urls]
 Homepage = "https://github.com/zchen15/plasmid"

@@ -131,12 +131,13 @@ class Viewer:
         carr = np.zeros(seq_len, dtype=int)
         
         for loc, color in df[['location', 'color']].to_numpy():
-            if color not in idict:
-                cdict[j] = color
-                idict[color] = j
+            key = tuple(color) if isinstance(color, (list, tuple)) else color
+            if key not in idict:
+                cdict[j] = key
+                idict[key] = j
                 j += 1
                 
-            val = idict[color]
+            val = idict[key]
                         
             for start, end, strand in loc.positions:
                 # Handle circular plasmids and out-of-bounds coordinates
