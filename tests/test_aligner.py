@@ -1,7 +1,8 @@
 #!/usr/bin/env python
-# tests for fileIO.py
+# tests for io.py
 
 import plasmid
+from plasmid.aligners import io
 import pandas as pd
 import glob
 import os
@@ -10,8 +11,8 @@ def test_mappy():
     # Read a fasta and fastq file
     f1 = 'data/coi.fq.bz2'
     f2 = 'data/coi.fq.bz2'
-    f1 = plasmid.fileIO.read_fastq(f1)
-    f2 = plasmid.fileIO.read_fastq(f2)
+    f1 = io.read_fastq(f1)
+    f2 = io.read_fastq(f2)
     f1 = f1.iloc[:10]
     f2 = f2.iloc[:10]
     # perform cross alignment
@@ -26,8 +27,8 @@ def test_mappy():
 def test_parasail():
     f1 = 'data/coi.fq.bz2'
     f2 = 'data/coi.fq.bz2'
-    f1 = plasmid.fileIO.read_fastq(f1)
-    f2 = plasmid.fileIO.read_fastq(f2)
+    f1 = io.read_fastq(f1)
+    f2 = io.read_fastq(f2)
     f1 = f1.iloc[:10]
     f2 = f2.iloc[:10]
     # perform cross alignment
@@ -57,8 +58,8 @@ def test_pyspoa():
 def test_minimap2():
     f1 = 'data/coi.fq.bz2'
     f2 = 'data/coi.fq.bz2'
-    f1 = plasmid.fileIO.read_fastq(f1)
-    f2 = plasmid.fileIO.read_fastq(f2)
+    f1 = io.read_fastq(f1)
+    f2 = io.read_fastq(f2)
     f1 = f1.iloc[:10]
     f2 = f2.iloc[:10]
     
@@ -84,8 +85,8 @@ def test_minimap2():
 def test_bwa():
     f1 = 'data/coi.fq.bz2'
     f2 = 'data/coi.fq.bz2'
-    f1 = plasmid.fileIO.read_fastq(f1)
-    f2 = plasmid.fileIO.read_fastq(f2)
+    f1 = io.read_fastq(f1)
+    f2 = io.read_fastq(f2)
     f1 = f1.iloc[:10]
     f2 = f2.iloc[:10]
     
@@ -104,8 +105,8 @@ def test_bwa():
 def test_bowtie2():
     f1 = 'data/coi.fq.bz2'
     f2 = 'data/coi.fq.bz2'
-    f1 = plasmid.fileIO.read_fastq(f1)
-    f2 = plasmid.fileIO.read_fastq(f2)
+    f1 = io.read_fastq(f1)
+    f2 = io.read_fastq(f2)
     f1 = f1.iloc[:10]
     f2 = f2.iloc[:10]
     
@@ -123,7 +124,7 @@ def test_bowtie2():
 
 def test_get_fastq_statistics():
     f1 = 'data/coi.fq.bz2'
-    f1 = plasmid.fileIO.read_fastq(f1)
+    f1 = io.read_fastq(f1)
     f1 = f1.iloc[:10]
     x = plasmid.Aligner.get_fastq_statistics(f1)
     col = ['Q_min','Q_lower','Q_median','Q_upper','Q_max']

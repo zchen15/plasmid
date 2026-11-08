@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # tests for aligner.py
 
-import plasmid
+from plasmid.aligners import io
 import glob
 
 def test_read_fastq():
     # Read a fastq file
     fname = 'data/coi.fq.bz2'
-    x = plasmid.fileIO.read_fastq(fname)
+    x = io.read_fastq(fname)
     assert type(x).__name__ == 'DataFrame'
     col = ['name','sequence','quality']
     for c in col:
@@ -17,7 +17,7 @@ def test_read_fastq():
 def test_read_fasta():
     # Read a fasta
     fname = 'data/mRNA.fa'
-    x = plasmid.fileIO.read_fasta(fname)
+    x = io.read_fasta(fname)
     assert type(x).__name__ == 'DataFrame'
     col = ['name','sequence']
     for c in col:
@@ -26,7 +26,7 @@ def test_read_fasta():
 def test_read_fastx():
     # Read a fasta
     fname = 'data/mRNA.fa'
-    x = plasmid.fileIO.read_fastx(fname)
+    x = io.read_fastx(fname)
     assert type(x).__name__ == 'DataFrame'
     col = ['name','sequence']
     for c in col:
@@ -34,7 +34,7 @@ def test_read_fastx():
 
     # Read a fastq file
     fname = 'data/coi.fq.bz2'
-    x = plasmid.fileIO.read_fastx(fname)
+    x = io.read_fastx(fname)
     assert type(x).__name__ == 'DataFrame'
     col = ['name','sequence','quality']
     for c in col:

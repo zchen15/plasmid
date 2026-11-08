@@ -28,10 +28,10 @@ plasmid.designer module
    :undoc-members:
    :show-inheritance:
 
-plasmid.fileIO module
----------------------
+plasmid.aligners.io module
+--------------------------
 
-.. automodule:: plasmid.fileIO
+.. automodule:: plasmid.aligners.io
    :members:
    :undoc-members:
    :show-inheritance:

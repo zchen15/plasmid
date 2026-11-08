@@ -8,7 +8,6 @@ import pandas as pd
 # reading and writing genbank files
 import Bio
 import Bio.SeqUtils
-import spoa
 import parasail
 import mappy
 import sklearn
@@ -25,7 +24,7 @@ from .misc import translate
 from .misc import substring_search
 from .misc import isDNA
 from .misc import load_args
-from .genbank.fileIO import fileIO
+from . import io
 from .graphic import Graphic
 from .graphic import colormaps
 
@@ -50,18 +49,8 @@ class Aligner:
     params['bwa'] = {'config':'mem -a'}
     params['bowtie2'] = {'config':'-a --very-sensitive-local --threads 1 --quiet'}
     
-    params['spoa'] = {'algorithm':0,
-                    'genmsa':True,
-                    'm':5,
-                    'n':-4,
-                    'g':-8,
-                    'e':-6,
-                    'q':-10,
-                    'c':-4}
-
     params['work_dir'] = None
-    params['binaries'] = {'minimap':'minimap2',
-                'bwa':'bwa',
+    params['binaries'] = {'bwa':'bwa',
                 'bowtie2':'bowtie2',
                 'mmseqs2':'mmseqs',
                 'ngmerge':'./ngmerge'}
@@ -133,34 +122,6 @@ class Aligner:
                 x['ref_id'] = 'ref_'+str(j)
                 out.append(x)
         return pd.concat(out)
-    
-    def spoa(self, seq:list) -> dict:
-        '''
-        Runs multi-sequence alignment on provided sequences with spoa
-
-        Args:
-            seq: list of sequences
-        
-        Return:
-            A dictionary containing {'consensus':sequence,
-                                     'msa':[sequences]}
-        '''
-        algo = self.params['spoa']['algorithm']
-        genmsa = self.params['spoa']['genmsa']
-        m = self.params['spoa']['m']
-        n = self.params['spoa']['n']
-        g = self.params['spoa']['g']
-        e = self.params['spoa']['e']
-        q = self.params['spoa']['q']
-        c = self.params['spoa']['c']
-        
-        consensus, msa = spoa.poa(sequences=seq, genmsa=genmsa, algorithm=algo, m=m, n=n, g=g, e=e, q=q, c=c)
-        out = {'consensus':consensus,
-               'msa':msa,
-               'params':{}}
-        for k in self.params['spoa'].keys():
-            out['params'][k] = self.params['spoa'][k]
-        return out
     
     def format_msa(msa:list, width:int=100) -> str:
         '''
@@ -466,155 +427,6 @@ class Aligner:
         return df.iloc[idx[value].values].reset_index()
     
    
-    def minimap2_get_index(self, database, filename:str='index.mmi'):
-        '''
-        This is a wrapper for the minimap2 to build the fn_index. fn_index file is built in the temporary file directory
-        
-        Args:
-            database: database of sequences being search through database must be in pandas dataframe format with columns:
-            filename: custom filename of thefn_index
-
-        Returns:
-            A string containing the filename of the fn_index
-        '''
-        work_dir = self.params['work_dir']
-        if type(database) == str:
-            db_file = database
-        else:
-            db_file = work_dir.name + '/db'
-            db_file = fileIO.write_fastx(db_file, database)
-
-        # set the parameters
-        w = self.params['minimap']['w']
-        k = self.params['minimap']['k']
-        mm2bin = self.params['binaries']['minimap']
-        fn_index = work_dir.name + '/' + filename
-        
-        # execute the command
-        cmd = mm2bin +' -k '+str(k)+' -w '+str(w)+' -d '+fn_index+' '+db_file
-        subprocess.run(cmd.split(' '))
-        self.params['minimap']['index'] = fn_index
-        return fn_index
-    
-    def minimap2(self, query, query2=None, database=None) -> pd.core.frame.DataFrame:
-        '''
-        This is a wrapper for the minimap2 aligner. This aligner is better suited for long reads (>100bp) from nanopore sequencing
-
-        Args:
-            query: list of sequences to search for in database
-            query2: reverse pair of paired end read
-            database: database of sequences being search through
-
-        Notes:
-            query, query2 must be in pandas dataframe format with columns:
-            [name, sequence] or [name, sequence, quality]
- 
-            database must be in pandas dataframe format with columns:
-            [name, sequence] or [name, sequence, quality]
-            or a string containing the filename of the fn_index
-
-        Returns:
-            A pandas dataframe of alignment results from the paf file
-        '''
-        # Define locations of input and output files
-        work_dir = self.params['work_dir']
-        if type(query) == str:
-            query = fileIO.read_fastx(query)
-        query, qmap = Aligner.aligner_fix_name(query, col='name')
-        qfile = work_dir.name + '/' + 'read1'
-        qfile = fileIO.write_fastx(qfile, query)
-        
-        paired = False
-        if type(query2).__name__!='NoneType':
-            paired = True
-            if type(query2) == str:
-                query2 = fileIO.read_fastx(query2)
-
-            query2, qmap2 = Aligner.aligner_fix_name(query2, col='name')
-            mfile = work_dir.name + '/' + 'read2'
-            mfile = fileIO.write_fastx(mfile, query2)
-        
-        if type(database).__name__=='NoneType':
-            dbfile = self.params['minimap']['index']
-        elif type(database) == str:
-            dbfile = database
-        else:
-            database, dbmap = Aligner.aligner_fix_name(database, col='name')
-            dbfile = work_dir.name + '/' + 'database'
-            dbfile = fileIO.write_fastx(dbfile, database)
-        
-        outfile = work_dir.name+'/results.paf'
-        
-        # set the parameters
-        w = self.params['minimap']['w']
-        k = self.params['minimap']['k']
-        mm2bin = self.params['binaries']['minimap']
-        
-        config = self.params['minimap']['config']
-        if self.params['minimap']['cigar']: # adds flag to generate cigar string
-            config+= ' -c'
-        config+= ' -k '+str(k)
-        config+= ' -w '+str(w)
-
-        # Do paired end search if needed
-        if paired:
-            cmd = mm2bin+' '+config+' '+dbfile+' '+qfile+' '+mfile+' -o '+outfile
-        else:
-            cmd = mm2bin+' '+config+' '+dbfile+' '+qfile+' -o '+outfile
-        # call the aligner
-        subprocess.run(cmd.split(' '))
-        # extract the PAF file information
-        data = fileIO.parse_PAF(outfile)
-        # add spaces back to the sequences
-        data = Aligner.aligner_restore_name(data, qmap, col='query_id')
-        if query2!=None:
-            data = Aligner.aligner_restore_name(data, qmap2, col='query_id')
-        if type(database).__name__=='DataFrame':
-            data = Aligner.aligner_restore_name(data, dbmap, col='database_id')
-
-        # Format the fields to integer
-        cols = ['q_len','q_start','q_end','t_len','t_start','t_end',
-                'match','tot','mapq','cm','s1','s2','NM','AS','ms','nn','rl']
-        for i in cols:
-            data[i] = data[i].astype(int)
-        data['match_score'] = data['match']/data['tot']*1.0 # compute blast like score
-
-        # compute similarity
-        data = Aligner.get_similarity(data)
-        
-        return data
-
-    def aligner_fix_name(df, col:str) -> dict:
-        '''
-        Removes spacing in the names that causes minimap2 to truncate read ids
-        
-        Args:
-            df: dataframe with column containing the old id
-            col: column with in the old id
-        
-        Returns:
-            a dictionary mapping dataframe to id and another dictionary mapping id to dataframe
-        '''
-        out = df.copy()
-        revmap = {str(i)+'_'+out.iloc[i][col].replace(' ','_'):out.iloc[i][col] for i in range(0,len(df))}
-        out[col] = list(revmap.keys())
-        return out, revmap
-
-    def aligner_restore_name(df, revmap:dict, col:str) -> pd.core.frame.DataFrame:
-        '''
-        Restore spaces in the names
-
-        Args:
-            df: dataframe with column containing the new id
-            revmap: dictionary containing mapping of new id to old id
-            col: column name containing the id restore
-
-        Returns:
-            A dataframe with restored names
-        '''
-        df[col] = [revmap[df.iloc[i][col]] for i in range(0,len(df))]
-        return df
-
     def get_similarity(data):
         '''
         Add similarity metric to output dataframe from aligner
@@ -653,7 +465,7 @@ class Aligner:
             dbfile = database
         else:
             dbfile = work_dir.name + '/db'
-            dbfile = fileIO.write_fastx(dbfile, database)
+            dbfile = io.write_fastx(dbfile, database)
         cmd = bwa+' index '+dbfile
         subprocess.run(cmd.split(' '))
         self.params['bwa']['index'] = dbfile
@@ -685,7 +497,7 @@ class Aligner:
             qfile = query
         else:
             qfile = work_dir.name + '/' + 'read1'
-            qfile = fileIO.write_fastx(qfile, query)
+            qfile = io.write_fastx(qfile, query)
         
         paired = False
         if type(query2).__name__!='NoneType':
@@ -694,7 +506,7 @@ class Aligner:
                 mfile = query2
             else:
                 mfile = work_dir.name + '/' + 'read2'
-                mfile = fileIO.write_fastx(mfile, query2)
+                mfile = io.write_fastx(mfile, query2)
         
         if type(database).__name__!='NoneType':
             self.bwa_get_index(database)
@@ -711,7 +523,7 @@ class Aligner:
         subprocess.run(cmd.split(' '))
         
         # extract the SAM file information
-        data = fileIO.parse_SAM(outfile)
+        data = io.parse_SAM(outfile)
         data = Aligner.bwa_format_SAM(query, query2, database, data)
         return data
 
@@ -734,11 +546,11 @@ class Aligner:
             paired = True
         
         if type(query)==str:
-            query = fileIO.read_fastx(query)
+            query = io.read_fastx(query)
         if type(query2)==str:
-            query2 = fileIO.read_fastx(query2)
+            query2 = io.read_fastx(query2)
         if type(database)==str:
-            database = fileIO.read_fastx(database)
+            database = io.read_fastx(database)
         
         # add q_len and t_len info
         q_len = np.transpose([query['name'].values, [len(i) for i in query['sequence']]])
@@ -785,14 +597,14 @@ class Aligner:
         # write input files
         if type(database) == str:
             if '.fq' in database or '.fastq' in database:
-                database = fileIO.read_fastq(database)
+                database = io.read_fastq(database)
                 dbfile = work_dir.name + '/db'
-                fileIO.write_fasta(dbfile, database)
+                io.write_fasta(dbfile, database)
             else:
                 dbfile = database
         else:
             dbfile = work_dir.name + '/db'
-            fileIO.write_fasta(dbfile, database)
+            io.write_fasta(dbfile, database)
 
         btfile = work_dir.name+'/'+filename
         # bowtie2 only builds indexes against fasta files
@@ -828,7 +640,7 @@ class Aligner:
             qfile = query
         else:
             qfile = work_dir.name + '/' + 'read1'
-            qfile = fileIO.write_fastx(qfile, query)
+            qfile = io.write_fastx(qfile, query)
         
         paired = False
         if type(query2).__name__!='NoneType':
@@ -837,7 +649,7 @@ class Aligner:
                 mfile = query2
             else:
                 mfile = work_dir.name + '/' + 'read2'
-                mfile = fileIO.write_fastx(mfile, query2)
+                mfile = io.write_fastx(mfile, query2)
         
         if type(database).__name__!='NoneType':
             self.bowtie2_get_index(database)
@@ -857,7 +669,7 @@ class Aligner:
         subprocess.run(cmd.split(' '))
         
         # extract the SAM file information
-        data = fileIO.parse_SAM(outfile)
+        data = io.parse_SAM(outfile)
         data = Aligner.bwa_format_SAM(query, query2, database, data)
         return data
 
@@ -965,7 +777,7 @@ class Aligner:
             qfile = query
         else:
             qfile = work_dir.name + '/' + 'query'
-            qfile = fileIO.write_fastx(qfile, query)
+            qfile = io.write_fastx(qfile, query)
         
         # run clustering
         cmd = mmseq +' '+config+' '+qfile+' '+ofile+' '+work_dir.name

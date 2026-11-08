@@ -19,7 +19,7 @@ import subprocess
 from .misc import read_to_df
 from .misc import revcomp
 from .misc import load_args
-from .genbank.fileIO import fileIO
+from . import io
 from ..aligners.aligner import Aligner
 
 class Clust(Aligner):
