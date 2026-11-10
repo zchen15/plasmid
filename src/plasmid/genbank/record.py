@@ -18,6 +18,7 @@ from typing import Any, Optional, Union
 
 # location helpers (all wrap-aware)
 from .locations import Location, SeqFeatureLocation_to_Location
+from .terminal import Viewer
 
 # sequence search helpers
 from .search import (
@@ -626,7 +627,6 @@ class Record:
         Print out colored representation of Plasmid
         width = number of characters per line
         '''
-        from .terminal import Viewer
         rec = Viewer(self)
         out = rec.colorize(width=width)
         return out

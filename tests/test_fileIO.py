@@ -26,7 +26,7 @@ def test_read_fasta():
 def test_read_fastx():
     # Read a fasta
     fname = 'data/mRNA.fa'
-    x = io.read_fastx(fname)
+    x = io.read_fasta(fname)
     assert type(x).__name__ == 'DataFrame'
     col = ['name','sequence']
     for c in col:
@@ -34,7 +34,7 @@ def test_read_fastx():
 
     # Read a fastq file
     fname = 'data/coi.fq.bz2'
-    x = io.read_fastx(fname)
+    x = io.read_fastq(fname)
     assert type(x).__name__ == 'DataFrame'
     col = ['name','sequence','quality']
     for c in col:

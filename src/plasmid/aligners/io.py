@@ -11,14 +11,26 @@ import gzip
 import Bio
 import Bio.SeqIO
 
-# BAM file parsing
-import pysam
-
 # system and time
 import os
 import re
 import sys
 import logging
+import multiprocessing
+
+
+def revcomp(seq: str) -> str:
+    '''
+    Get the reverse complement of a sequence.
+
+    Args:
+        seq: sequence string.
+
+    Returns:
+        Reverse complement of the sequence.
+    '''
+    seq = str(seq).upper()
+    return seq[::-1].translate(str.maketrans('ACGT', 'TGCA'))
 
 
 def decompress(fname):
@@ -49,64 +61,6 @@ def compress(fname):
         return gzip.open(fname, mode='wt')
     else:
         return open(fname, 'w')
-
-
-def add_seq(df):
-    '''
-    Adds sequence and quality information back to dataframe
-    df = dataframe containing at least the columns:
-        [filename, id, seek1, rlen] for fasta files
-        [filename, id, seek1, seek2, rlen] for fastq files
-    return dataframe with columns [id, sequence, quality] or [id, sequence]
-    to do testing
-    '''
-    # if data is already there, dont do anything
-    if 'sequence' in df.keys():
-        return df
-    # check if relevant columns are there
-    cols = ['filename', 'name', 'seek1', 'rlen']
-    for c in cols:
-        if (c in df.keys()) == False:
-            logging.warning('columns '+c+' not found in dataframe')
-            return df
-    # sort and iterate
-    df = df.sort_values(by=['filename', 'seek1']).copy()
-    data = []
-    if 'seek2' in df.keys():
-        # work on fastq
-        x = df[['filename', 'name', 'seek1', 'seek2', 'rlen']].values
-        files = np.unique(x[:, 0])
-        for fname in files:
-            y = x[x[:, 0] == fname]
-            # decompress file if needed
-            with decompress(fname) as f:
-                for i in range(0, len(y)):
-                    f.seek(y[i, 2])
-                    seq = f.read(y[i, 4])
-                    f.seek(y[i, 3])
-                    q = f.read(y[i, 4])
-                    data.append([seq, q])
-        df['sequence'] = [i[0] for i in data]
-        df['quality'] = [i[1] for i in data]
-        cols = ['seek1', 'seek2', 'rlen', 'filename']
-        df = df.drop(columns=cols)
-    else:
-        # work on fasta
-        x = df[['filename', 'name', 'seek1', 'rlen']].values
-        files = np.unique(x[:, 0])
-        for fname in files:
-            y = x[x[:, 0] == fname]
-            # decompress the file
-            with decompress(fname) as f:
-                for i in range(0, len(y)):
-                    f.seek(y[i, 2])
-                    seq = f.read(y[i, 3])
-                    seq = seq.replace('\n', '')
-                    data.append(seq)
-        df['sequence'] = data
-        cols = ['seek1', 'rlen', 'filename']
-        df = df.drop(columns=cols)
-    return df
 
 
 def write_fastq(fname, data):
@@ -188,372 +142,384 @@ def write_fasta(fname, data):
             f.write(text)
 
 
-def read_fastx(fname):
+def get_best(df, col: list, value: str = "score", opt: str = "idxmax") -> pd.DataFrame:
     '''
-    Reads data from fasta or fastq
-    returns filename
-    '''
-    # write data to fastq file
-    try:
-        return read_fastq(fname)
-    except Exception:
-        logging.info('failed to read '+str(fname)+' as fastq')
-
-    try:
-        return read_fasta(fname)
-    except Exception:
-        logging.info('failed to read '+str(fname)+' as fasta')
-    # throws an error to do
-    sys.exit(1)
-
-
-def write_fastx(prefix, data):
-    '''
-    Writes data to fasta or fastq
-    returns filename
-    '''
-    # write data to fastq file
-    try:
-        fname = prefix+'.fq'
-        write_fastq(fname, data)
-        return fname
-    except Exception:
-        logging.info('failed to write fastq')
-
-    # write data to fasta file
-    try:
-        fname = prefix+'.fa'
-        write_fasta(fname, data)
-        return fname
-    except Exception:
-        logging.info('failed to write fasta')
-
-    # throws an error to do
-    sys.exit(1)
-
-
-def parse_SAM(fname):
-    '''
-    This function parses the information from a SAM file and returns a dataframe
-    fname = filename of .sam file
-    returns dataframe with columns
-    ['query_id','database_id','orientation','flag','t_start','t_end',
-    'mapq','CIGAR','AS','XS','XN','XM','XO','XG','NM']
-    '''
-    fsize = os.path.getsize(fname)
-    record = False
-    col1 = ['query_id', 'database_id', 'orientation', 'flag', 't_start', 't_end', 'mapq', 'CIGAR']
-    col2 = ['AS', 'XS', 'XN', 'XM', 'XO', 'XG', 'NM']
-    key = {col2[i]: i for i in range(0, len(col2))}
-    data = []
-    with open(fname, 'r') as f:
-        while fsize > f.tell():
-            text = f.readline()
-            # dont record anything until we read past the header
-            if ~record and text[:3] == '@PG':
-                record = True
-                text = f.readline()
-            # start recording data
-            if record:
-                out, info = get_SAM_info(text, key)
-                if out[3][-2] == '1':
-                    text = f.readline()
-                    out2, info2 = get_SAM_info(text, key)
-                    out[0] += ' '+out2[0]
-                    out[7] += ' '+out2[7]
-                    info = info+info2
-                data.append(out+[j for j in info])
-    return pd.DataFrame(data, columns=col1+col2)
-
-
-def get_SAM_info(read, key):
-    '''
-    Function to parse useful info from a line of the SAM file
-    read = each line of sam file
-    key = columns of data to look for
-    '''
-    read = read.split('\t')
-    qname = read[0]
-    flag = '{0:10b}'.format(int(read[1]))  # decode the sam flag via binary to see if reverse complement is aligned
-    rname = read[2]
-    if flag[-5] == '1':
-        orientation = '-'
-        pos2 = int(read[3])
-        pos1 = pos2 + int(read[8])
-    else:
-        orientation = '+'
-        pos1 = int(read[3])
-        pos2 = pos1 + int(read[8])
-    mapq = int(read[4])
-    cigar = read[5]
-    # get another sam info
-    info = np.array([0]*len(key))
-    if rname != '*':
-        for i in range(11, len(read)):
-            x = read[i].split(':')  # parse it backwards
-            if x[0] in key.keys():
-                info[key[x[0]]] = x[-1]
-    data = [qname, rname, orientation, flag, pos1, pos2, mapq, cigar]
-    return data, info
-
-
-def read_PAF(fname):
-    '''
-    Read a minimap2 PAF file.
+    Get idxmax or idxmin over a set of groups
 
     Args:
-        fname: PAF filename.
+        col: column to group by
+        value: column to sort
+        opt: statistic to compute such as idxmax
 
     Returns:
-        A pandas dataframe of alignment results.
+        A pandas DataFrame of filtered values
     '''
-    col1 = ['query_id', 'q_len', 'q_start', 'q_end', 'orientation',
-            'database_id', 't_len', 't_start', 't_end', 'match', 'tot', 'mapq']
-    col2 = ['tp', 'cm', 's1', 's2', 'NM', 'AS', 'ms', 'nn', 'rl', 'cg']
-    key = {col2[i]: i for i in range(len(col2))}
+    df = df.reset_index(drop=True)
+    idx = df.groupby(by=col).agg({value: opt}).reset_index()
+    return df.iloc[idx[value].values].reset_index()
+
+
+def remove_overlapping_reads_N(df, metric: str = "AS", thresh: float = 0.1, N: int = 2) -> pd.DataFrame:
+    '''
+    Remove overlapping alignments for each concatemeric read
+
+    Args:
+        df: pandas dataframe of read alignments
+        metric: metric to use for sorting
+        thresh: threshold overlap allowed between adjacent alignments
+        N: number of N overlaps
+
+    Returns:
+        A pandas dataframe of filtered reads
+    '''
+    # sort and remove overlapping reads
+    cols = ["q_id", metric, "q_start"]
+    df = df.sort_values(by=cols, ascending=False).reset_index(drop=True)
+    q_start = df["q_start"].values
+    q_end = df["q_end"].values
+    match = df["match"].values
+
+    keep = np.array([True]*len(df))
+    for i in range(N):
+        for j in range(i+1,N):
+            minL = np.min([match[i::N], match[j::N]], axis=0)
+            c1 = q_end[i::N] < (q_start[j::N] + thresh*minL)
+            c2 = q_end[j::N] < (q_start[i::N] + thresh*minL)
+            c = c1 | c2 | ~keep[i::N]
+            keep[j::N] &= c
+    return df[keep]
+
+
+def remove_overlapping_reads(df, metric: str = "AS", thresh: float = 0.1) -> pd.DataFrame:
+    '''
+    Remove overlapping alignments for each concatemeric read
+
+    Args:
+        df: pandas dataframe from read_SAM or read_PAF
+        metric: metric to use for sorting
+        thresh: threshold overlap allowed between adjacent alignments
+
+    Returns:
+        A pandas dataframe of filtered reads
+    '''
+    # work on things with only one alignment
+    x = df.groupby(by=["q_id"]).agg({"q_id":"count"})
+    out = []
+    for N in np.unique(x["q_id"]):
+        c = df["q_id"].isin(x[x["q_id"]==N].index)
+        if N == 1:
+            y = df[c]
+        else:
+            y = remove_overlapping_reads_N(df[c], metric, thresh, int(N))
+        out.append(y)
+    # return results
+    df = pd.concat(out)
+    return df
+
+
+def get_indel_list(df, key: str = "([0-9]*)([DIM=SX])"):
+    '''
+    Add indel info to each read
+
+    Args:
+        df: pandas dataframe of alignment information
+        key: cigar string keys
+
+    Returns:
+        pandas dataframe
+    '''
+    # iterate and get start and end positions of mutations
+    out = []
+    for cigar in df["CIGAR"].drop_duplicates().values:
+        x = cigar_decode(cigar, key)
+        cols = ["cg_len", "cg_value"]
+        x = pd.DataFrame(x, columns=cols)
+        x["cg_step"] = x["cg_len"]
+        c = x["cg_value"] == "I"
+        x.loc[c, "cg_step"] = 0
+        x["cg_start"] = np.cumsum(x["cg_step"]) - x["cg_step"]
+        x.loc[c, "cg_step"] = 1
+        x["cg_end"] = x["cg_start"] + x["cg_step"]
+        x["CIGAR"] = cigar
+        out.append(x)
+    df_mut = pd.concat(out)
+
+    # merge info
+    df = df.merge(df_mut, on="CIGAR", how="left")
+    df["cg_start"] += df["t_start"]
+    df["cg_end"] += df["t_start"]
+
+    # correct for circular alignments
+    df["cg_start"] = df["cg_start"] % df["t_len"]
+    df["cg_end"] = df["cg_end"] % df["t_len"]
+    c = df["cg_end"] == 0
+    df.loc[c, "cg_end"] = df.loc[c, "t_len"]
+
+    # break around origin and merge
+    c = df["cg_end"] < df["cg_start"]
+    df1 = df[c].copy()
+    df2 = df[c].copy()
+    df1["cg_start"] = 0
+    df2["cg_end"] = df2["t_len"]
+    df = pd.concat([df[~c], df1, df2])
+    return df
+
+
+def get_indel_hist(df, wcol: str):
+    '''
+    Get indel array for plotting
+
+    Args:
+        df: pandas dataframe of alignment info
+        wcol: weights column for each alignment
+
+    Returns:
+        pandas dataframe
+    '''
+    cols = ["cg_start", "cg_end", "cg_value", wcol]
+    df = df.groupby(by=cols[:-1]).agg({wcol: "sum"}).reset_index()
+
+    # get position bounds
+    t_start = int(np.min(df["cg_start"]))
+    t_end = int(np.max(df["cg_end"]))
+    x = np.zeros([t_end - t_start, 5])
+    x[:, 0] = t_start + np.arange(len(x))
+
+    # sum over positions
+    mut_dict = {"M": 4, "=": 4, "X": 3, "D": 2, "I": 1}
+    for s1, s2, mut, w in df[cols].values:
+        c = x[:, 0] >= s1
+        c &= x[:, 0] < s2
+        x[c, mut_dict[mut]] += w
+
+    # format results into a dataframe
+    cols = ["position", "insertion", "deletion", "mismatch", "match"]
+    df = pd.DataFrame(x, columns=cols)
+    return df
+
+
+def get_count(df, idx: int, block_size: int, wcol: str, key: str):
+    '''
+    Calls get_indel_list and get_indel_hist for multiprocessing
+
+    Args:
+        df: pandas dataframe of alignment info
+        idx: index of the dataframe block
+        block_size: size of the dataframe block
+        wcol: weights column for each alignment
+        key: cigar string keys
+
+    Returns:
+        pandas dataframe
+    '''
+    if idx % 100 == 0:
+        logging.info(f"processing {idx}/{block_size}")
+    df = get_indel_list(df, key)
+    df = get_indel_hist(df, wcol)
+    if idx % 100 == 0:
+        logging.info(f"finished {idx}/{block_size}")
+    return df
+
+
+def get_indel_freq(data, wcol: str = "weights", key: str = "([0-9]*)([DIM=SX])", block_size: int = 10000, threads: int = 4):
+    '''
+    Get indel frequency array for plotting
+
+    Args:
+        data: pandas dataframe of alignment info
+        wcol: weights column for each alignment
+        key: key used to decode the cigar string. Default="([0-9]*)([DIM=SX])"
+        threads: number of parallel threads to run
+
+    Returns:
+        pandas dataframe
+    '''
+    df = data.copy()
+    df = df.sort_values(by=["t_id", "t_start", "q_id", "q_start"]).reset_index(drop=True)
 
     out = []
-    with decompress(fname) as f:
-        for line in f:
-            line = line.rstrip('\n')
-            if len(line) == 0 or line[0] == '#':
-                continue
-            fields = line.split('\t')
-            if len(fields) < len(col1):
-                continue
-            info = [0]*len(col2)
-            for field in fields[len(col1):]:
-                x = field.split(':', 2)
-                if len(x) == 3 and x[0] in key:
-                    info[key[x[0]]] = x[2]
-            out.append(fields[:len(col1)]+info)
+    for t_id in df["t_id"].drop_duplicates().values:
+        logging.info(f"processing {t_id}")
 
-    data = pd.DataFrame(out, columns=col1+col2)
-    data = data.rename(columns={'cg': 'CIGAR'})
-    if 'CIGAR' in data.columns:
-        data['CIGAR'] = [str(i).replace('\n', '') for i in data['CIGAR']]
-    return format_alignment(data)
+        # prepare data for parallel processing
+        c = df["t_id"] == t_id
+        x = df[c].copy()
+        L = max(int(len(x) / block_size), 1)
+        chunk = np.array_split(x, L)
+        data_chunks = [[chunk[i], i, len(chunk), wcol, key] for i in range(len(chunk))]
+
+        # process data in parallel using Pool
+        logging.info(f"Processing {len(data_chunks)} datasets using {threads} threads")
+        with multiprocessing.Pool(processes=threads) as pool:
+            results = pool.starmap(get_count, data_chunks)
+
+        # aggregate results
+        results = pd.concat(results)
+        cols = ["insertion", "deletion", "mismatch", "match"]
+        stats = {k: "sum" for k in cols}
+        results = results.groupby(["position"]).agg(stats).reset_index()
+        results["t_id"] = t_id
+
+        # compute indel frequency
+        results["total_reads"] = 0
+        cols = ["insertion", "deletion", "mismatch", "match"]
+        for k in cols:
+            results["total_reads"] += results[k]
+        for k in cols:
+            results[k + "_freq"] = results[k] / results["total_reads"]
+        out.append(results)
+
+    # aggregate final results
+    df = pd.concat(out)
+    return df
 
 
-# backwards-compatible alias
-read_paf = read_PAF
-
-
-def read_SAM(fname, mode='r'):
+def cigar_decode(cigar: str, key: str = '([0-9]*)([DIM=SX])') -> list:
     '''
-    Read a SAM or BAM file.
+    Decode cigar strings into counts of indels and mismatches
 
     Args:
-        fname: SAM or BAM filename.
-        mode: 'r' for SAM or 'rb' for BAM. BAM files are detected by
-            filename when mode is 'r'.
+        cigar: cigar string
+        key: key used to decrypt the cigar string
 
     Returns:
-        A pandas dataframe of alignment results.
-
-    Notes:
-        Reading BAM files requires pysam. For SAM input the reference
-        length (t_len) is the aligned reference span, since a SAM record
-        does not contain the full reference length.
+        list containing [[key value, counts],...]
     '''
-    if mode == 'rb' or str(fname).lower().endswith('.bam'):
-        return read_BAM(fname)
-
-    col1 = ['query_id', 'q_len', 'q_start', 'q_end', 'orientation',
-            'database_id', 't_len', 't_start', 't_end', 'CIGAR', 'mapq']
-    col2 = ['NM', 'ms', 'AS', 'nn', 'tp', 'cm', 's1', 's2', 'de', 'rl']
-    key = {col2[i]: i for i in range(len(col2))}
-
-    out = []
-    with decompress(fname) as f:
-        for line in f:
-            if line[0] == '@':
-                continue
-            fields = line.rstrip('\n').split('\t')
-            if len(fields) < 11 or fields[2] == '*':
-                continue
-            qname = fields[0]
-            flag = int(fields[1])
-            rname = fields[2]
-            pos = int(fields[3])
-            mapq = int(fields[4])
-            cigar = fields[5]
-            seq = fields[9]
-            q_len = len(seq) if seq != '*' else 0
-            q_start, q_end = cigar_query_bounds(cigar, q_len)
-            t_start = max(pos-1, 0)
-            t_len = cigar_ref_span(cigar)
-            t_end = t_start+t_len
-            orientation = '-' if flag & 16 else '+'
-
-            info = [0]*len(col2)
-            for field in fields[11:]:
-                x = field.split(':', 2)
-                if len(x) == 3 and x[0] in key:
-                    info[key[x[0]]] = x[2]
-            out.append([qname, q_len, q_start, q_end, orientation,
-                        rname, t_len, t_start, t_end, cigar, mapq]+info)
-
-    data = pd.DataFrame(out, columns=col1+col2)
-    data = add_match_stats(data)
-    return format_alignment(data)
+    pattern = re.compile(key)
+    return [[int(i), j] for i, j in pattern.findall(cigar)]
 
 
-def read_BAM(fname):
+def cigar_to_stats(cig: str, qseq: str, rseq: str) -> list:
     '''
-    Read a BAM file with pysam.
+    Get alignment statistics associated with parasail output
 
     Args:
-        fname: BAM filename.
+        cig: cigar string
+        qseq: query sequence
+        rseq: reference sequence
 
     Returns:
-        A pandas dataframe of alignment results.
+        list with columns [q_len, q_start, q_end, t_len, t_start, t_end, M, Xm, indel]
     '''
-    col1 = ['query_id', 'q_len', 'q_start', 'q_end', 'orientation',
-            'database_id', 't_len', 't_start', 't_end', 'CIGAR', 'mapq']
-    col2 = ['NM', 'ms', 'AS', 'nn', 'tp', 'cm', 's1', 's2', 'de', 'rl']
+    cig = cigar_decode(cig)
 
-    out = []
-    samfile = pysam.AlignmentFile(str(fname), 'rb', check_sq=False)
-    try:
-        for read in samfile:
-            if read.reference_name is None:
-                continue
-            tags = dict(read.tags)
-            q_len = read.infer_read_length()
-            if q_len is None:
-                q_len = read.query_length if read.query_length is not None else 0
-            t_start = read.reference_start
-            t_end = read.reference_end
-            if t_end is None:
-                t_end = t_start
-            t_len = read.reference_length
-            if t_len is None:
-                t_len = t_end-t_start
-            out.append([read.qname, q_len, read.qstart, read.qend,
-                        '+' if read.is_forward else '-',
-                        read.reference_name, t_len, t_start, t_end,
-                        read.cigarstring if read.cigarstring is not None else '',
-                        read.mapq]+[tags.get(i, 0) for i in col2])
-    finally:
-        samfile.close()
-
-    data = pd.DataFrame(out, columns=col1+col2)
-    data = add_match_stats(data)
-    return format_alignment(data)
-
-
-def add_match_stats(data):
-    '''
-    Add match and tot columns to a SAM derived alignment dataframe.
-
-    Args:
-        data: dataframe with columns [q_start, q_end, NM].
-
-    Returns:
-        A dataframe with columns [tot, match] added.
-    '''
-    if len(data) == 0:
-        data['tot'] = pd.Series(dtype=int)
-        data['match'] = pd.Series(dtype=int)
-        return data
-    nm = pd.to_numeric(data['NM'], errors='coerce').fillna(0).astype(int)
-    q_start = pd.to_numeric(data['q_start'], errors='coerce').fillna(0).astype(int)
-    q_end = pd.to_numeric(data['q_end'], errors='coerce').fillna(0).astype(int)
-    data['tot'] = q_end-q_start
-    data['match'] = data['tot']-nm
-    return data
-
-
-def cigar_query_bounds(cigar, q_len):
-    '''
-    Compute the aligned query start and end from a CIGAR string.
-
-    Args:
-        cigar: CIGAR string.
-        q_len: query length.
-
-    Returns:
-        list containing [q_start, q_end].
-    '''
-    ops = re.findall('([0-9]+)([MIDNSHP=X])', cigar)
+    # compute match boundaries
     q_start = 0
-    q_end = q_len
-    if len(ops) > 0 and ops[0][1] == 'S':
-        q_start = int(ops[0][0])
-    if len(ops) > 0 and ops[-1][1] == 'S':
-        q_end = q_len-int(ops[-1][0])
-    return [q_start, q_end]
+    q_end = len(qseq)
+    q_len = len(qseq)
+    t_start = 0
+    t_end = len(rseq)
+    t_len = len(rseq)
+    if cig[0][1] == 'I':
+        t_start = cig[0][0]
+    elif cig[0][1] == 'D':
+        q_start = cig[0][0]
+    if cig[-1][1] == 'I':
+        t_end -= cig[-1][0]
+    elif cig[-1][1] == 'D':
+        q_end -= cig[-1][0]
+
+    x = np.array([cig[i][0] for i in range(len(cig))])
+    y = np.array([cig[i][1] for i in range(len(cig))])
+
+    # get number of matches
+    M = np.sum(x[y == '='])
+    M += np.sum(x[y == 'M'])
+
+    # get number of mismatches
+    Xm = np.sum(x[y == 'X'])
+
+    # get indel count
+    indel = np.sum(x[y == 'I'])
+    indel += np.sum(x[y == 'D'])
+    return [q_len, q_start, q_end, t_len, t_start, t_end, M, Xm, indel]
 
 
-def cigar_ref_span(cigar):
+def cigar_to_alignment(query: str, ref: str, cigar: str) -> list:
     '''
-    Compute the reference span of a CIGAR string.
+    Function to align query and reference strings based on CIGAR string
 
     Args:
-        cigar: CIGAR string.
+        query: query sequence. This must be relative to how it was used in aligner
+        ref: reference sequence
+        cigar: CIGAR string from aligner
 
     Returns:
-        Number of reference bases spanned by the alignment.
+        list with values [aligned query, aligned reference, alignment ticks]
     '''
-    ops = re.findall('([0-9]+)([MIDNSHP=X])', cigar)
-    span = 0
-    for n, op in ops:
-        if op in 'MDN=X':
-            span += int(n)
-    return span
+    pattern = re.compile('([0-9]*)([DIMSX])')
+    query = query.upper()
+    ref = ref.upper()
+    q_aligned = ''
+    ref_aligned = ''
+    align = ''
+    i1 = 0
+    i2 = 0
+    for n, c in pattern.findall(cigar):
+        span = int(n)
+        if c == 'M':
+            q_aligned += query[i1:i1 + span]
+            ref_aligned += ref[i2:i2 + span]
+            align += ''.join(['|'] * span)
+            i1 += span
+            i2 += span
+        elif c == 'X':
+            q_aligned += query[i1:i1 + span]
+            ref_aligned += ref[i2:i2 + span]
+            align += ''.join([' '] * span)
+            i1 += span
+            i2 += span
+        elif c == 'S' or c == 'H':
+            q_aligned += query[i1:i1 + span].lower()
+            ref_aligned += ref[i2:i2 + span]
+            align += ''.join([' '] * span)
+            i1 += span
+            i2 += span
+        elif c == 'I':
+            q_aligned += query[i1:i1 + span]
+            ref_aligned += ''.join(['-'] * span)
+            align += ''.join([' '] * span)
+            i1 += span
+        elif c == 'D':
+            q_aligned += ''.join(['-'] * span)
+            ref_aligned += ref[i2:i2 + span]
+            align += ''.join([' '] * span)
+            i2 += span
+    return [q_aligned, ref_aligned, align]
 
 
-def format_alignment(data):
+def get_fastq_statistics(query: pd.DataFrame) -> pd.DataFrame:
     '''
-    Format numeric columns and add match_score and similarity metrics.
+    Compute quality statistics about each read
 
     Args:
-        data: dataframe of alignment results.
+        query: dataframe with columns [quality]
 
     Returns:
-        A formatted dataframe.
+        original dataframe with ['Q_min','Q_lower','Q_median','Q_upper','Q_max'] appended
     '''
-    int_cols = ['q_len', 'q_start', 'q_end', 't_len', 't_start', 't_end',
-                'match', 'tot', 'mapq', 'cm', 's1', 's2', 'NM', 'AS',
-                'ms', 'nn', 'rl']
-    for c in int_cols:
-        if c in data.columns:
-            data[c] = pd.to_numeric(data[c], errors='coerce').fillna(0).astype(int)
-    if 'de' in data.columns:
-        data['de'] = pd.to_numeric(data['de'], errors='coerce').fillna(0.0).astype(float)
+    out = []
+    for v in query['quality'].values:
+        v = phred_to_int(v)
+        q = [0, 0.25, 0.5, 0.75, 1]
+        y = np.quantile(v, q)
+        out.append(y)
 
-    if 'match' in data.columns and 'tot' in data.columns:
-        tot = pd.to_numeric(data['tot'], errors='coerce').replace(0, np.nan)
-        data['match_score'] = (pd.to_numeric(data['match'], errors='coerce')/tot).fillna(0.0)
-    elif 'match_score' not in data.columns:
-        data['match_score'] = pd.Series(dtype=float)
-
-    if all(i in data.columns for i in ['q_len', 't_len', 'NM']):
-        data = get_similarity(data)
-    elif 'similarity' not in data.columns:
-        data['similarity'] = pd.Series(dtype=float)
-    return data
+    col = ['Q_min', 'Q_lower', 'Q_median', 'Q_upper', 'Q_max']
+    df = pd.DataFrame(out, columns=col)
+    for c in col:
+        query[c] = df[c]
+    return query
 
 
-def get_similarity(data):
+def phred_to_int(x) -> list:
     '''
-    Add a similarity metric to an alignment dataframe.
+    Translate phred ASCII to quality integers
 
     Args:
-        data: dataframe with columns [NM, q_len, t_len].
+        x: quality strings
 
     Returns:
-        A dataframe with similarity added to the columns.
+        list of integers
     '''
-    if len(data) == 0:
-        data['similarity'] = pd.Series(dtype=float)
-        return data
-    q_len = pd.to_numeric(data['q_len'], errors='coerce').fillna(0).values
-    t_len = pd.to_numeric(data['t_len'], errors='coerce').fillna(0).values
-    nm = pd.to_numeric(data['NM'], errors='coerce').fillna(0).values
-    v1 = np.min([q_len, t_len], axis=0)
-    v1 = np.where(v1 == 0, 1, v1)
-    data['similarity'] = 1-nm/v1
-    data.loc[data['similarity'] < 0, 'similarity'] = 0
-    return data
+    return [ord(i) - 33 for i in x]

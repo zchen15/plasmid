@@ -2,7 +2,7 @@
 # Main function to execute commandline utilities
 
 # local libraries
-from .aligners.aligner import Aligner
+from .aligners.parasail import Aligner
 from .pcr.oligos import Oligos
 
 # system and time

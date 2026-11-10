@@ -20,7 +20,7 @@ from .misc import read_to_df
 from .misc import revcomp
 from .misc import load_args
 from . import io
-from ..aligners.aligner import Aligner
+from ..aligners.parasail import Aligner
 
 class Clust(Aligner):
     """

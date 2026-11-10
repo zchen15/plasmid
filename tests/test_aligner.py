@@ -126,7 +126,7 @@ def test_get_fastq_statistics():
     f1 = 'data/coi.fq.bz2'
     f1 = io.read_fastq(f1)
     f1 = f1.iloc[:10]
-    x = plasmid.Aligner.get_fastq_statistics(f1)
+    x = io.get_fastq_statistics(f1)
     col = ['Q_min','Q_lower','Q_median','Q_upper','Q_max']
     for c in col:
         assert (c in x.columns)

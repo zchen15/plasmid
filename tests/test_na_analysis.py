@@ -7,7 +7,7 @@ and the matrix conversion utilities without using pytest fixtures.
 """
 
 import numpy as np
-from plasmid.pcr.analysis import NucleicAcidAnalyzer, _analyze_single_sequence
+from plasmid.pcr.analysis import NucleicAcidAnalyzer, analyze_sequences
 
 # ==============================================================================
 # Test Data
@@ -25,7 +25,7 @@ SEQ_DNA = "ATCGATCGATCGATCG"
 
 def test_basic_rna_fold():
     """Tests basic RNA folding, ensuring MFE is negative and structure length matches."""
-    res = _analyze_single_sequence(SEQ_RNA_SIMPLE, 37.0, False, 0.01, True)
+    res = analyze_sequences([SEQ_RNA_SIMPLE], 37.0, False, 0.01, True)[0]
     
     assert res['sequence'] == SEQ_RNA_SIMPLE
     assert res['length'] == len(SEQ_RNA_SIMPLE)
@@ -37,7 +37,7 @@ def test_basic_rna_fold():
 
 def test_dna_mode():
     """Tests that DNA mode runs without error and produces valid output."""
-    res = _analyze_single_sequence(SEQ_DNA, 37.0, True, 0.01, True)
+    res = analyze_sequences([SEQ_DNA], 37.0, True, 0.01, True)[0]
     
     assert res['sequence'] == SEQ_DNA
     assert res['dG_mfe'] < 0.0  # DNA should also fold
@@ -45,7 +45,7 @@ def test_dna_mode():
 
 def test_compute_probs_false():
     """Tests that skipping probabilities results in None dG_pf and empty pairs."""
-    res = _analyze_single_sequence(SEQ_RNA_SIMPLE, 37.0, False, 0.01, False)
+    res = analyze_sequences([SEQ_RNA_SIMPLE], 37.0, False, 0.01, False)[0]
     
     assert res['dG_pf'] is None
     assert res['pair_probabilities'] == []
@@ -56,9 +56,9 @@ def test_compute_probs_false():
 def test_prob_threshold_filtering():
     """Tests that a higher probability threshold results in fewer returned pairs."""
     # Get all pairs (threshold 0.0)
-    res_all = _analyze_single_sequence(SEQ_RNA_SIMPLE, 37.0, False, 0.0, True)
+    res_all = analyze_sequences([SEQ_RNA_SIMPLE], 37.0, False, 0.0, True)[0]
     # Get only highly probable pairs (threshold 0.9)
-    res_high = _analyze_single_sequence(SEQ_RNA_SIMPLE, 37.0, False, 0.9, True)
+    res_high = analyze_sequences([SEQ_RNA_SIMPLE], 37.0, False, 0.9, True)[0]
     
     assert len(res_all['pair_probabilities']) >= len(res_high['pair_probabilities'])
     
