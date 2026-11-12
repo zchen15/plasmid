@@ -144,13 +144,9 @@ class Aligner:
         Args:
             kwargs: settings that override the class defaults.
 
-        Raises:
-            TypeError: if kwargs contains a name that is not an Aligner setting.
         '''
         for key, value in kwargs.items():
-            if not hasattr(self, key):
-                continue
-            if value is not None:
+            if hasattr(self, key) and value is not None:
                 setattr(self, key, value)
         self.work_dir = tempfile.TemporaryDirectory(prefix='infernal_')
 

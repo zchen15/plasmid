@@ -4,44 +4,87 @@
 import numpy as np
 import pandas as pd
 
+# BAM file parsing
+import pysam
+
 # system libraries
 import os
-import re
 import subprocess
 import tempfile
 
-from . import io
-from .bwa import read_SAM
 
-
-def format_alignment(data):
+def get_BAM_tags(tag, cols) -> list:
     '''
-    Format numeric columns and add match_score metrics.
+    Parse BAM tags for columns.
 
     Args:
-        data: dataframe of alignment results.
+        tag: list of tuples of tag key and value.
+        cols: values to extract.
 
     Returns:
-        A formatted dataframe.
+        list of values.
     '''
-    int_cols = ['q_len', 'q_start', 'q_end', 't_len', 't_start', 't_end',
-                'match', 'tot', 'mapq', 'cm', 's1', 's2', 'NM', 'AS',
-                'ms', 'nn', 'rl']
-    for c in int_cols:
-        if c in data.columns:
-            data[c] = pd.to_numeric(data[c], errors='coerce').fillna(0).astype(int)
-    if 'de' in data.columns:
-        data['de'] = pd.to_numeric(data['de'], errors='coerce').fillna(0.0).astype(float)
-
-    if 'match' in data.columns and 'tot' in data.columns:
-        tot = pd.to_numeric(data['tot'], errors='coerce').replace(0, np.nan)
-        data['match_score'] = (pd.to_numeric(data['match'], errors='coerce')/tot).fillna(0.0)
-    elif 'match_score' not in data.columns:
-        data['match_score'] = pd.Series(dtype=float)
-    return data
+    out = [None]*len(cols)
+    for j in range(len(cols)):
+        for k in tag:
+            if k[0] == cols[j]:
+                out[j] = k[1]
+                break
+    return out
 
 
-def read_PAF(fname):
+def read_SAM(fname: str, mode: str='r') -> pd.DataFrame:
+    '''
+    Read a SAM or BAM file.
+
+    Args:
+        fname: filename of the SAM or BAM file.
+        mode: 'r' for SAM or 'rb' for BAM.
+
+    Returns:
+        A pandas dataframe of alignment information.
+    '''
+    samfile = pysam.AlignmentFile(str(fname), mode=mode, check_sq=False)
+
+    out = []
+    col2 = ['NM', 'ms', 'AS', 'nn', 'tp', 'cm', 's1', 's2', 'de', 'rl']
+    for read in samfile:
+        q_id = read.qname
+        q_len = read.infer_read_length()
+        q_start = read.qstart
+        q_end = read.qend
+
+        t_id = read.reference_name
+        t_len = read.reference_length
+        t_start = read.reference_start
+        t_end = read.reference_end
+
+        if t_id is not None:
+            orientation = read.is_forward
+            cigar = read.cigarstring
+            mapq = read.mapq
+            tags = read.tags
+            [NM, ms, AS, nn, tp, cm, s1, s2, de, rl] = get_BAM_tags(tags, col2)
+            out.append([q_id, q_len, q_start, q_end, orientation,
+                        t_id, t_len, t_start, t_end, cigar, mapq,
+                        NM, ms, AS, nn, tp, cm, s1, s2, de, rl])
+    samfile.close()
+    col1 = ['q_id', 'q_len', 'q_start', 'q_end', 'orientation',
+            't_id', 't_len', 't_start', 't_end', 'CIGAR', 'mapq']
+    cols = col1 + col2
+    df = pd.DataFrame(out, columns=cols)
+
+    df['orientation'] = df['orientation'].replace({True: '+', False: '-'})
+
+    # compute blast like score
+    df['tot'] = df['q_end'] - df['q_start']
+    df['match'] = df['tot'] - df['NM']
+    tot = pd.to_numeric(df['tot'], errors='coerce').replace(0, np.nan)
+    df['match_score'] = (pd.to_numeric(df['match'], errors='coerce')/tot).fillna(0.0)
+    return df
+
+
+def read_PAF(fname: str) -> pd.DataFrame:
     '''
     Read a minimap2 PAF file.
 
@@ -53,30 +96,43 @@ def read_PAF(fname):
     '''
     col1 = ['q_id', 'q_len', 'q_start', 'q_end', 'orientation',
             't_id', 't_len', 't_start', 't_end', 'match', 'tot', 'mapq']
-    col2 = ['tp', 'cm', 's1', 's2', 'NM', 'AS', 'ms', 'nn', 'rl', 'cg']
-    key = {col2[i]: i for i in range(len(col2))}
+    col2 = ['tp', 'cm', 's1', 's2', 'NM', 'AS', 'ms', 'nn', 'rl', 'CIGAR']
+    key = {name: i for i, name in enumerate(col2)}
 
     out = []
-    with io.decompress(fname) as f:
+    with open(str(fname), 'r') as f:
         for line in f:
             line = line.rstrip('\n')
-            if len(line) == 0 or line[0] == '#':
+            if not line or line[0] == '#':
                 continue
             fields = line.split('\t')
             if len(fields) < len(col1):
                 continue
-            info = [0]*len(col2)
+            info = ['']*len(col2)
             for field in fields[len(col1):]:
                 x = field.split(':', 2)
-                if len(x) == 3 and x[0] in key:
-                    info[key[x[0]]] = x[2]
+                if len(x) != 3:
+                    continue
+                tag, value = x[0], x[2]
+                if tag == 'cg':
+                    tag = 'CIGAR'
+                if tag in key:
+                    info[key[tag]] = value
             out.append(fields[:len(col1)]+info)
 
     data = pd.DataFrame(out, columns=col1+col2)
-    data = data.rename(columns={'cg': 'CIGAR'})
-    if 'CIGAR' in data.columns:
-        data['CIGAR'] = [str(i).replace('\n', '') for i in data['CIGAR']]
-    return format_alignment(data)
+
+    # format numeric columns
+    int_cols = ['q_len', 'q_start', 'q_end', 't_len', 't_start', 't_end',
+                'match', 'tot', 'mapq', 'cm', 's1', 's2', 'NM', 'AS',
+                'ms', 'nn', 'rl']
+    for c in int_cols:
+        data[c] = pd.to_numeric(data[c], errors='coerce').fillna(0).astype(int)
+
+    # compute blast like score
+    tot = data['tot'].replace(0, np.nan)
+    data['match_score'] = (data['match']/tot).fillna(0.0)
+    return data
 
 
 class Aligner:
@@ -88,14 +144,14 @@ class Aligner:
 
     Attributes:
         verbose: print run settings when True.
-        config: minimap2 configuration string.
-        index: filename of the cached minimap2 index.
         binary: minimap2 binary.
+        config: minimap2 configuration string for alignment.
+        index_config: minimap2 configuration string for index building.
     '''
     verbose = False
     binary = 'minimap2'
     config = '-c -k 15 -w 7'
-    fn_index = None
+    index_config = '-k 15 -w 7'
 
     def __init__(self, **kwargs):
         '''
@@ -119,7 +175,7 @@ class Aligner:
 
         Args:
             database: filename containing the reference sequences.
-            filename: name of the index file inside the working directory.
+            fn_index: name of the index file inside the working directory.
 
         Returns:
             Filename of the minimap2 index.
@@ -127,21 +183,17 @@ class Aligner:
         if fn_index is None:
             fn_index = os.path.join(self.work_dir.name, "index.mmi")
 
-        cmd = [self.binary,
-               '-k', str(self.k),
-               '-w', str(self.w)]
-        if self.threads is not None:
-            cmd+= ['-t', str(self.threads)]
-        cmd+= ['-d', fn_index, database]
+        options = str(self.index_config).split(' ') if str(self.index_config) else []
+        cmd = [self.binary] + options + ['-d', fn_index, database]
 
         ret = subprocess.run(cmd)
         if ret.returncode != 0:
             raise RuntimeError('minimap2 index failed. '+str(ret))
 
-        self.fn_index = fn_index
         return fn_index
 
-    def run(self, qfile, mfile=None, dbfile=None, paf_file=None, sam_file=None):
+    def run(self, qfile: str, mfile: str=None, dbfile: str=None,
+            paf_file: str=None, sam_file: str=None) -> pd.DataFrame:
         '''
         Wrapper for performing sequence alignment with minimap2.
 
@@ -155,21 +207,21 @@ class Aligner:
 
         Returns:
             A pandas dataframe of alignment results from the PAF or SAM file.
-        '''
-        work_dir = self.work_dir.name
-        if dbfile is None and self.fn_index is not None:
-            dbfile = self.fn_index
-        else:
-            raise ValueError('database is required when no index has been built')
 
-        config = self.config
+        Raises:
+            ValueError: if no index has been built and no database is given.
+        '''
+        if dbfile is None:
+            raise ValueError('database is required')
+
+        config = str(self.config).split(' ')
         if sam_file is not None:
-            config = f"-a {config}"
+            config = ['-a'] + config
+            outfile = sam_file
         elif paf_file is not None:
             outfile = paf_file
         else:
-            outfile = os.path.join(self.work_dir.name, "results.paf")
-        config = config.split(" ")
+            outfile = os.path.join(self.work_dir.name, 'results.paf')
 
         # call the aligner
         if mfile is None:

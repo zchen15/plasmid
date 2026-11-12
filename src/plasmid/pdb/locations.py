@@ -5,15 +5,20 @@ import copy
 class Location:
     """
     This class holds function related to merging and storing locations
+
+    Attributes:
+        positions: unique positions stored by the location.
     """
-    
-    def __init__(self, pos:list):
+    positions = np.array([], dtype=int)
+
+    def __init__(self, pos: list):
         """
-        Initializes the Record object
-        
+        Initializes the Location object
+
         Args:
-            pos: list of positions
-        
+            pos: list of positions.
+            kwargs: settings that override the class defaults.
+
         Returns:
             Location object
         """

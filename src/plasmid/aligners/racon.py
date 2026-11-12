@@ -1,29 +1,40 @@
 #!/usr/bin/env python
 
 # computing libraries
-import numpy as np
 import pandas as pd
 
 # system libraries
-import os
-import re
 import subprocess
 import tempfile
 
-from . import io
 
-
-def read_fasta(fname: str) -> pd.DataFrame:
+def parse_fasta(text: str) -> pd.DataFrame:
     '''
-    Read polished sequences from a fasta file.
+    Parse fasta formatted text into a dataframe.
 
     Args:
-        fname: filename of the fasta file of polished sequences.
+        text: fasta formatted text, such as racon output from stdout.
 
     Returns:
         A dataframe of sequences with columns [name, sequence].
     '''
-    return io.read_fasta(fname)
+    data = []
+    name = None
+    seq = []
+    for line in text.splitlines():
+        line = line.strip()
+        if len(line) == 0:
+            continue
+        if line[0] == '>':
+            if name is not None:
+                data.append([name, ''.join(seq)])
+            name = line[1:].split(' ')[0]
+            seq = []
+        elif name is not None:
+            seq.append(line)
+    if name is not None:
+        data.append([name, ''.join(seq)])
+    return pd.DataFrame(data, columns=['name', 'sequence'])
 
 
 class Aligner:
@@ -49,13 +60,9 @@ class Aligner:
         Args:
             kwargs: settings that override the class defaults.
 
-        Raises:
-            TypeError: if kwargs contains a name that is not an Aligner setting.
         '''
         for key, value in kwargs.items():
-            if not hasattr(self, key):
-                continue
-            if value is not None:
+            if hasattr(self, key) and value is not None:
                 setattr(self, key, value)
         self.work_dir = tempfile.TemporaryDirectory(prefix='racon_')
 
@@ -79,25 +86,20 @@ class Aligner:
         Raises:
             RuntimeError: if the raco command fails.
         '''
-        work_dir = self.work_dir.name
-        if out_file is None:
-            out_file = work_dir + '/results.fa'
         if config is None:
             config = self.config
 
         # run raco
-        if len(str(config)) > 0:
-            cmd = [self.binary] + str(config).split(' ') + [seq, paf, ref]
-        else:
-            cmd = [self.binary, seq, paf, ref]
+        options = str(config).split(' ') if str(config) else []
+        cmd = [self.binary] + options + [seq, paf, ref]
         ret = subprocess.run(cmd, stdout=subprocess.PIPE)
         if ret.returncode != 0:
             raise RuntimeError('racon failed. '+str(ret))
 
-        # write polished fasta output from stdout
-        with open(out_file, 'w') as f:
-            f.write(ret.stdout.decode('utf-8'))
-
-        # read the polished sequences
-        data = read_fasta(out_file)
+        # parse the polished fasta output directly from stdout
+        text = ret.stdout.decode('utf-8')
+        if out_file is not None:
+            with open(out_file, 'w') as f:
+                f.write(text)
+        data = parse_fasta(text)
         return data

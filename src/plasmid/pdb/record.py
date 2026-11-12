@@ -9,9 +9,80 @@ from .locations import Location
 from ..utils import load_libraries
 
 import biotite.structure.io
+import biotite.structure.io.pdb as pdb
+import biotite.structure.io.pdbx as pdbx
 
 import copy
+import os
 import tempfile
+
+
+def _first(value):
+    """
+    Return the first value of a sequence-like value, otherwise the value itself.
+
+    Args:
+        value: scalar or sequence-like value.
+
+    Returns:
+        A scalar value or None.
+    """
+    if isinstance(value, (list, tuple, np.ndarray)):
+        if len(value) == 0:
+            return None
+        return value[0]
+    return value
+
+
+def _text(value):
+    """
+    Convert a structure file value to a stripped string.
+
+    Args:
+        value: scalar or sequence-like value.
+
+    Returns:
+        A string or None.
+    """
+    # unwrap biotite CIF column objects
+    if hasattr(value, 'as_array'):
+        try:
+            value = value.as_array()
+        except Exception:
+            try:
+                value = value.as_item()
+            except Exception:
+                pass
+    value = _first(value)
+    if value is None:
+        return None
+    if isinstance(value, bytes):
+        value = value.decode('utf-8')
+    return str(value).strip()
+
+
+def _column(category, key: str) -> list:
+    """
+    Extract a column from a biotite CIF category.
+
+    Args:
+        category: biotite CIFCategory object.
+        key: column name.
+
+    Returns:
+        A list of column values, or an empty list if the column is absent.
+    """
+    try:
+        column = category[key]
+    except Exception:
+        return []
+    try:
+        return column.as_array().tolist()
+    except Exception:
+        try:
+            return [column.as_item()]
+        except Exception:
+            return []
 
 def read_pdb(filename:str):
     """
@@ -30,26 +101,70 @@ class Record:
     
     Attributes:
         atom_array: biotite.structure.AtomArray object
+        filename: name of the pdb or mmCIF file that was read
         annotations: pandas dataframe of annotations associated with the AtomArray
+        sequence_annotations: pandas dataframe of sequence information from get_sequence()
+        ligand_annotations: pandas dataframe of ligand information from get_ligands()
+        chain_colors: dictionary mapping each chain_id to a default color
     """
-    
+
+    # default colors assigned to chains in the order they are encountered
+    default_chain_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
+                            '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
+                            '#bcbd22', '#17becf']
+
     # annotations are stored in a dataframe with columns
     # [name, feature, location, color, description] similar to genbank features
     annotations: pd.DataFrame = pd.DataFrame(
         columns=["name", "feature", "location", "color", "description"]
     )
-    
-    def __init__(self, filename:str):
+    sequence_annotations: pd.DataFrame = pd.DataFrame(
+        columns=["atom_id", "chain_id", "res_id", "sequence", "n_frames", "color"]
+    )
+    ligand_annotations: pd.DataFrame = pd.DataFrame(
+        columns=["atom_id", "chain_id", "res_name", "res_id", "count",
+                 "n_frames", "color"]
+    )
+    chain_colors: dict = {}
+    atom_array = None
+    filename = None
+
+    def __init__(self, filename: str, **kwargs):
         """
         Initializes the Record object
-        
+
         Args:
-            filename: name of pdb or mmCIF file to read
-        
+            filename: name of pdb or mmCIF file to read.
+            kwargs: settings that override the class defaults.
+
         Returns:
             Record object
         """
+        self.filename = filename
         self.atom_array = biotite.structure.io.load_structure(filename)
+        self.chain_colors = {}
+        self.annotations = pd.DataFrame(
+            columns=["name", "feature", "location", "color", "description"]
+        )
+        self.sequence_annotations = pd.DataFrame(
+            columns=["atom_id", "chain_id", "res_id", "sequence", "n_frames", "color"]
+        )
+        self.ligand_annotations = pd.DataFrame(
+            columns=["atom_id", "chain_id", "res_name", "res_id", "count",
+                     "n_frames", "color"]
+        )
+
+        # parse annotations that are stored in the structure file
+        self.annotations = self.parse_structure_annotations(filename)
+
+        for key, value in kwargs.items():
+            if hasattr(self, key) and value is not None:
+                setattr(self, key, value)
+
+        # populate the cached sequence and ligand annotation tables
+        self.get_sequence()
+        self.get_ligands()
+        self.get_chain_colors()
         
     def copy(self):
         """
@@ -204,10 +319,45 @@ class Record:
         #df["frame"] = df["frame"].astype(int)
         return df
         
+    def get_chain_color(self, chain_id) -> str:
+        """
+        Get the default color assigned to a chain, assigning one if needed.
+
+        Args:
+            chain_id: chain identifier.
+
+        Returns:
+            A color string.
+        """
+        if chain_id not in self.chain_colors:
+            i = len(self.chain_colors) % len(self.default_chain_colors)
+            self.chain_colors[chain_id] = self.default_chain_colors[i]
+        return self.chain_colors[chain_id]
+
+    def get_chain_colors(self) -> dict:
+        """
+        Get the default color assigned to each chain.
+
+        Chains that have not been seen by get_sequence() or get_ligands()
+        (for example nucleotide-only chains) are assigned a color here.
+
+        Returns:
+            Dictionary mapping chain_id to color.
+        """
+        if isinstance(self.atom_array, biotite.structure.AtomArrayStack):
+            chain_ids = self.atom_array[0].chain_id
+        else:
+            chain_ids = self.atom_array.chain_id
+        for chain_id in np.unique(chain_ids):
+            self.get_chain_color(chain_id)
+        return dict(self.chain_colors)
+
     def get_sequence(self):
         """
         Get list of protein and amino acid sequences
-        
+
+        The result is cached as the sequence_annotations attribute.
+
         Returns:
             pandas dataframe of chain_id and sequence
         """
@@ -246,12 +396,19 @@ class Record:
             df["n_frames"] = len(self.atom_array)
         else:
             df["n_frames"] = 0
+
+        # assign a default color to each chain
+        df["color"] = [self.get_chain_color(c) for c in df["chain_id"].values]
+
+        self.sequence_annotations = df
         return df
         
     def get_ligands(self):
         """
         Get list of ligands in crystal structure
-        
+
+        The result is cached as the ligand_annotations attribute.
+
         Returns:
             pandas dataframe of ligands
         """
@@ -278,8 +435,120 @@ class Record:
             df["n_frames"] = len(self.atom_array)
         else:
             df["n_frames"] = 0
+
+        # assign a default color to each chain
+        df["color"] = [self.get_chain_color(c) for c in df["chain_id"].values]
+
+        self.ligand_annotations = df
         return df
-        
+
+    def parse_structure_annotations(self, filename: str) -> pd.DataFrame:
+        """
+        Parse annotations from the header of a pdb or mmCIF structure file.
+
+        The annotations dataframe stores at least the [name, description]
+        columns. Structure-level metadata (title, keywords, entity
+        descriptions) and secondary structure records are read when they are
+        available in the file.
+
+        Args:
+            filename: name of pdb or mmCIF file to read.
+
+        Returns:
+            pandas dataframe of annotations
+        """
+        cols = ["name", "feature", "location", "color", "description"]
+        rows = []
+
+        # strip compression extensions before detecting the file type
+        name = os.path.basename(str(filename)).lower()
+        if name.endswith('.gz'):
+            name = name[:-3]
+
+        try:
+            if name.endswith(('.cif', '.mmcif', '.bcif')):
+                if name.endswith('.bcif'):
+                    cif = pdbx.BinaryCIFFile.read(filename)
+                else:
+                    cif = pdbx.CIFFile.read(filename)
+                block = cif.block
+
+                # structure title and keywords
+                title = None
+                if 'struct' in block:
+                    values = _column(block['struct'], 'title')
+                    title = _text(values[0]) if values else None
+                keywords = None
+                if 'struct_keywords' in block:
+                    values = _column(block['struct_keywords'], 'pdbx_keywords')
+                    keywords = _text(values[0]) if values else None
+                if title:
+                    rows.append(['title', 'structure', None, None, title])
+                if keywords:
+                    rows.append(['keywords', 'structure', None, None, keywords])
+
+                # entity descriptions, one per chain
+                if 'entity' in block:
+                    entity = block['entity']
+                    ids = _column(entity, 'id')
+                    descriptions = _column(entity, 'pdbx_description')
+                    for i, entity_id in enumerate(ids):
+                        desc = _text(descriptions[i]) if i < len(descriptions) else None
+                        if desc:
+                            rows.append([f'entity {_text(entity_id)}', 'chain',
+                                         None, None, desc])
+
+                # helix and turn annotations
+                if 'struct_conf' in block:
+                    conf = block['struct_conf']
+                    ids = _column(conf, 'id')
+                    types = _column(conf, 'conf_type_id')
+                    asym = _column(conf, 'beg_label_asym_id')
+                    beg = _column(conf, 'beg_label_seq_id')
+                    end = _column(conf, 'end_label_seq_id')
+                    for i, conf_id in enumerate(ids):
+                        label = _text(types[i]) if i < len(types) else 'secondary structure'
+                        chain = _text(asym[i]) if i < len(asym) else None
+                        start = _text(beg[i]) if i < len(beg) else None
+                        stop = _text(end[i]) if i < len(end) else None
+                        desc = f'{label} {chain}:{start}-{stop}'
+                        rows.append([_text(conf_id) or f'conf {i+1}',
+                                     'secondary_structure', None, None, desc])
+
+                # beta sheet annotations
+                if 'struct_sheet_range' in block:
+                    sheet = block['struct_sheet_range']
+                    ids = _column(sheet, 'id')
+                    asym = _column(sheet, 'beg_label_asym_id')
+                    beg = _column(sheet, 'beg_label_seq_id')
+                    end = _column(sheet, 'end_label_seq_id')
+                    for i, sheet_id in enumerate(ids):
+                        chain = _text(asym[i]) if i < len(asym) else None
+                        start = _text(beg[i]) if i < len(beg) else None
+                        stop = _text(end[i]) if i < len(end) else None
+                        desc = f'sheet {chain}:{start}-{stop}'
+                        rows.append([_text(sheet_id) or f'sheet {i+1}',
+                                     'secondary_structure', None, None, desc])
+            else:
+                pdb_file = pdb.PDBFile.read(filename)
+                header = pdb_file.get_header()
+
+                title = _text(header.get('title'))
+                keywords = _text(header.get('keywords'))
+                if title:
+                    rows.append(['title', 'structure', None, None, title])
+                if keywords:
+                    rows.append(['keywords', 'structure', None, None, keywords])
+                for key in ['compound', 'source']:
+                    value = header.get(key)
+                    if value:
+                        rows.append([key, 'structure', None, None, str(value)])
+        except Exception:
+            # annotations are optional, so ignore files without usable metadata
+            pass
+
+        return pd.DataFrame(rows, columns=cols)
+
     def get_protein_sse(self):
         """
         Compute secondary structure of protein sequence using P-SEA algorithm
