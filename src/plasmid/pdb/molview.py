@@ -43,10 +43,7 @@ class Viewer:
         Returns:
             tuple of (viewer, builder, structure).
         '''
-        # derive the structure name from the record filename
-        rec_name = getattr(self.rec, 'filename', None) or 'structure'
-        name = os.path.splitext(os.path.basename(str(rec_name)))[0] + '.cif'
-        filename = f'{self.work_dir.name}/{name}'
+        filename = f'{self.work_dir.name}/crystal.cif'
         self.rec.save(filename)
 
         # read the data
@@ -55,7 +52,7 @@ class Viewer:
 
         # generate the view
         builder = molviewspec.create_builder()
-        structure = builder.download(url=name).parse(format='mmcif').model_structure()
+        structure = builder.download(url='crystal.cif').parse(format='mmcif').model_structure()
 
         structure.component(selector='polymer')\
             .representation(type='cartoon')\

@@ -113,17 +113,15 @@ class Record:
                             '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
                             '#bcbd22', '#17becf']
 
-    # annotations are stored in a dataframe with columns
-    # [name, feature, location, color, description] similar to genbank features
-    annotations: pd.DataFrame = pd.DataFrame(
-        columns=["name", "feature", "location", "color", "description"]
-    )
+    # sequence_annotations stores per-chain sequence information
     sequence_annotations: pd.DataFrame = pd.DataFrame(
-        columns=["atom_id", "chain_id", "res_id", "sequence", "n_frames", "color"]
+        columns=["atom_id", "chain_id", "res_id", "sequence", "n_frames", "color",
+                 "name", "description"]
     )
+    # ligand_annotations stores per-ligand information
     ligand_annotations: pd.DataFrame = pd.DataFrame(
         columns=["atom_id", "chain_id", "res_name", "res_id", "count",
-                 "n_frames", "color"]
+                 "n_frames", "color", "name", "description"]
     )
     chain_colors: dict = {}
     atom_array = None
@@ -143,19 +141,16 @@ class Record:
         self.filename = filename
         self.atom_array = biotite.structure.io.load_structure(filename)
         self.chain_colors = {}
-        self.annotations = pd.DataFrame(
-            columns=["name", "feature", "location", "color", "description"]
-        )
         self.sequence_annotations = pd.DataFrame(
-            columns=["atom_id", "chain_id", "res_id", "sequence", "n_frames", "color"]
+            columns=["atom_id", "chain_id", "res_id", "sequence", "n_frames", "color",
+                     "name", "description"]
         )
         self.ligand_annotations = pd.DataFrame(
             columns=["atom_id", "chain_id", "res_name", "res_id", "count",
-                     "n_frames", "color"]
+                     "n_frames", "color", "name", "description"]
         )
 
-        # parse annotations that are stored in the structure file
-        self.annotations = self.parse_structure_annotations(filename)
+        # populate the cached sequence and ligand annotation tables
 
         for key, value in kwargs.items():
             if hasattr(self, key) and value is not None:

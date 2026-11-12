@@ -18,7 +18,6 @@ class Viewer:
         ligand: show ligands as ball and stick.
         camera: camera type.
         background: background color.
-        traj: cached mdtraj trajectory loaded for pose drawing.
     '''
     verbose = False
     poses = False
@@ -26,7 +25,6 @@ class Viewer:
     ligand = True
     camera = 'orthographic'
     background = 'gray'
-    traj = None
 
     def __init__(self, rec, **kwargs):
         '''
@@ -94,8 +92,7 @@ class Viewer:
         Returns:
             nglview.widget.NGLWidget object.
         '''
-        if self.traj is None:
-            filename = f'{self.work_dir.name}/poses.pdb'
-            self.rec.save(filename)
-            self.traj = mdtraj.load(filename)
-        return self.format_view(nglview.show_mdtraj(self.traj))
+        filename = f'{self.work_dir.name}/poses.pdb'
+        self.rec.save(filename)
+        traj = mdtraj.load(filename)
+        return self.format_view(nglview.show_mdtraj(traj))
