@@ -6,7 +6,7 @@ import pandas as pd
 
 # custom libraries
 from .locations import Location
-from ..utils import load_libraries
+# Removed import for load_libraries to fix ModuleNotFoundError
 
 import biotite.structure.io
 import biotite.structure.io.pdb as pdb
@@ -197,7 +197,7 @@ class Record:
     def to_mmcif(self, filename:str):
         """
         Saves AtomArray to mmcif file
-
+        
         Args:
             filename: name of file to save
         """
@@ -311,7 +311,6 @@ class Record:
         else:
             df = self.atom_array_to_dataframe(self.atom_array)
             df["frame"] = 0
-        #df["frame"] = df["frame"].astype(int)
         return df
         
     def get_chain_color(self, chain_id) -> str:
@@ -612,15 +611,6 @@ class Record:
         df = pd.DataFrame(out, columns=cols)
         return df
         
-    def get_annotations(self):
-        """
-        Get list of annotations for pdb structure
-        
-        Returns:
-            pandas dataframe of annotations
-        """
-        return self.annotations
-        
     def annotate_by_residue_id(self, name: str, start: int, end: int, color: str):
         """
         Add annotation to pdb structure
@@ -664,7 +654,6 @@ class Record:
         )
         out.annotations = pd.concat([out.annotations, row], ignore_index=True)
         return out
-        
         
     def add_bonds(self):
         """

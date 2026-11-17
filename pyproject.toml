@@ -7,7 +7,7 @@ name = "plasmid"
 description = "Plasmid: A python package for viewing, editing, and assembling DNA"
 readme = "README.md"
 license = "AGPL-3.0-only"
-license-files = ["LICENSE"]
+license-files = ["LICENSE.md"]
 authors = [
     { name = "Zhewei Chen", email = "zchen15@github.com" },
 ]
@@ -47,6 +47,7 @@ misc = [
 visualization = [
     "matplotlib",
     "bokeh",
+    "molviewspec",
 ]
 alignment = [
     "parasail",
