@@ -32,3 +32,4 @@ def test_read_cif_file_not_found():
     non_existent_file = "test/non_existent.cif"
     with pytest.raises(FileNotFoundError):
         read_pdb(non_existent_file)
+

@@ -49,9 +49,8 @@ class Viewer:
         view.clear_representations()
         view.add_representation('cartoon', selection='protein')
         
-        view.add_representation('cartoon', selection='nucleic', color='skeleton')
-        view.add_representation('basepair', selection='nucleic', color='red', linewidth=2)
-        #view.add_representation('cartoon', selection='nucleic')
+        view.add_representation('basepair', selection='nucleic', color='red')
+        view.add_representation('cartoon', selection='nucleic')
         #view.add_representation('basepair', selection='nucleic')
         
         view.add_representation('ball+stick', selection='ligand', color='element')
