@@ -1,11 +1,9 @@
 # Module for nglview viewer functionality
 
-# science libs
 import tempfile
-
-import nglview
-import mdtraj
-
+from ..utils import library_safeload
+mdtraj = library_safeload("mdtraj")
+nglview = library_safeload("nglview")
 
 class Viewer:
     '''
@@ -20,11 +18,8 @@ class Viewer:
         background: background color.
     '''
     verbose = False
-    poses = False
-    cartoon = True
-    ligand = True
     camera = 'orthographic'
-    background = 'gray'
+    background = 'black'
 
     def __init__(self, rec, **kwargs):
         '''
@@ -40,21 +35,7 @@ class Viewer:
                 setattr(self, key, value)
         self.rec = rec
         self.work_dir = tempfile.TemporaryDirectory(prefix='nglview_')
-        self.view = self.draw()
-        # keep the temporary directory alive for as long as the widget exists
-        self.view._work_dir = self.work_dir
-
-    def draw(self):
-        '''
-        Draw the record with nglview.
-
-        Returns:
-            nglview.widget.NGLWidget object.
-        '''
-        if self.poses:
-            return self.draw_poses()
-        return self.draw_structure()
-
+        
     def format_view(self, view):
         '''
         Apply the default representations to an nglview widget.
@@ -66,15 +47,19 @@ class Viewer:
             The formatted nglview widget.
         '''
         view.clear_representations()
-        if self.cartoon:
-            view.add_representation('cartoon', selection='protein', color='sstruc')
-        if self.ligand:
-            view.add_representation('ball+stick', selection='ligand', color='element')
+        view.add_representation('cartoon', selection='protein')
+        
+        view.add_representation('cartoon', selection='nucleic', color='skeleton')
+        view.add_representation('basepair', selection='nucleic', color='red', linewidth=2)
+        #view.add_representation('cartoon', selection='nucleic')
+        #view.add_representation('basepair', selection='nucleic')
+        
+        view.add_representation('ball+stick', selection='ligand', color='element')
         view.camera = self.camera
         view.background = self.background
         return view
 
-    def draw_structure(self):
+    def draw(self):
         '''
         Draw a single structure from the record.
 
@@ -83,8 +68,21 @@ class Viewer:
         '''
         filename = f'{self.work_dir.name}/record.pdb'
         self.rec.save(filename)
-        return self.format_view(nglview.show_file(filename))
+        view = nglview.show_file(filename)
+        view = self.format_view(view)
+        return view
 
+    def draw_from_url(self, url:str):
+        '''
+        Draw a single structure from the record.
+
+        Returns:
+            nglview.widget.NGLWidget object.
+        '''
+        view = nglview.show_url(url)
+        view = self.format_view(view)
+        return view
+    
     def draw_poses(self):
         '''
         Draw a multi-model record as a trajectory.
@@ -95,4 +93,6 @@ class Viewer:
         filename = f'{self.work_dir.name}/poses.pdb'
         self.rec.save(filename)
         traj = mdtraj.load(filename)
-        return self.format_view(nglview.show_mdtraj(traj))
+        view = nglview.show_mdtraj(traj)
+        view = self.format_view(view)
+        return view

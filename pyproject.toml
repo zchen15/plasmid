@@ -34,24 +34,26 @@ classifiers = [
     "Topic :: Utilities",
 ]
 dependencies = [
-    "biopython>=1.78",
+    "biopython",
+    "biotite",
     "numpy",
     "scipy",
     "pandas",
+    "matplotlib",
 ]
 
 [project.optional-dependencies]
-misc = [
-    "sty",
+pdb = [
+    "molviewspec",
+    "py3dmol",
 ]
 visualization = [
-    "matplotlib",
     "bokeh",
     "molviewspec",
+    "py3dmol",
 ]
 alignment = [
     "parasail",
-    "mappy",
 ]
 assembly = [
     "scikit-learn",
