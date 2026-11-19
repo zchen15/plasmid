@@ -657,12 +657,8 @@ class Record:
         return "\n".join(lines)
 
     # -- slicing ------------------------------------------------------------
-
-    def slice(
-        self,
-        start: Optional[int] = None,
-        end: Optional[int] = None,
-    ) -> "Record":
+    
+    def slice(self, start: Optional[int] = None, end: Optional[int] = None) -> "Record":
         """Return a sub-Record containing only features fully inside ``[start, end)``.
 
         Args:
@@ -675,8 +671,12 @@ class Record:
         """
         if start is None:
             start = 0
+        elif start < 0:
+            raise ValueError("cannot slice with start < 0")
         if end is None:
             end = len(self.sequence)
+        if start >= end:
+            raise ValueError("cannot slice with start >= end")
 
         out = self.copy()
         
@@ -865,7 +865,7 @@ class Record:
             start = 0
         if end is None:
             end = len(self.sequence)
-
+        
         if circular:
             out = out.set_origin(start)
             L = end - start

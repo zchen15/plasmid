@@ -5,6 +5,9 @@ import tempfile
 import py3Dmol
 import urllib
 
+# custom libraries
+from .sequences import get_sequence, get_ligands
+
 class Viewer:
     '''
     This class holds functions pertaining to drawing structures with py3Dmol.
@@ -48,7 +51,7 @@ class Viewer:
             The formatted nglview widget.
         '''
         # colorize protein as ribbons
-        df = self.rec.get_sequence().drop_duplicates()
+        df = get_sequence(self.rec).drop_duplicates()
         cols = ['chain_id', 'res_id']
         for chain_id, res_id in df[cols].values:
             protein = {'resi': f'{min(res_id.positions)}-{max(res_id.positions)}'}
@@ -61,7 +64,7 @@ class Viewer:
                 view.addSurface(py3Dmol.VDW, surface, protein)
         
         # colorize ligands as sticks
-        df = self.rec.get_ligands()
+        df = get_ligands(self.rec)
         for res_name in df['res_name'].values:
             ligand = {'resn': res_name}
             view.setStyle(ligand, {

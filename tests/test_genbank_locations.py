@@ -196,9 +196,3 @@ def test_extract_mixed_strands():
     seq = 'ATGCGTACGTAGCTA'
     extracted = loc.extract(seq)
     assert len(extracted) > 5
-
-
-# Run all tests
-if __name__ == '__main__':
-    import pytest as pt
-    pt.main([__file__, '-v'])
