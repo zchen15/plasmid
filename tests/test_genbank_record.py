@@ -2,14 +2,15 @@
 # tests for plasmid.py
 
 import plasmid.genbank.record
+from plasmid.genbank.record import Record
 import glob
 import copy
 
 def test_read_genbank():
     # Read a genbank file
-    fname = 'data/dcas9_LacI.gb'
+    fname = 'data/genbank/dcas9_LacI.gb'
     x = plasmid.read_genbank(fname)        
-    assert type(x).__name__ == 'Plasmid'
+    assert isinstance(x, Record)
     return x
 
 def test_plasmid_print():
@@ -20,15 +21,15 @@ def test_plasmid_print():
 
 def test_rotation():
     # Checks rotation of entries
-    fname = 'data/dcas9_LacI.gb'
+    fname = 'data/genbank/dcas9_LacI.gb'
     x = plasmid.read_genbank(fname)
-    ori = x[x['locus_tag'].str.contains('TetR')]['start'].values[0]
+    ori = x[x['name'].str.contains('TetR')]['start'].values[0]
     x = x.set_origin(ori)
-    assert 'TetR' in x['locus_tag'].values[0]
+    assert 'TetR' in x['name'].values[0]
     
 def test_del():
     # Checks deletion of entries
-    fname = 'data/dcas9_LacI.gb'
+    fname = 'data/genbank/dcas9_LacI.gb'
     x = plasmid.read_genbank(fname)
     f1 = x[0]
     f2 = x[1]
@@ -37,32 +38,32 @@ def test_del():
     print('f1', f1.__repr__())
     print('f2', f2.__repr__())
     print('x', x.__repr__())
-    c1 = f2['locus_tag'].values[0]
-    c2 = x['locus_tag'].values[0]
+    c1 = f2['name'].values[0]
+    c2 = x['name'].values[0]
     print('==', c1==c2)
     assert c1==c2
 
 def test_add():
     # Checks concatenation
     x = df+df
-    assert type(x).__name__ == 'Plasmid'
+    assert isinstance(x, Record)
     N = len(df)
     f1 = x[0]
     f2 = x[N]
     print(f1.__repr__())
     print(f2.__repr__())
-    c1 = f1['locus_tag'].values[0]
-    c2 = f2['locus_tag'].values[0]
+    c1 = f1['name'].values[0]
+    c2 = f2['name'].values[0]
     assert c1==c2
 
 def test_set():
     # Checks deletion of entries
-    fname = 'data/dcas9_LacI.gb'
+    fname = 'data/genbank/dcas9_LacI.gb'
     x = plasmid.read_genbank(fname)
     
     # index set
     val = 'hello'
-    col = 'locus_tag'
+    col = 'name'
     i = 1
     x[col, i] = val
     assert x[col].values[i] == val 
@@ -76,7 +77,7 @@ def test_set():
     # bool setting
     val = 'blue'
     col = 'color'
-    idx = x['type'] == 'terminator'
+    idx = x['feature'] == 'terminator'
     x[idx, col] = val
     x = x['color'].values[idx]
     for y in x:
@@ -84,10 +85,10 @@ def test_set():
     
 def test_splice():
     # Checks splicing of sequences
-    fname = 'data/dcas9_LacI.gb'
+    fname = 'data/genbank/dcas9_LacI.gb'
     x = plasmid.read_genbank(fname)
     i = 1
-    name1, s1, s2 = x[['locus_tag','start','end']].values[i]
+    name1, s1, s2 = x[['name','start','end']].values[i]
     seq1 = x[s1:s2].splice().__str__()
     seq2 = x.__str__()[s1:s2]
 
@@ -95,7 +96,7 @@ def test_splice():
 
 def test_replace():
     # Checks sequence replacement
-    fname = 'data/dcas9_LacI.gb'
+    fname = 'data/genbank/dcas9_LacI.gb'
     x = plasmid.read_genbank(fname)
     i = 2
     val = 'TTTTTTAAAAAA'
@@ -115,7 +116,7 @@ def test_replace():
     
 def test_merge():
     # Checks merger of records todo
-    fname = 'data/dcas9_LacI.gb'
+    fname = 'data/genbank/dcas9_LacI.gb'
     x = plasmid.read_genbank(fname)
     assert True
 

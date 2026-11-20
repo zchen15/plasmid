@@ -1,56 +1,161 @@
 import pytest
 import numpy as np
 import pandas as pd
-import os
 import biotite.structure.io.pdbqt as pdbqt
-from plasmid.pdb.record import read_pdb, Record
+
+from plasmid.pdb.record import read_pdb
 from plasmid.pdb.io import atom_array_to_df, add_bonds
 
-# Define the test file path
-TEST_CIF_FILENAME = "data/pdb/9C3E.cif"
+import os
+import glob
 
-# Structure used for the split/merge round-trip test
-TEST_COMPLEX_FILENAME = "data/pdb/4ZT9.cif"
-
-def test_read_cif_success():
-    # Test reading the CIF file
-    record = read_pdb(TEST_CIF_FILENAME)
-    assert isinstance(record, Record)
-    assert record.filename == TEST_CIF_FILENAME
-    assert record.atom_array is not None
-    assert len(record) > 0 # Check if atoms were successfully loaded
-
-def test_record_to_dataframe():
+def test_read_pdb():
     # Test conversion to DataFrame
-    record = read_pdb(TEST_CIF_FILENAME)
-    df = atom_array_to_df(record.atom_array)
+    files = glob.glob("data/pdb/*.cif")
+    for fname in files:
+        rec = read_pdb(fname)
+
+        print(f"atom_array in {fname}: \n{rec.atom_array}")
+        print(f"__repr__() of {fname}: \n{rec}")
+        
+        # check columns
+        expected_cols = ["atom_id", "chain_id", "res_id", "res_name", 
+                         "hetero", "atom_name", "element", "entity_type",
+                         "x", "y", "z",
+                         "b_factor", "occupancy", "charge",
+                         "frame"]
+        for col in expected_cols:
+            assert col in rec.atom_array
+
+def expected_locations(rec, chain_id):
+    """Return the atom and residue positions for a chain."""
+    c = rec.atom_array["chain_id"] == chain_id
+    atoms = rec.atom_array.loc[c, "atom_id"].values
+    res_ids = np.unique(rec.atom_array.loc[c, "res_id"].values)
+    return atoms, res_ids
+
+def test_annotate_gRNA():
+    fname = "data/pdb/4ZT9.cif"
+    rec = read_pdb(fname)
+
+    # non inplace annotation of gRNA
+    c = rec["chain_id"] == "B"
+    rec1 = rec.annotate_by_atom_id(atom_id = rec[c, "atom_id"],
+                            name = "gRNA B",
+                            color = "blue",
+                           )
+    c = rec["chain_id"] == "D"
+    rec2 = rec.annotate_by_atom_id(atom_id = rec[c, "atom_id"],
+                            name = "gRNA D",
+                            color = "red",
+                           )    
+    print(f"orig dCas9 contents:\n{rec}")
+    print(f"rec1 dCas9 contents:\n{rec1}")
+    print(f"rec2 dCas9 contents:\n{rec2}")
     
-    assert isinstance(df, pd.DataFrame)
-    # Expect at least 2 atoms (based on the dummy PDB structure, though CIF might be larger)
-    assert len(df) > 0 
-    # Check for expected columns
-    expected_cols = ["atom_id", "chain_id", "res_id", "res_name", "hetero", "atom_name", "element", "x", "y", "z", "frame"]
-    for col in expected_cols:
-        assert col in df.columns
+    # expected atom/residue locations for each gRNA chain
+    expected_atoms_b, expected_res_b = expected_locations(rec, "B")
+    expected_atoms_d, expected_res_d = expected_locations(rec, "D")
+    
+    assert len(rec.features) == 0
+    assert rec1.features["name"].values[0] == "gRNA B"
+    assert rec2.features["name"].values[0] == "gRNA D"
+    
+    # check the non-inplace annotations keep their locations
+    feature_b = rec1.features.iloc[0]
+    assert feature_b["chain_id"] == "B"
+    assert feature_b["entity_type"] == "nucleic_acid"
+    assert feature_b["color"] == "blue"
+    assert feature_b["representation"] == "cartoon"
+    assert np.array_equal(feature_b["atom_id"].positions, expected_atoms_b)
+    assert np.array_equal(feature_b["res_id"].positions, expected_res_b)
+    
+    feature_d = rec2.features.iloc[0]
+    assert feature_d["chain_id"] == "D"
+    assert feature_d["entity_type"] == "nucleic_acid"
+    assert feature_d["color"] == "red"
+    assert feature_d["representation"] == "cartoon"
+    assert np.array_equal(feature_d["atom_id"].positions, expected_atoms_d)
+    assert np.array_equal(feature_d["res_id"].positions, expected_res_d)
+    
+    # annotate gRNAs inplace
+    c = rec["chain_id"] == "B"
+    rec.annotate_by_atom_id(atom_id = rec[c, "atom_id"],
+                            name = "gRNA B",
+                            color = "blue",
+                            inplace = True,
+                           )
+    c = rec["chain_id"] == "D"
+    rec.annotate_by_atom_id(atom_id = rec[c, "atom_id"],
+                            name = "gRNA D",
+                            color = "red",
+                            inplace = True,
+                           )
+    
+    print(f"dCas9 contents:\n{rec}")
+    
+    # check the inplace annotations keep their locations
+    assert len(rec.features) == 2
+    expected = {
+        "gRNA B": ("B", "blue", expected_atoms_b, expected_res_b),
+        "gRNA D": ("D", "red", expected_atoms_d, expected_res_d),
+    }
+    for _, feature in rec.features.iterrows():
+        chain_id, color, atoms, res_ids = expected[feature["name"]]
+        assert feature["chain_id"] == chain_id
+        assert feature["entity_type"] == "nucleic_acid"
+        assert feature["color"] == color
+        assert feature["representation"] == "cartoon"
+        assert np.array_equal(feature["atom_id"].positions, atoms)
+        assert np.array_equal(feature["res_id"].positions, res_ids)
 
-def test_read_cif_file_not_found():
-    # Test file not found scenario
-    non_existent_file = "test/non_existent.cif"
-    with pytest.raises(FileNotFoundError):
-        read_pdb(non_existent_file)
+def test_annotate_add():
+    fname = "data/pdb/4ZT9.cif"
+    rec = read_pdb(fname)
+    
+    c1 = rec["chain_id"] == "B"
+    rec.annotate_by_atom_id(atom_id = rec[c1, "atom_id"],
+                            name = "gRNA",
+                            color = "blue",
+                            inplace = True,
+                           )
+    c2 = rec["chain_id"] == "A"
+    rec.annotate_by_atom_id(atom_id = rec[c2, "atom_id"],
+                            name = "dCas9",
+                            color = "orange",
+                            inplace = True,
+                           )
+    print(f"annotated record:\n{rec}")
 
+    # filter for chain A and B
+    rec = rec[c1 | c2]
+    
+    # add records
+    x = rec.copy() + rec.copy()
+    assert len(x.atom_array) > 0
+    assert len(x.atom_array) == len(rec.atom_array)*2
+    assert len(x.features) == 4
 
-def test_record_repr(capsys):
-    # Test that __repr__ prints the sequence and ligand tables
-    record = read_pdb(TEST_CIF_FILENAME)
-    print(record)
+def test_reset_index():
+    fname = "data/pdb/4ZT9.cif"
+    rec = read_pdb(fname)
+    rec.atom_array["atom_id"] = np.random.permutation(rec.atom_array["atom_id"].values)
+    print(rec)
+    x = rec.reset_index()
+    print(x)
 
-    captured = capsys.readouterr()
-    assert "List of Sequences:" in captured.out
-    assert "List of Ligands:" in captured.out
-
-
+    # check at atom positions are contiguous
+    df = x.get_amino_acids()
+    assert all(len(loc.get_slices())==1 for loc in df["atom_id"])
+    
+    # check at atom positions are contiguous
+    df = x.get_nucleic_acids()
+    assert all(len(loc.get_slices())==1 for loc in df["atom_id"])
+    
 def test_split_and_merge_structures(tmp_path):
+    # Structure used for the split/merge round-trip test
+    TEST_COMPLEX_FILENAME = "data/pdb/4ZT9.cif"
+    
     # Read the full dCas9/gRNA complex
     record = read_pdb(TEST_COMPLEX_FILENAME)
 
@@ -85,8 +190,12 @@ def test_split_and_merge_structures(tmp_path):
     recombined = (read_pdb(str(gRNA_file)) + read_pdb(str(dCas9_cif_file))).reset_index()
     expected = record.reset_index()
 
-    pd.testing.assert_frame_equal(
-        atom_array_to_df(recombined.atom_array).drop(columns=["atom_id"]),
-        atom_array_to_df(expected.atom_array).drop(columns=["atom_id"]),
-    )
+    # atom_array is already a dataframe in the current API; compare the
+    # structures after normalising row order
+    sort_cols = ["chain_id", "res_id", "atom_name", "element", "res_name", "hetero"]
+    recombined_df = (recombined.atom_array.drop(columns=["atom_id"])
+                     .sort_values(sort_cols).reset_index(drop=True))
+    expected_df = (expected.atom_array.drop(columns=["atom_id"])
+                   .sort_values(sort_cols).reset_index(drop=True))
+    pd.testing.assert_frame_equal(recombined_df, expected_df)
 

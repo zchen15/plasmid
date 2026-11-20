@@ -258,6 +258,24 @@ class Location:
         else:
             out.positions = out.positions[key]
         return out
+
+    def contains(self, start:int, stop:int):
+        """
+        Return true if all positions are fully contained in start and stop
+        """
+        keep = True
+        for s1, s2, sd in self.positions:
+            if start < stop:
+                if s1 < start:
+                    keep = False
+                elif s2 > stop:
+                    keep = False
+            else:
+                if s1 >= stop and s2 <= start:
+                    keep = False
+            if keep:
+                break
+        return keep
         
     def truncate(self, start: int, stop: int) -> "Location":
         """Truncate the location to fit within a specified range.

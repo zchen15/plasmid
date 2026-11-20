@@ -677,27 +677,15 @@ class Record:
             end = len(self.sequence)
         if start >= end:
             raise ValueError("cannot slice with start >= end")
-
-        out = self.copy()
         
-        L = len(out.sequence)
+        out = self.copy()
         if len(out.features) == 0:
             out.sequence = out.sequence[start:end]
             return out
         
-        keep: list[bool] = []
-        loc_list = []
-        for loc in out.features["location"].values:
-            loc_start = loc.start()
-            loc_end = loc.end()
-            if loc_start >= start and loc_end <= end:
-                loc_list.append(loc.shift(L, circular=True))
-                keep.append(True)
-            else:
-                loc_list.append(loc)
-                keep.append(False)
-        out.features["location"] = loc_list
+        keep = [loc.contains(start, end) for loc in out.features["location"]]
         out.features = out.features[keep]
+        out.features["location"] = [loc.shift(-start) for loc in out.features["location"]]
         out.sequence = out.sequence[start:end]
         out.reset_index()
         return out
@@ -768,8 +756,8 @@ class Record:
         * ``int`` — replace the span of the feature at that index with
           ``value`` (a sequence string or :class:`Record`).
         * ``slice`` — replace the sliced span with ``value``.
-        * ``(index, column_name)`` tuple — set that cell in the feature
-          table.
+        * ``(index, column_name)`` or ``(column_name, index)`` tuple — set
+          that cell in the feature table.
 
         Mutates ``self.sequence`` / ``self.features`` and re-sorts features.
 
@@ -792,8 +780,13 @@ class Record:
             out = self.replace(key.start, key.stop, value)
             self.sequence = out.sequence
             self.features = out.features
-        elif isinstance(key, tuple) and len(key) == 2 and isinstance(key[1], str):
-            row, column = key
+        elif isinstance(key, tuple) and len(key) == 2:
+            if isinstance(key[1], str):
+                row, column = key
+            elif isinstance(key[0], str):
+                column, row = key
+            else:
+                raise TypeError(f"Unsupported key type: {type(key)!r}")
             self.features.iloc[row, self.features.columns.get_loc(column)] = value
         else:
             raise TypeError(f"Unsupported key type: {type(key)!r}")
@@ -952,17 +945,17 @@ class Record:
 
     def translate(self, table: str = "Standard", frame: int = 0) -> str:
         """Translate the nucleotide sequence to amino acids.
-
+        
         Args:
             table: Codon table to use (default ``"Standard"``).
             frame: Reading frame offset (0, 1, or 2). Default 0.
-
+        
         Returns:
             Amino-acid string (stops as ``'*'``).
         """
         seq = Bio.Seq.Seq(self.sequence)
         return str(seq[frame:].translate(table=table))
-
+        
     def revcomp(self) -> "Record":
         """Return a reverse-complemented copy of the record.
 
@@ -997,7 +990,7 @@ class Record:
         df = self.to_dataframe()
         cols = ["feature", "location", "sequence"]
         return df[cols].duplicated()
-
+        
     def drop_duplicates(self) -> "Record":
         """Return a copy with duplicate features removed.
 
@@ -1012,9 +1005,7 @@ class Record:
         out.features = out.features.loc[~mask.values].reset_index(drop=True)
         out.reset_index()
         return out
-
-    # -- merge annotations from another record ------------------------------
-
+        
     def merge(self, df):
         """
         Add annotations from one genbank file into another

@@ -23,13 +23,7 @@ class Location:
             Location object
         """
         self.positions = np.unique(pos)
-        
-    def copy(self):
-        """
-        Returns a copy of self
-        """
-        return copy.deepcopy(self)
-        
+                
     def get_slices(self):
         """
         Transform list of indices into list of slices
@@ -48,6 +42,26 @@ class Location:
             out.append(slice(int(s1[i]), int(s2[i])+1))
         return out
         
+    def remap(self, pos:dict):
+        """
+        Remap atom_id
+        """
+        positions = [pos[i] for i in self.positions]
+        return Location(positions)
+        
+    def contains(self, pos:list):
+        """
+        check if location contains all positions
+        """
+        return all(np.isin(self.positions, pos))
+
+    def truncate(self, pos:list):
+        """
+        keep only positions that 
+        """
+        pos = np.intersect1d(self.positions, pos)
+        return Location(pos)
+    
     def __len__(self):
         """
         Returns length of position indicies
@@ -59,7 +73,7 @@ class Location:
         Format list of indices into a string
         """
         out = [f"[{s.start}:{s.stop}]" for s in self.get_slices()]
-        out = ", ".join(out)
+        out = "+".join(out)
         return out
 
     def __repr__(self):
@@ -67,23 +81,25 @@ class Location:
         Returns the representation of the string
         """
         return self.__str__()
-                
+        
     def __add__(self, other):
         """
         Performs self + other
-
+        
         Args:
             other: Record object
         
         Returns:
             modified copy of object
         """
-        out = self.copy()
-        x1 = list(out.positions)
-        x2 = list(other.positions)
-        out.positions = np.unique(x1 + x2)
-        return out
-
+        # check if this should be inplace or not
+        if isinstance(other, Location):
+            pos = np.concatenate((self.positions, other.positions))
+            pos = np.unique(pos)
+        elif isinstance(other, int):
+            pos = self.positions + other
+        return Location(pos)
+        
     def __radd__(self, other):
         """
         Performs other + self
@@ -96,3 +112,15 @@ class Location:
         """
         out = self.__add__(other)
         return out
+        
+    def __sub__(self, other):
+        if isinstance(other, Location):
+            pos = np.setdiff1d(self.positions, other.positions)
+        elif isinstance(other, int):
+            pos = self.positions - other
+        return Location(pos)
+
+    def __eq__(self, other):
+        if isinstance(other, Location) and len(self.positions) == len(other.positions):
+            return all(self.positions == other.positions)
+        return False

@@ -11,11 +11,11 @@ import biotite.structure.io.pdbx
 from .locations import Location
 
 ENTITY_TYPE = {
-    0:"ligand",
-    1:"amino_acid",
-    2:"nucleic_acid",
-    3:"ion",
-    4:"solvent"
+    "ligand":0,
+    "amino_acid":1,
+    "nucleic_acid":2,
+    "ion":3,
+    "solvent":4,
 }
 
 def atom_array_to_df(
@@ -55,72 +55,25 @@ def atom_array_to_df(
                    if "charge" in annotations
                    else np.zeros(len(atom_array))),
     }
-
-    # preserve any other annotation attached to the AtomArray (e.g. ins_code)
-    for key in annotations:
-        if key not in data:
-            data[key] = atom_array.get_annotation(key)
-
     # classify each atom for downstream filtering / display
     feature = np.zeros(len(atom_array))
     feature[biotite.structure.filter_solvent(atom_array)] = ENTITY_TYPE["solvent"]
-    feature[biotite.structure.filter_monoatomic_ions(atom_array)] = ENTITY_TYPE["ions"]
+    feature[biotite.structure.filter_monoatomic_ions(atom_array)] = ENTITY_TYPE["ion"]
     feature[biotite.structure.filter_amino_acids(atom_array)] = ENTITY_TYPE["amino_acid"]
     feature[biotite.structure.filter_nucleotides(atom_array)] = ENTITY_TYPE["nucleic_acid"]
     data["entity_type"] = feature
     
-    df = pd.DataFrame(data)
-    df["frame"] = 0
-    return df
-
-def add_bonds(record: "Record") -> "Record":
-    """
-    Add a bond list based on residue names and inter-atomic distances.
-
-    Args:
-        record: Record object.
-
-    Returns:
-        Copy of the record with ``AtomArray.bonds`` assigned.
-    """
-    df = atom_array_to_df(record.atom_array)
-    df = df[df["frame"] == 0]
-    c0 = biotite.structure.filter_amino_acids(record.atom_array)
-    c0 |= biotite.structure.filter_nucleotides(record.atom_array)
-
-    atom_list = []
-    for chain_id in df["chain_id"].drop_duplicates():
-        c1 = df["chain_id"] == chain_id
-        c_poly = c0 & c1
-        c_lig = ~c0 & c1
-        if isinstance(record.atom_array, biotite.structure.AtomArrayStack):
-            poly_atom_array = record.atom_array[:, c_poly]
-            lig_atom_array = record.atom_array[:, c_lig]
-        else:
-            poly_atom_array = record.atom_array[c_poly]
-            lig_atom_array = record.atom_array[c_lig]
-
-        # bonds for residues
-        bondlist = biotite.structure.connect_via_residue_names(poly_atom_array)
-        poly_atom_array.bonds = bondlist
-        atom_list.append(poly_atom_array)
-
-        # bonds for ligands
-        if isinstance(record.atom_array, biotite.structure.AtomArrayStack):
-            bondlist = biotite.structure.connect_via_distances(lig_atom_array[0])
-        else:
-            bondlist = biotite.structure.connect_via_distances(lig_atom_array)
-        lig_atom_array.bonds = bondlist
-        atom_list.append(lig_atom_array)
-
-    # concatenate atom_array
-    for i in range(1, len(atom_list)):
-        atom_list[0] = atom_list[0] + atom_list[i]
-
-    # return copy
-    out = record.copy()
-    out.atom_array = atom_list[0]
-    return out
+    # preserve any other annotation attached to the AtomArray (e.g. ins_code)
+    for key in annotations:
+        if key not in data:
+            data[key] = atom_array.get_annotation(key)
+    
+    cols = ["entity_type","charge","occupancy","res_id","atom_id"]
+    for col in cols:
+        data[col] = data[col].astype(int)
+    
+    data = pd.DataFrame(data)
+    return data
 
 def df_to_atom_stack(df):
     # build one AtomArray per frame and stack when there is more than one
@@ -142,7 +95,7 @@ def df_to_atom_array(
     """
     if "frame" in df.columns and df["frame"].nunique() > 1:
         return df_to_atom_stack(df)
-
+    
     df = df.reset_index(drop=True)
     atom_array = biotite.structure.AtomArray(len(df))
     atom_array.coord = df[["x", "y", "z"]].to_numpy(dtype=float)
@@ -157,20 +110,6 @@ def df_to_atom_array(
     
     # check if charge is integer or float
     atom_array.set_annotation("charge", df["charge"].to_numpy(dtype=float))
-
-    # restore every other non-derived column as an annotation
-    skip = {"atom_id", "frame", "x", "y", "z", "feature",
-            "chain_id", "res_id", "res_name", "hetero", "atom_name",
-            "element", "b_factor", "occupancy", "charge"}
-    for column in df.columns:
-        if column in skip:
-            continue
-        values = df[column].to_numpy()
-        if values.dtype == object:
-            non_null = values[~pd.isna(values)]
-            if all(isinstance(value, str) for value in non_null):
-                values = values.astype(str)
-        atom_array.set_annotation(column, values)
     return atom_array
 
 def to_mmcif(filename:str, df_atom_array, df_pep=None, df_seq=None, df_nuc=None) -> None:
@@ -257,3 +196,142 @@ def to_mmcif(filename:str, df_atom_array, df_pep=None, df_seq=None, df_nuc=None)
     # add structure info
     biotite.structure.io.pdbx.set_structure(file, atom_array)
     file.write(str(filename))
+
+def add_bonds(record: "Record") -> "Record":
+    """
+    Add a bond list based on residue names and inter-atomic distances.
+
+    Args:
+        record: Record object.
+
+    Returns:
+        Copy of the record with ``AtomArray.bonds`` assigned.
+    """
+    # Record.atom_array is a dataframe in the current API; convert it back to
+    # a biotite structure before computing bonds
+    atom_array = record.atom_array
+    if isinstance(atom_array, pd.DataFrame):
+        atom_array = df_to_atom_array(atom_array)
+
+    df = atom_array_to_df(atom_array)
+    if "frame" in df.columns:
+        df = df[df["frame"] == 0]
+    c0 = biotite.structure.filter_amino_acids(atom_array)
+    c0 |= biotite.structure.filter_nucleotides(atom_array)
+
+    atom_list = []
+    for chain_id in df["chain_id"].drop_duplicates():
+        c1 = df["chain_id"] == chain_id
+        c_poly = c0 & c1
+        c_lig = ~c0 & c1
+        if isinstance(atom_array, biotite.structure.AtomArrayStack):
+            poly_atom_array = atom_array[:, c_poly]
+            lig_atom_array = atom_array[:, c_lig]
+        else:
+            poly_atom_array = atom_array[c_poly]
+            lig_atom_array = atom_array[c_lig]
+
+        # bonds for residues
+        bondlist = biotite.structure.connect_via_residue_names(poly_atom_array)
+        poly_atom_array.bonds = bondlist
+        atom_list.append(poly_atom_array)
+
+        # bonds for ligands
+        if isinstance(atom_array, biotite.structure.AtomArrayStack):
+            bondlist = biotite.structure.connect_via_distances(lig_atom_array[0])
+        else:
+            bondlist = biotite.structure.connect_via_distances(lig_atom_array)
+        lig_atom_array.bonds = bondlist
+        atom_list.append(lig_atom_array)
+
+    # concatenate atom_array
+    for i in range(1, len(atom_list)):
+        atom_list[0] = atom_list[0] + atom_list[i]
+
+    # return copy
+    out = record.copy()
+    out.atom_array = atom_list[0]
+    return out
+
+# biotite 2.0 returns ``PSeaElement`` integer codes; older versions returned
+# the DSSP letter codes directly. ``t`` (turn) is not produced by biotite's
+# P-SEA implementation, but is accepted for backwards compatibility.
+_SSE_CODES = {-1: "c", 0: "c", 1: "a", 2: "b"}
+
+
+def get_protein_sse(record: "Record") -> pd.DataFrame:
+    """
+    Compute the secondary structure of each protein chain using P-SEA.
+
+    Args:
+        record: Record object.
+
+    Returns:
+        The sequence dataframe with an added ``dssp`` column containing one
+        letter per residue.
+    """
+    df = get_sequence(record)
+    out = []
+    for atom_id in df["atom_id"].values:
+        s1 = min(atom_id.positions)
+        s2 = max(atom_id.positions)
+        sse = biotite.structure.annotate_sse(record.atom_array[s1:s2])
+
+        # biotite 2.0 uses integer PSeaElement codes, older versions letters
+        try:
+            sse = "".join(
+                _SSE_CODES.get(int(code), "c") for code in sse
+            )
+        except (TypeError, ValueError):
+            sse = "".join(sse)
+        out.append(sse)
+    df = df.copy()
+    df["dssp"] = out
+    return df
+
+
+def get_dssp_annotations(record: "Record") -> pd.DataFrame:
+    """
+    Get secondary-structure annotations for the protein sequence.
+
+    Args:
+        record: Record object.
+
+    Returns:
+        Dataframe with one row per secondary-structure segment and the columns
+        ``atom_id``, ``chain_id``, ``res_id``, ``dssp`` and ``length``.
+    """
+    data = atom_array_to_df(record.atom_array)
+    data = data[data["frame"] == 0]
+    df = get_protein_sse(record)
+
+    out = []
+    cols = ["chain_id", "atom_id", "dssp"]
+    for chain_id, atom_id, sse in df[cols].values:
+        # residues in this chain and within the annotated atom range
+        in_chain = data["atom_id"] >= min(atom_id.positions)
+        in_chain &= data["atom_id"] < max(atom_id.positions)
+        in_chain &= data["chain_id"] == chain_id
+        res_ids = data.loc[in_chain, "res_id"].drop_duplicates().values
+
+        sse = np.array(list(sse))
+        same_as_next = sse[:-1] == sse[1:]
+        segment_start = np.concatenate(([True], ~same_as_next))
+        segment_end = np.concatenate((~same_as_next, [True]))
+
+        for start, end, code in zip(
+            res_ids[segment_start],
+            res_ids[segment_end],
+            sse[segment_start],
+        ):
+            if code == "c":
+                continue
+            in_segment = data["chain_id"] == chain_id
+            in_segment &= data["res_id"] >= start
+            in_segment &= data["res_id"] <= end
+            atom_ids = Location(data.loc[in_segment, "atom_id"].values)
+            res_id = Location(data.loc[in_segment, "res_id"].values)
+            out.append([atom_ids, chain_id, res_id, code, end - start])
+
+    cols = ["atom_id", "chain_id", "res_id", "dssp", "length"]
+    return pd.DataFrame(out, columns=cols)
