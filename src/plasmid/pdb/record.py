@@ -40,20 +40,22 @@ def _trim_features(atom_array: pd.DataFrame, features: pd.DataFrame) -> pd.DataF
     if len(features) == 0:
         return features
 
-    kept = sorted({int(p) for p in atom_array["atom_id"].tolist()}) if len(atom_array) else []
-    keep_mask = []
-    for i, loc in enumerate(features["atom_id"].values):
-        positions = np.asarray(loc.positions, dtype=int) if isinstance(loc, Location) else np.asarray([loc], dtype=int)
-        surviving = [int(p) for p in positions if int(p) in kept]
-        if len(surviving) == 0:
-            keep_mask.append(False)
-        else:
-            keep_mask.append(True)
-            features.iloc[i, features.columns.get_loc("atom_id")] = Location(surviving)
-            features.iloc[i, features.columns.get_loc("res_id")] = Location(surviving)
-
-    return features[np.asarray(keep_mask, dtype=bool)].reset_index(drop=True)
-
+    atom_list = atom_array["atom_id"].drop_duplicates()
+    features = features.copy()
+    
+    # keep only features that still have atoms
+    features["atom_id"] = [loc.intersection(atom_list) for loc in features["atom_id"].values]
+    c = [len(loc) > 0 for loc in features["atom_id"]]
+    features = features[c].copy()
+    
+    # update res_id
+    new_res_id = []
+    for i in range(len(features)):
+        loc = features.iloc[i]["atom_id"]
+        c = atom_array["atom_id"].isin(loc.get_positions())
+        new_res_id.append(Location(atom_array.loc[c, "res_id"]))
+    features["res_id"] = new_res_id
+    return features
 
 def read_pdb(filename:str):
     """Reads a PDB or mmCIF file into a Record object.
@@ -141,9 +143,10 @@ class Record:
         features = self.features.copy()
         features["atom_id"] = [loc.remap(new_id) for loc in features["atom_id"]]
         stats = {"res_id":"sum", "atom_id":"sum"}
-        
         cols = ["chain_id", "entity_type", "name", "representation", "color", "description"]
         features = features.groupby(cols).agg(stats).reset_index()
+
+        # output
         out = Record(filename = self.filename,
                      atom_array = atom_array,
                      features = features,
@@ -437,7 +440,7 @@ class Record:
         out = f"filename: {self.filename}\n\n"
         out+= f"List of Sequences:\n{df_seq}\n\n"
         out+= f"List of Ligands:\n{df_lig}\n\n"
-        out+= f"List of Features:\n{self.features}\n\n"
+        out+= f"List of Features:\n{self.features[FEATURE_COLUMNS]}\n\n"
         return out
         
     def __str__(self):

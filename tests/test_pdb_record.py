@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import biotite.structure.io.pdbqt as pdbqt
 
+from plasmid.pdb.locations import Location
 from plasmid.pdb.record import read_pdb
 from plasmid.pdb.io import atom_array_to_df, add_bonds
 
@@ -159,13 +160,23 @@ def test_trim_features():
     # trim to dCas9 protein only
     c = rec.atom_array["chain_id"] == "A"
     x = rec[c]
-    print(f"trimmed record:\n{x}")
+    
+    print(f"trimmed record to dCas9:\n{x}")
     assert len(x.features) == 1
-    assert x.features["name"] == "dCas9"
-    assert x.features["color"] == "orange"
+    assert x.features["name"].values[0] == "dCas9"
+    assert x.features["color"].values[0] == "orange"
     
-    # todo trim to a subset of dCas9 sequence and check
+    # trim to a subset of dCas9 sequence and check
+    c = rec.atom_array["chain_id"] == "A"
+    c&= rec.atom_array["res_id"] >= 315
+    c&= rec.atom_array["res_id"] < 800
+    x = rec[c]
     
+    print(f"trimmed record to dCas9 subset:\n{x}")
+    assert len(x.features) == 1
+    assert x.features["name"].values[0] == "dCas9"
+    assert x.features["color"].values[0] == "orange"
+    assert x.features["atom_id"].values[0] == Location(range(2372, 5804))
     
 def test_reset_index():
     fname = "data/pdb/4ZT9.cif"

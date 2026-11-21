@@ -54,10 +54,10 @@ class Location:
         check if location contains all positions
         """
         return all(np.isin(self.positions, pos))
-
-    def truncate(self, pos:list):
+        
+    def intersection(self, pos:list):
         """
-        keep only positions that 
+        keep only positions that intersect
         """
         pos = np.intersect1d(self.positions, pos)
         return Location(pos)
