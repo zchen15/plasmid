@@ -21,8 +21,7 @@ def test_read_pdb():
         # check columns
         expected_cols = ["atom_id", "chain_id", "res_id", "res_name", 
                          "hetero", "atom_name", "element", "entity_type",
-                         "x", "y", "z",
-                         "b_factor", "occupancy", "charge",
+                         "x", "y", "z", "b_factor", "occupancy", "charge",
                          "frame"]
         for col in expected_cols:
             assert col in rec.atom_array
@@ -34,21 +33,21 @@ def expected_locations(rec, chain_id):
     res_ids = np.unique(rec.atom_array.loc[c, "res_id"].values)
     return atoms, res_ids
 
-def test_annotate_gRNA():
+def test_annotate_by_atom_id():
     fname = "data/pdb/4ZT9.cif"
     rec = read_pdb(fname)
 
     # non inplace annotation of gRNA
-    c = rec["chain_id"] == "B"
-    rec1 = rec.annotate_by_atom_id(atom_id = rec[c, "atom_id"],
-                            name = "gRNA B",
-                            color = "blue",
-                           )
-    c = rec["chain_id"] == "D"
-    rec2 = rec.annotate_by_atom_id(atom_id = rec[c, "atom_id"],
-                            name = "gRNA D",
-                            color = "red",
-                           )    
+    c = rec.atom_array["chain_id"] == "B"
+    rec1 = rec.annotate_by_atom_id(atom_id = rec.atom_array.loc[c, "atom_id"],
+                                    name = "gRNA B",
+                                    color = "blue",
+                                   )
+    c = rec.atom_array["chain_id"] == "D"
+    rec2 = rec.annotate_by_atom_id(atom_id = rec.atom_array.loc[c, "atom_id"],
+                                    name = "gRNA D",
+                                    color = "red",
+                                   )    
     print(f"orig dCas9 contents:\n{rec}")
     print(f"rec1 dCas9 contents:\n{rec1}")
     print(f"rec2 dCas9 contents:\n{rec2}")
@@ -79,14 +78,14 @@ def test_annotate_gRNA():
     assert np.array_equal(feature_d["res_id"].positions, expected_res_d)
     
     # annotate gRNAs inplace
-    c = rec["chain_id"] == "B"
-    rec.annotate_by_atom_id(atom_id = rec[c, "atom_id"],
+    c = rec.atom_array["chain_id"] == "B"
+    rec.annotate_by_atom_id(atom_id = rec.atom_array.loc[c, "atom_id"],
                             name = "gRNA B",
                             color = "blue",
                             inplace = True,
                            )
-    c = rec["chain_id"] == "D"
-    rec.annotate_by_atom_id(atom_id = rec[c, "atom_id"],
+    c = rec.atom_array["chain_id"] == "D"
+    rec.annotate_by_atom_id(atom_id = rec.atom_array.loc[c, "atom_id"],
                             name = "gRNA D",
                             color = "red",
                             inplace = True,
@@ -109,33 +108,65 @@ def test_annotate_gRNA():
         assert np.array_equal(feature["atom_id"].positions, atoms)
         assert np.array_equal(feature["res_id"].positions, res_ids)
 
-def test_annotate_add():
+def test_add():
     fname = "data/pdb/4ZT9.cif"
     rec = read_pdb(fname)
     
-    c1 = rec["chain_id"] == "B"
-    rec.annotate_by_atom_id(atom_id = rec[c1, "atom_id"],
+    c1 = rec.atom_array["chain_id"] == "B"
+    rec.annotate_by_atom_id(atom_id = rec.atom_array.loc[c1, "atom_id"],
                             name = "gRNA",
                             color = "blue",
                             inplace = True,
                            )
-    c2 = rec["chain_id"] == "A"
-    rec.annotate_by_atom_id(atom_id = rec[c2, "atom_id"],
+    c2 = rec.atom_array["chain_id"] == "A"
+    rec.annotate_by_atom_id(atom_id = rec.atom_array.loc[c2, "atom_id"],
                             name = "dCas9",
                             color = "orange",
                             inplace = True,
                            )
     print(f"annotated record:\n{rec}")
-
+    
     # filter for chain A and B
     rec = rec[c1 | c2]
     
     # add records
-    x = rec.copy() + rec.copy()
+    x = rec + rec
+    print(f"added record:\n{x}")
+    print(x.features)
+    
     assert len(x.atom_array) > 0
     assert len(x.atom_array) == len(rec.atom_array)*2
     assert len(x.features) == 4
 
+def test_trim_features():
+    fname = "data/pdb/4ZT9.cif"
+    rec = read_pdb(fname)
+
+    c1 = rec.atom_array["chain_id"] == "B"
+    rec.annotate_by_atom_id(atom_id = rec.atom_array.loc[c1, "atom_id"],
+                            name = "gRNA",
+                            color = "blue",
+                            inplace = True,
+                           )
+    c2 = rec.atom_array["chain_id"] == "A"
+    rec.annotate_by_atom_id(atom_id = rec.atom_array.loc[c2, "atom_id"],
+                            name = "dCas9",
+                            color = "orange",
+                            inplace = True,
+                           )
+    print(f"annotated record:\n{rec}")
+    
+    # trim to dCas9 protein only
+    c = rec.atom_array["chain_id"] == "A"
+    x = rec[c]
+    print(f"trimmed record:\n{x}")
+    assert len(x.features) == 1
+    assert x.features["name"] == "dCas9"
+    assert x.features["color"] == "orange"
+    
+    # todo trim to a subset of dCas9 sequence and check
+    
+    
 def test_reset_index():
     fname = "data/pdb/4ZT9.cif"
     rec = read_pdb(fname)

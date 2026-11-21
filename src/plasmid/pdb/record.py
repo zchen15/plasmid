@@ -23,17 +23,46 @@ FEATURE_COLUMNS = [
     "representation", "color", "description",
 ]
 
-def read_pdb(filename:str):
-    """
-    Reads a pdb or mmCIF file
+
+def _trim_features(atom_array: pd.DataFrame, features: pd.DataFrame) -> pd.DataFrame:
+    """Trim the feature table so that it only references atoms present in ``atom_array``.
+
+    Features whose atoms were all removed are dropped; features which only partially
+    overlap are trimmed to the surviving atoms.
+
     Args:
-        filename: filename to read
+        atom_array: Atom dataframe to trim the features against.
+        features: Feature table to trim.
+
+    Returns:
+        Copy of the feature table trimmed to ``atom_array``.
+    """
+    if len(features) == 0:
+        return features
+
+    kept = sorted({int(p) for p in atom_array["atom_id"].tolist()}) if len(atom_array) else []
+    keep_mask = []
+    for i, loc in enumerate(features["atom_id"].values):
+        positions = np.asarray(loc.positions, dtype=int) if isinstance(loc, Location) else np.asarray([loc], dtype=int)
+        surviving = [int(p) for p in positions if int(p) in kept]
+        if len(surviving) == 0:
+            keep_mask.append(False)
+        else:
+            keep_mask.append(True)
+            features.iloc[i, features.columns.get_loc("atom_id")] = Location(surviving)
+            features.iloc[i, features.columns.get_loc("res_id")] = Location(surviving)
+
+    return features[np.asarray(keep_mask, dtype=bool)].reset_index(drop=True)
+
+
+def read_pdb(filename:str):
+    """Reads a PDB or mmCIF file into a Record object.
+    
+    Args:
+        filename: Path to the PDB or mmCIF file to read.
     
     Returns:
-        Record object
-
-    todo fixes, if each frame does not have the same number of total atoms,
-    assume chain_id, res_id, res_name, element, atom_name uniquely identify the atom, then assign atom_id based on that
+        A Record object containing the parsed structure.
     """
     atom_array = biotite.structure.io.load_structure(filename)
     if isinstance(atom_array, biotite.structure.AtomArrayStack):
@@ -62,14 +91,15 @@ class Record:
     features = None
     
     def __init__(self, **kwargs):
-        """
-        Initializes the Record object
+        """Initializes a Record object with default or provided attributes.
         
         Args:
-            kwargs: settings that override the class defaults.
+            kwargs: Keyword arguments matchingRecord attributes to override
+                defaults. Supported keys include ``filename``, ``atom_array``,
+                and ``features``.
         
         Returns:
-            Record object
+            None. The Record instance is modified in place.
         """
         self.atom_array = pd.DataFrame(columns=ATOM_ARRAY_COLUMNS)
         self.features = pd.DataFrame(columns=FEATURE_COLUMNS)
@@ -79,8 +109,10 @@ class Record:
                 setattr(self, key, value)
         
     def copy(self):
-        """
-        Returns a copy of self
+        """Returns a deep copy of the Record instance.
+        
+        Returns:
+            A new Record object with copied atom_array and features DataFrames.
         """
         rec = Record(filename = self.filename,
                      atom_array = self.atom_array.copy(),
@@ -89,8 +121,13 @@ class Record:
         return rec
         
     def reset_index(self):
-        """
-        Function for sorting record info
+        """Sorts the Record's atom array and feature table in place.
+        
+        Reassigns sequential atom IDs and re-sorts features by
+        (start, length, feature, name) for consistent ordering.
+        
+        Returns:
+            None. The Record is modified in place.
         """
         # sort and get new atom_id
         cols = ["atom_id","chain_id","res_id","res_name","hetero","atom_name","element"]
@@ -114,16 +151,30 @@ class Record:
         return out
         
     def save(self, filename:str, **kwargs):
-        """
-        Saves AtomArray to files
+        """Saves the Record's atom array to a PDB/mmCIF file.
         
         Args:
-            filename: name of file to save
+            filename: Path to the output file. Extension determines format
+                (``.pdb`` or ``.cif``).
+            **kwargs: Additional arguments passed to
+                :func:`biotite.structure.io.save_structure`.
+        
+        Returns:
+            None. The file is written to disk.
         """
         atom_array = df_to_atom_stack(self.atom_array)
         biotite.structure.io.save_structure(filename, atom_array, **kwargs)
         
     def get_ligands(self, frame:int=0):
+        """Returns ligand and small-molecule atoms in the structure.
+        
+        Args:
+            frame: Model index to select atoms from (default 0).
+        
+        Returns:
+            DataFrame with columns ``[atom_id, chain_id, res_id, entity_type, res_name]``
+            containing ligand/non-polymer atoms.
+        """
         c1 = self.atom_array["entity_type"] == ENTITY_TYPE["nucleic_acid"]
         c1|= self.atom_array["entity_type"] == ENTITY_TYPE["amino_acid"]
         c2 = self.atom_array["frame"] == frame
@@ -148,6 +199,15 @@ class Record:
         return out
         
     def get_amino_acids(self, frame:int=0):
+        """Returns amino acid residue atoms in the structure.
+        
+        Args:
+            frame: Model index to select atoms from (default 0).
+        
+        Returns:
+            DataFrame with columns ``[atom_id, chain_id, sequence, res_id, entity_type]``
+            containing per-residue amino acid information.
+        """
         c1 = self.atom_array["entity_type"] == ENTITY_TYPE["amino_acid"]
         c2 = self.atom_array["frame"] == frame
         df = self.atom_array[c1 & c2]
@@ -174,6 +234,15 @@ class Record:
         return out
         
     def get_nucleic_acids(self, frame:int=0):
+        """Returns nucleic acid residue atoms in the structure.
+        
+        Args:
+            frame: Model index to select atoms from (default 0).
+        
+        Returns:
+            DataFrame with columns ``[atom_id, chain_id, sequence, res_id, entity_type]``
+            containing per-residue nucleic acid information.
+        """
         c1= self.atom_array["entity_type"] == ENTITY_TYPE["nucleic_acid"]
         c2 = self.atom_array["frame"] == frame
         df = self.atom_array[c1 & c2]
@@ -199,14 +268,22 @@ class Record:
         return out
         
     def annotate_by_atom_id(self, atom_id:list, name:str, representation:str=None, color:str=None, description:dict=None, inplace:bool=False):
-        """
-        Add annotation to pdb structure
+        """Adds annotation features to the PDB structure at specified atom positions.
         
         Args:
-            name: name of feature
+            atom_id: List of atom IDs where the feature should be added.
+            name: Name/label of the new feature.
+            representation: Visual representation style (e.g. ``'cartoon'``,
+                ``'ball+stick'``). If ``None``, a default is chosen based on
+                ``entity_type``.
+            color: Color name or list for the feature. If ``None``, a default
+                is chosen based on ``entity_type``.
+            description: Optional dictionary of additional qualifiers.
+            inplace: When ``True``, modifies ``self`` in place and returns it.
+                When ``False`` (default), returns a copy with the new feature.
         
         Returns:
-            copy of pdb record object
+            Record object with the new feature annotation added.
         """
         # specify default representations
         DEFAULT_REPRESENTATIONS = {
@@ -258,15 +335,22 @@ class Record:
         return out
         
     def superimpose_to(self, rec, atom_mask=None):
-        """
-        Superimpose one crystal structure to another
+        """Superimposes another crystal structure onto this record.
+        
+        Aligns the atom arrays of ``self`` and ``rec`` using biotite's
+        structural superposition, returning a new Record with the fitted
+        coordinates.
         
         Args:
-            rec: Record object
-            atom_mask: bool array which selects which atoms will be used for alignment
+            rec: Record object whose structure will be superimposed onto
+                this record.
+            atom_mask: Optional boolean array selecting which atoms participate
+                in the alignment. Atoms not in the mask are excluded from the
+                superposition calculation.
         
         Returns:
-            returns aligned copy of self
+            A new Record object with the coordinates of ``rec`` aligned to
+            this record's coordinate frame.
         """
         out = self.copy()
         x1 = df_to_atom_array(rec.atom_array)
@@ -281,18 +365,21 @@ class Record:
         return out
         
     def superimpose_homologs_to(self, rec, min_anchors:int=3):
-        """
-        Align one crystal structure into another by first doing
-        pairwise alignment of residue sequences to identify matching
-        backbone residues. Then, perform superimpose with outliers on
-        matching residues.
+        """Aligns this structure to another via homology-based superposition.
+        
+        Performs pairwise sequence alignment of residue backbones to identify
+        matching anchors, then uses biotite's homologue superposition to fit
+        ``rec`` onto this record's coordinate frame.
         
         Args:
-            rec: Record object
-            min_anchors: min number of anchor atoms
+            rec: Record object to align into this record's frame.
+            min_anchors: Minimum number of anchor atom pairs required for a
+                valid superposition. Lower values allow alignment with fewer
+                matching residues.
         
         Returns:
-            returns aligned copy of self
+            A new Record object with ``rec``'s coordinates aligned to this
+            record's coordinate frame.
         """
         out = self.copy()
         x1 = df_to_atom_array(rec.atom_array)
@@ -307,19 +394,20 @@ class Record:
         return out
 
     def superimpose_by_sse_to(self, rec, min_anchors:int=3):
-        """
-        Align one crystal structure into another by first doing
-        pairwise alignment of sequence representation of secondary
-        structures to identify matching anchor backbone residues. 
-        Next, the structures are superimposed using these anchor
-        residues while minimizing the Tm score.
+        """Aligns this structure to another using secondary structure element (SSE) matching.
+        
+        Performs pairwise alignment of secondary structure representations to
+        identify matching anchor residues, then superimposes ``rec`` onto this
+        record's coordinate frame while minimizing the TM score.
         
         Args:
-            rec: Record object
-            min_anchors: min number of anchor atoms
+            rec: Record object to align into this record's frame.
+            min_anchors: Minimum number of anchor atom pairs required for a
+                valid superposition.
         
         Returns:
-            returns aligned copy of self
+            A new Record object with ``rec``'s coordinates aligned to this
+            record's coordinate frame.
         """
         out = self.copy()
         x1 = df_to_atom_array(rec.atom_array)
@@ -333,11 +421,13 @@ class Record:
         return out
         
     def __repr__(self):
-        """
-        Gets representation of underlying data
+        """Returns a human-readable representation of the Record.
+        
+        Displays summary information including filename, sequences,
+        ligands, and features.
         
         Returns:
-            string representation of the underlying data
+            Multi-line string showing the record's contents.
         """
         df_AA = self.get_amino_acids()
         df_nuc = self.get_nucleic_acids()
@@ -353,99 +443,101 @@ class Record:
     def __str__(self):
         return self.__repr__()
         
-    def _trim_features(self, atom_array):
-        """
-        Trim the feature table so that it only references atoms which are
-        present in ``atom_array``.
+    def __delitem__(self, key):
+        """Deletes features or atom slices from the Record.
         
-        Features whose atoms were all removed are dropped; features which
-        only partially overlap are trimmed to the surviving atoms.
+        Supports boolean masks (to drop selected atoms) and slices (to remove
+        a sequence range). Feature annotations are automatically trimmed to
+        remain consistent with the remaining atoms.
         
         Args:
-            atom_array: Atom dataframe to trim the features against.
+            key: Boolean array selecting atoms to keep (``~key`` are deleted),
+                or a slice ``(start, stop)`` removing atoms in that range.
         
-        Returns:
-            Copy of the feature table trimmed to ``atom_array``.
-        """
-        features = self.features.copy()
-        if len(features) == 0:
-            return features
-        
-        kept = sorted({int(p) for p in atom_array["atom_id"].tolist()}) if len(atom_array) else []
-        keep_mask = []
-        for i, loc in enumerate(features["atom_id"].values):
-            positions = np.asarray(loc.positions, dtype=int) if isinstance(loc, Location) else np.asarray([loc], dtype=int)
-            surviving = [int(p) for p in positions if int(p) in kept]
-            if len(surviving) == 0:
-                keep_mask.append(False)
-            else:
-                keep_mask.append(True)
-                features.iloc[i, features.columns.get_loc("atom_id")] = Location(surviving)
-                features.iloc[i, features.columns.get_loc("res_id")] = Location(surviving)
-        
-        return features[np.asarray(keep_mask, dtype=bool)].reset_index(drop=True)
-
-    def __delitem__(self, key):
-        """
-        Deletes parts of the atom_array
+        Raises:
+            ValueError: If ``key`` is not a boolean array or slice.
         """
         # deletes slices of atom_array by bool array
         if isinstance(key, np.ndarray) and key.dtype == bool:
             self.atom_array = self.atom_array.loc[~key]
-            self.features = self._trim_features(self.atom_array)
+            self.features = _trim_features(self.atom_array, self.features)
         
         # deletes slices of the atom array and associated features
         elif isinstance(key, slice):
             c = self.atom_array["atom_id"] >= key.start
             c&= self.atom_array["atom_id"] < key.stop
             self.atom_array = self.atom_array.loc[~c]
-            self.features = self._trim_features(self.atom_array)
+            self.features = _trim_features(self.atom_array, self.features)
         else:
-            raise ValueError(f"__setitem__(): Unsupported: {type(key)} {type(value)}")
+            raise ValueError(f"Unsupported key type: {type(key)!r}")
         
-    def __setitem__(self, key:tuple, value:Record):
-        """
-        Replaces a set of atoms with new atoms
+    def __setitem__(self, key:tuple, value:"Record"):
+        """Sets atom values and updates feature annotations accordingly.
+        
+        Supports replacing atom arrays with new Record objects via boolean mask
+        or slice keys. Feature annotations are automatically trimmed to match
+        the new atom configuration.
+        
+        Args:
+            key: Tuple of (index/slice/boolean_mask, column_name) or just a
+                boolean array/slice selecting which atoms to replace.
+            value: New Record object whose atoms will replace the selected
+                atoms in ``self``.
+        
+        Raises:
+            ValueError: If ``key`` or ``value`` are of unsupported types.
         """
         if isinstance(value, Record) and isinstance(key, np.ndarray) and key.dtype == bool:
             self.atom_array = self.atom_array.loc[~key]
-            features = self._trim_features(self.atom_array)
+            features = _trim_features(self.atom_array, self.features)
             self = self + value
         
         elif isinstance(value, Record) and isinstance(key, slice):
             c = self.atom_array["atom_id"] >= key.start
             c&= self.atom_array["atom_id"] < key.stop
             self.atom_array = self.atom_array[~c]
-            self.features = self._trim_features(self.atom_array)
+            self.features = _trim_features(self.atom_array, self.features)
             self = self + value
         
         else:
-            raise ValueError(f"__setitem__(): Unsupported: {type(key)} {type(value)}")
+            raise ValueError(f"Unsupported key type: {type(key)!r}")
         
     def __getitem__(self, key):
-        """
-        Get slices of an AtomArray
+        """Retrieves a subset of the Record via indexing.
+        
+        Supports slice, boolean array, and integer array keys. When a boolean
+        mask or index array is used, the returned Record's feature table is
+        trimmed to match the selected atoms.
         
         Args:
-            key: slice or list of bools or strings
+            key: Selection key. Accepted forms:
+                - ``slice`` ``(start, stop)`` — atoms in that range.
+                - ``numpy.ndarray`` of bools — features at ``True`` positions.
+                - ``pandas.Series`` of bools — same as numpy array.
+                - ``str`` (column name) — returns that column from features.
+                - ``(int, str)`` tuple — cell value at row ``index``, column ``name``.
         
         Returns:
-            copy of the values of the underlying data
+            A new Record object containing the selected atoms and trimmed
+            feature annotations, or a pandas Series/scalar depending on key type.
+        
+        Raises:
+            ValueError: If ``key`` is of an unsupported type.
         """
         # slice through atom_array
         if isinstance(key, slice):
             c = self.atom_array["atom_id"] >= key.start
             c&= self.atom_array["atom_id"] < key.stop
             atom_array = self.atom_array[c].copy()
-            features = self._trim_features(atom_array)
+            features = _trim_features(atom_array, self.features)
         
         # slice via array indices or bool indices
         elif isinstance(key, np.ndarray) or isinstance(key, pd.Series):
             atom_array = self.atom_array.loc[key].copy()
-            features = self._trim_features(atom_array)
+            features = _trim_features(atom_array, self.features)
 
         else:
-            raise ValueError(f"__setitem__(): Unsupported: {type(key)} {type(value)}")
+            raise ValueError(f"Unsupported key type: {type(key)!r}")
         
         rec = Record(filename = self.filename,
                      features = features,
@@ -471,13 +563,15 @@ class Record:
         other = other.reset_index()
         other.atom_array["atom_id"]+= L
         other.features["atom_id"]+= L
+
+        print('debug', other, out)
         
         # concatenate
         out.atom_array = pd.concat([out.atom_array, other.atom_array])
         out.features = pd.concat([out.features, other.features])
         return out
 
-    def merge(self, other:Record):
+    def merge(self, other:"Record"):
         """
         Merges atoms from one Record into another
 
@@ -497,7 +591,7 @@ class Record:
         cols = ["atom_id","chain_id","res_id"]
         atom_array = atom_array[cols].drop_duplicates()
         atom_array = atom_array.merge(self.atom_array, on=cols, how="left")
-        self_features = self._trim_features(atom_array)
+        self_features = _trim_features(atom_array, self.features)
         
         cols = ["atom_id","chain_id","res_id","res_name","atom_name","element"]
         x = atom_array[cols].drop_duplicates()
@@ -507,11 +601,11 @@ class Record:
         # populate joint atom_id slots with other
         c = atom_array["element"].notna()
         x1 = atom_array[c]
-
+        
         cols = ["atom_id","chain_id","res_id"]
         atom_array = atom_array[~c, cols].drop_duplicates()
         x2 = atom_array.merge(other.atom_array, on=cols, how="left")
-        other_features = other._trim_features(x2)
+        other_features = _trim_features(x2, other.features)
         
         atom_array = pd.concat([x1, x2])
         
