@@ -228,6 +228,6 @@ def test_split_and_merge_structures(tmp_path):
     c = recombined.atom_array == expected.atom_array
     print('mismatch atom_array', recombined.atom_array[~c])    
 
-    assert assert_frame_equal(recombined.atom_array, expected.atom_array, check_index=False, check_dtype=False)
+    assert assert_frame_equal(recombined.atom_array, expected.atom_array)
     assert assert_frame_equal(recombined.features, expected.features, check_index=False, check_dtype=False)
 
