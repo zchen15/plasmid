@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from pandas.testing import assert_frame_equal
+import pandas as pd
 import biotite.structure.io.pdbqt as pdbqt
 
 from plasmid.pdb.locations import Location
