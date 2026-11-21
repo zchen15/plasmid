@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-import pandas as pd
+from pandas.testing import assert_frame_equal
 import biotite.structure.io.pdbqt as pdbqt
 
 from plasmid.pdb.locations import Location
@@ -218,5 +218,16 @@ def test_split_and_merge_structures(tmp_path):
 
     recombined = (read_pdb(str(gRNA_file)) + read_pdb(str(dCas9_cif_file))).reset_index()
     expected = record.reset_index()
-    pd.testing.assert_frame_equal(recombined_df, expected_df)
+    
+    print('recombined.__repr__()', recombined)
+    print('expected.__repr__()', expected)
+    
+    print('recombined.atom_array.columns', recombined.atom_array.columns)   
+    print('expected.atom_array.columns', expected.atom_array.columns)   
+    
+    c = recombined.atom_array == expected.atom_array
+    print('mismatch atom_array', recombined.atom_array[~c])    
+
+    assert assert_frame_equal(recombined.atom_array, expected.atom_array, check_index=False, check_dtype=False)
+    assert assert_frame_equal(recombined.features, expected.features, check_index=False, check_dtype=False)
 

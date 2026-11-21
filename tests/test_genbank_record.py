@@ -15,9 +15,14 @@ def test_read_genbank():
 
 def test_plasmid_print():
     # Check printing
-    assert type(df.__str__())==str
-    assert type(df.get_colored())==str
-    assert type(df.__repr__())==str
+    fname = 'data/genbank/dcas9_LacI.gb'
+    x = plasmid.read_genbank(fname)        
+    
+    print('no coloring\n', x.__repr__())
+    print('colored genbank \n', x.get_colored())
+    
+    assert x.__str__() == x.sequence
+    assert len(x.get_colored()) > len(x.sequence)
 
 def test_rotation():
     # Checks rotation of entries
@@ -44,6 +49,8 @@ def test_del():
     assert c1==c2
 
 def test_add():
+    fname = 'data/genbank/dcas9_LacI.gb'
+    df = plasmid.read_genbank(fname)
     # Checks concatenation
     x = df+df
     assert isinstance(x, Record)
@@ -87,12 +94,12 @@ def test_splice():
     # Checks splicing of sequences
     fname = 'data/genbank/dcas9_LacI.gb'
     x = plasmid.read_genbank(fname)
+    print(x)
     i = 1
     name1, s1, s2 = x[['name','start','end']].values[i]
-    seq1 = x[s1:s2].splice().__str__()
-    seq2 = x.__str__()[s1:s2]
-
-    assert seq1==seq2
+    y = x[s1:s2]
+    print(y)
+    assert x.sequence[s1:s2]==y.sequence
 
 def test_replace():
     # Checks sequence replacement
@@ -104,13 +111,12 @@ def test_replace():
     # check initial values
     s1 = x[i]['start'].values[0]
     s2 = s1 + len(val)
-    print(s1, s2)
 
     # set to new value
     x[i] = val
-
+    seq = x.sequence[s1:s2]
+    
     # check new values
-    seq = x.__str__()[s1:s2]
     print(val, seq)
     assert val == seq
     

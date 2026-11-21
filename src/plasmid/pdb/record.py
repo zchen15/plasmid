@@ -24,7 +24,7 @@ FEATURE_COLUMNS = [
 ]
 
 
-def _trim_features(atom_array: pd.DataFrame, features: pd.DataFrame) -> pd.DataFrame:
+def trim_features(atom_array: pd.DataFrame, features: pd.DataFrame) -> pd.DataFrame:
     """Trim the feature table so that it only references atoms present in ``atom_array``.
 
     Features whose atoms were all removed are dropped; features which only partially
@@ -138,6 +138,7 @@ class Record:
         
         atom_array = self.atom_array.copy()
         atom_array["atom_id"] = [new_id[i] for i in atom_array["atom_id"]]
+        atom_array = atom_array.sort_values(by=["atom_id"]).reset_index(drop=True)
         
         # remap atom_id of features
         features = self.features.copy()
@@ -463,14 +464,14 @@ class Record:
         # deletes slices of atom_array by bool array
         if isinstance(key, np.ndarray) and key.dtype == bool:
             self.atom_array = self.atom_array.loc[~key]
-            self.features = _trim_features(self.atom_array, self.features)
+            self.features = trim_features(self.atom_array, self.features)
         
         # deletes slices of the atom array and associated features
         elif isinstance(key, slice):
             c = self.atom_array["atom_id"] >= key.start
             c&= self.atom_array["atom_id"] < key.stop
             self.atom_array = self.atom_array.loc[~c]
-            self.features = _trim_features(self.atom_array, self.features)
+            self.features = trim_features(self.atom_array, self.features)
         else:
             raise ValueError(f"Unsupported key type: {type(key)!r}")
         
@@ -492,14 +493,14 @@ class Record:
         """
         if isinstance(value, Record) and isinstance(key, np.ndarray) and key.dtype == bool:
             self.atom_array = self.atom_array.loc[~key]
-            features = _trim_features(self.atom_array, self.features)
+            features = trim_features(self.atom_array, self.features)
             self = self + value
         
         elif isinstance(value, Record) and isinstance(key, slice):
             c = self.atom_array["atom_id"] >= key.start
             c&= self.atom_array["atom_id"] < key.stop
             self.atom_array = self.atom_array[~c]
-            self.features = _trim_features(self.atom_array, self.features)
+            self.features = trim_features(self.atom_array, self.features)
             self = self + value
         
         else:
@@ -532,12 +533,12 @@ class Record:
             c = self.atom_array["atom_id"] >= key.start
             c&= self.atom_array["atom_id"] < key.stop
             atom_array = self.atom_array[c].copy()
-            features = _trim_features(atom_array, self.features)
+            features = trim_features(atom_array, self.features)
         
         # slice via array indices or bool indices
         elif isinstance(key, np.ndarray) or isinstance(key, pd.Series):
             atom_array = self.atom_array.loc[key].copy()
-            features = _trim_features(atom_array, self.features)
+            features = trim_features(atom_array, self.features)
 
         else:
             raise ValueError(f"Unsupported key type: {type(key)!r}")
@@ -595,7 +596,7 @@ class Record:
         cols = ["atom_id","chain_id","res_id"]
         atom_array = atom_array[cols].drop_duplicates()
         atom_array = atom_array.merge(self.atom_array, on=cols, how="left")
-        self_features = _trim_features(atom_array, self.features)
+        self_features = trim_features(atom_array, self.features)
         
         cols = ["atom_id","chain_id","res_id","res_name","atom_name","element"]
         x = atom_array[cols].drop_duplicates()
@@ -609,7 +610,7 @@ class Record:
         cols = ["atom_id","chain_id","res_id"]
         atom_array = atom_array[~c, cols].drop_duplicates()
         x2 = atom_array.merge(other.atom_array, on=cols, how="left")
-        other_features = _trim_features(x2, other.features)
+        other_features = trim_features(x2, other.features)
         
         atom_array = pd.concat([x1, x2])
         
