@@ -356,7 +356,6 @@ class Record:
             raise TypeError(f"Record expects str or SeqRecord, got {type(rec)!r}")
 
         self.name = name
-        self.reset_index()
 
     # -- internal helpers ---------------------------------------------------
 
@@ -382,7 +381,6 @@ class Record:
         })
         order = order.sort_values(by=["start", "length", "feature", "name"])
         self.features = df.iloc[order["_idx"].values].reset_index(drop=True)
-        
         return self
         
     # -- I/O ----------------------------------------------------------------
@@ -551,7 +549,6 @@ class Record:
             glist.append([name, feature, loc, color, dict(description)])
         new_df = pd.DataFrame(glist, columns=FEATURE_COLS)
         self.features = pd.concat([self.features, new_df], ignore_index=True)
-        self.reset_index()
         return self
         
     def annotate_by_location(
@@ -746,7 +743,9 @@ class Record:
             out.reset_index()
             return out
 
-        raise TypeError(f"Unsupported key type: {type(key)!r}")
+        raise ValueError(
+            f"Unsupported key type {type(key)!r} in __getitem__; key={key!r}"
+        )
 
     def __setitem__(self, key, value) -> None:
         """Assign a new sequence (or cell) into the record.
@@ -786,11 +785,14 @@ class Record:
             elif isinstance(key[0], str):
                 column, row = key
             else:
-                raise TypeError(f"Unsupported key type: {type(key)!r}")
+                raise ValueError(
+                    f"Unsupported key type {type(key)!r} in __setitem__; key={key!r}"
+                )
             self.features.iloc[row, self.features.columns.get_loc(column)] = value
         else:
-            raise TypeError(f"Unsupported key type: {type(key)!r}")
-        self.reset_index()
+            raise ValueError(
+                f"Unsupported key type {type(key)!r} in __setitem__; key={key!r}"
+            )
 
     def __delitem__(self, key) -> None:
         """Delete feature(s) or a sequence span from the record.
@@ -814,6 +816,7 @@ class Record:
         Raises:
             TypeError: If ``key`` is of an unsupported type.
         """
+        # deletes features
         if isinstance(key, (int, np.integer)) and not isinstance(key, bool):
             self.features = self.features.drop(self.features.index[int(key)])
         elif isinstance(key, np.ndarray) and key.dtype == bool:
@@ -823,14 +826,17 @@ class Record:
             keep = np.ones(L, dtype=bool)
             keep[key] = False
             self.features = self.features.loc[keep]
+        
+        # deletes sections of a sequence
         elif isinstance(key, slice):
             out = self.replace(key.start, key.stop, "")
             self.sequence = out.sequence
             self.features = out.features
         else:
-            raise TypeError(f"Unsupported key type: {type(key)!r}")
-        self.reset_index()
-
+            raise ValueError(
+                f"Unsupported key type {type(key)!r} in __delitem__; key={key!r}"
+            )
+    
     # -- replace ------------------------------------------------------------
 
     def replace(self, start, end, value, circular: bool = True) -> "Record":

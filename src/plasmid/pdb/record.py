@@ -1,6 +1,8 @@
 # Module for browsing and editing pdb and mmCIF files
 
 # science libs
+import json
+
 import numpy as np
 import pandas as pd
 import biotite.structure.io
@@ -26,14 +28,16 @@ def read_pdb(filename:str):
     Reads a pdb or mmCIF file
     Args:
         filename: filename to read
-        
+    
     Returns:
         Record object
+
+    todo fixes, if each frame does not have the same number of total atoms,
+    assume chain_id, res_id, res_name, element, atom_name uniquely identify the atom, then assign atom_id based on that
     """
-    
     atom_array = biotite.structure.io.load_structure(filename)
     if isinstance(atom_array, biotite.structure.AtomArrayStack):
-        # todo vectorize better
+        # todo vectorize better by extraccting all of biotite atom_array_stackz
         out = []
         for frame in range(len(atom_array)):
             df = atom_array_to_df(atom_array[frame])
@@ -328,15 +332,6 @@ class Record:
         out.atom_array = atom_array_to_df(fitted_arr)
         return out
         
-    def __len__(self):
-        """
-        Number of atoms
-        
-        Returns:
-            length of atom_array
-        """
-        return self.atom_array["atom_id"].max()
-        
     def __repr__(self):
         """
         Gets representation of underlying data
@@ -348,7 +343,7 @@ class Record:
         df_nuc = self.get_nucleic_acids()
         df_seq = pd.concat([df_AA, df_nuc])
         df_lig = self.get_ligands()
-
+        
         out = f"filename: {self.filename}\n\n"
         out+= f"List of Sequences:\n{df_seq}\n\n"
         out+= f"List of Ligands:\n{df_lig}\n\n"
@@ -358,26 +353,74 @@ class Record:
     def __str__(self):
         return self.__repr__()
         
-    def __delitem__(self, key):
+    def _trim_features(self, atom_array):
         """
-        Deletes features or lists of features
+        Trim the feature table so that it only references atoms which are
+        present in ``atom_array``.
+        
+        Features whose atoms were all removed are dropped; features which
+        only partially overlap are trimmed to the surviving atoms.
         
         Args:
-            key: list of bools
+            atom_array: Atom dataframe to trim the features against.
         
         Returns:
-            modified copy of self
+            Copy of the feature table trimmed to ``atom_array``.
         """
-        self.atom_array = self.atom_array.loc[~key]
-        # todo update feature array
+        features = self.features.copy()
+        if len(features) == 0:
+            return features
         
-    def __setitem__(self, key:tuple, value:str):
+        kept = sorted({int(p) for p in atom_array["atom_id"].tolist()}) if len(atom_array) else []
+        keep_mask = []
+        for i, loc in enumerate(features["atom_id"].values):
+            positions = np.asarray(loc.positions, dtype=int) if isinstance(loc, Location) else np.asarray([loc], dtype=int)
+            surviving = [int(p) for p in positions if int(p) in kept]
+            if len(surviving) == 0:
+                keep_mask.append(False)
+            else:
+                keep_mask.append(True)
+                features.iloc[i, features.columns.get_loc("atom_id")] = Location(surviving)
+                features.iloc[i, features.columns.get_loc("res_id")] = Location(surviving)
+        
+        return features[np.asarray(keep_mask, dtype=bool)].reset_index(drop=True)
+
+    def __delitem__(self, key):
         """
-        Set items in atom_array
+        Deletes parts of the atom_array
         """
-        if isinstance(key, tuple) and isinstance(key[1], str):
-            self.atom_array.loc[key] = value
-        # todo update feature array
+        # deletes slices of atom_array by bool array
+        if isinstance(key, np.ndarray) and key.dtype == bool:
+            self.atom_array = self.atom_array.loc[~key]
+            self.features = self._trim_features(self.atom_array)
+        
+        # deletes slices of the atom array and associated features
+        elif isinstance(key, slice):
+            c = self.atom_array["atom_id"] >= key.start
+            c&= self.atom_array["atom_id"] < key.stop
+            self.atom_array = self.atom_array.loc[~c]
+            self.features = self._trim_features(self.atom_array)
+        else:
+            raise ValueError(f"__setitem__(): Unsupported: {type(key)} {type(value)}")
+        
+    def __setitem__(self, key:tuple, value:Record):
+        """
+        Replaces a set of atoms with new atoms
+        """
+        if isinstance(value, Record) and isinstance(key, np.ndarray) and key.dtype == bool:
+            self.atom_array = self.atom_array.loc[~key]
+            features = self._trim_features(self.atom_array)
+            self = self + value
+        
+        elif isinstance(value, Record) and isinstance(key, slice):
+            c = self.atom_array["atom_id"] >= key.start
+            c&= self.atom_array["atom_id"] < key.stop
+            self.atom_array = self.atom_array[~c]
+            self.features = self._trim_features(self.atom_array)
+            self = self + value
+        
+        else:
+            raise ValueError(f"__setitem__(): Unsupported: {type(key)} {type(value)}")
         
     def __getitem__(self, key):
         """
@@ -389,34 +432,26 @@ class Record:
         Returns:
             copy of the values of the underlying data
         """
-        # return annotation values
-        if isinstance(key, str):
-            return self.atom_array[key]
-        
-        # return position value
-        elif isinstance(key, tuple) and isinstance(key[1], str):
-            return self.atom_array.loc[key]
-        
-        # slice through atom_ids
-        elif isinstance(key, slice):
+        # slice through atom_array
+        if isinstance(key, slice):
             c = self.atom_array["atom_id"] >= key.start
             c&= self.atom_array["atom_id"] < key.stop
-            keep = [loc.contains(list(range(start, stop))) for loc in self.features["atom_id"]]
-            rec = Record(filename = self.filename,
-                         features = self.features[keep].copy(),
-                         atom_array = self.atom_array.loc[c].copy(),
-            )
-            return rec
+            atom_array = self.atom_array[c].copy()
+            features = self._trim_features(atom_array)
+        
         # slice via array indices or bool indices
         elif isinstance(key, np.ndarray) or isinstance(key, pd.Series):
-            # todo clean up features
-            rec = Record(filename = self.filename,
-                         features = self.features.copy(),
-                         atom_array = self.atom_array.loc[key].copy(),
-            )
-            return rec
+            atom_array = self.atom_array.loc[key].copy()
+            features = self._trim_features(atom_array)
+
         else:
-            raise ValueError(f"__getitem__(self, key) has invalid key = {key}")
+            raise ValueError(f"__setitem__(): Unsupported: {type(key)} {type(value)}")
+        
+        rec = Record(filename = self.filename,
+                     features = features,
+                     atom_array = atom_array,
+        )
+        return rec
         
     def __add__(self, other):
         """
@@ -441,47 +476,80 @@ class Record:
         out.atom_array = pd.concat([out.atom_array, other.atom_array])
         out.features = pd.concat([out.features, other.features])
         return out
-        
-    def merge(self, other):
+
+    def merge(self, other:Record):
         """
         Merges atoms from one Record into another
-        
-        todo fixes
-        
+
+        Combines the atom arrays of both records and merges the feature
+        annotations, combining annotation definitions of features which
+        share a name.
+
         Args:
             other: Record object
         
         Returns:
             returns merged copy of self
         """
-        out = self.copy()
-        df = pd.concat([out.atom_array, other.atom_array])
+        atom_array = pd.concat([self.atom_array, other.atom_array])
         
         # populate joint atom_id slots with self
-        cols = ["atom_id","chain_id","res_id","res_name","frame"]
-        df = df[cols].drop_duplicates().merge(out.atom_array, on=cols, how="left")
+        cols = ["atom_id","chain_id","res_id"]
+        atom_array = atom_array[cols].drop_duplicates()
+        atom_array = atom_array.merge(self.atom_array, on=cols, how="left")
+        self_features = self._trim_features(atom_array)
+        
+        cols = ["atom_id","chain_id","res_id","res_name","atom_name","element"]
+        x = atom_array[cols].drop_duplicates()
+        if len(atom_array["atom_id"].drop_duplicates()) < len(x):
+            raise ValueError(f"merge(): duplicates of atom_id entries found in self.atom_array")
         
         # populate joint atom_id slots with other
-        c = df["element"].notna()
-        x1 = df[c]
-        x2 = df.loc[~c, cols].drop_duplicates().merge(other.atom_array, on=cols, how="left")
-        
-        # todo merge annotation definitions
-        out.atom_array = pd.concat([x1, x2])
-        out.features = pd.concat([out.features, other.features])
-        return out.reset_index()
+        c = atom_array["element"].notna()
+        x1 = atom_array[c]
 
+        cols = ["atom_id","chain_id","res_id"]
+        atom_array = atom_array[~c, cols].drop_duplicates()
+        x2 = atom_array.merge(other.atom_array, on=cols, how="left")
+        other_features = other._trim_features(x2)
+        
+        atom_array = pd.concat([x1, x2])
+        
+        cols = ["atom_id","chain_id","res_id","res_name","atom_name","element"]
+        x = atom_array[cols].drop_duplicates()
+        if len(atom_array["atom_id"].drop_duplicates()) < len(x):
+            raise ValueError(f"merge(): duplicates of atom_id entries found in other.atom_array")
+        
+        # todo generate tests
+        rec = Record(filename = self.filename,
+                     features = pd.concat([self_features, other_features]),
+                     atom_array = atom_array,
+        )
+        return rec
+        
     def duplicated(self):
         """
-        Todo, find duplicated atom positions
-        """
-    
-    def drop_duplicates(self):
-        """
-        Drop duplicates annotations
+        Find duplicated atom_array entries
         
-        Todo
+        Returns:
+            Boolean Series marking the duplicate features; the first
+            occurrence of each set of annotations is ``False``.
         """
-        out = self.copy()
-        out.atom_array = out.atom_array.drop_duplicates()
-        return out
+        # check unique atom entries are correct
+        cols = ["atom_id","chain_id","res_id","res_name",
+                "atom_name","hetero","element","entity_type"]
+        x = self.atom_array[cols].drop_duplicates()        
+        c = x[cols[:3]].duplicated()
+        if sum(c) > 0:
+            print(f"{sum(c)} duplicated atom_ids found")
+            return self.atom_array["atom_id"].isin(x.loc[c, "atom_id"])
+        
+        # check for unique positions across all
+        cols = ["atom_id", "chain_id", "res_id", "frame",
+                "x", "y", "z", "b_factor", "occupancy", "charge"]
+        x = self.atom_array[cols].drop_duplicates()
+        c = x[cols[:4]].duplicated()
+        if sum(c) > 0:
+            print(f"{sum(c)} duplicated positions found")
+            return self.atom_array["atom_id"].isin(x.loc[c, "atom_id"])
+        return self.atom_array.duplicated()

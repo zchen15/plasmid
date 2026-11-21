@@ -18,6 +18,57 @@ ENTITY_TYPE = {
     "solvent":4,
 }
 
+def atom_stack_to_df(
+    atom_array: biotite.structure.AtomArray | biotite.structure.AtomArrayStack,
+) -> pd.DataFrame:
+    """
+    todo
+    Convert an AtomArrayStack to a pandas dataframe
+    
+    Args:
+        atom_array: biotite AtomArray or AtomArrayStack.
+    
+    Returns:
+        A dataframe with one row per atom. For an AtomArrayStack the
+        ``frame`` column identifies the model and ``atom_id`` is the index
+        of the atom within its frame.
+    """
+    # populate the dictionary data structure below with data from the atom_stack, there should also be a column called frame indicating the model number
+    annotations = set(atom_array.get_annotation_categories())
+    data: dict[str, Any] = {
+        "atom_id": np.arange(len(atom_array)),
+        "chain_id": atom_array.chain_id,
+        "res_id": atom_array.res_id,
+        "res_name": atom_array.res_name,
+        "hetero": atom_array.hetero,
+        "atom_name": atom_array.atom_name,
+        "element": atom_array.element,
+        "x": atom_array.coord[:, 0],
+        "y": atom_array.coord[:, 1],
+        "z": atom_array.coord[:, 2],
+        "b_factor": (atom_array.get_annotation("b_factor")
+                     if "b_factor" in annotations
+                     else np.zeros(len(atom_array))),
+        "occupancy": (atom_array.get_annotation("occupancy")
+                      if "occupancy" in annotations
+                      else np.ones(len(atom_array))),
+        "charge": (atom_array.get_annotation("charge")
+                   if "charge" in annotations
+                   else np.zeros(len(atom_array))),
+    }
+    # format into pandas dataframe and then assign atom_id for each unique atom in all frames based
+    # on the columns [chain_id, res_id, res_name, hetero, atom_name, element]
+    
+    # classify each atom for downstream filtering / display into solvent, ion, amino_acid, nucleic_acid
+    
+    # format column types
+    cols = ["entity_type","charge","res_id","atom_id"]
+    for col in cols:
+        data[col] = data[col].astype(int)
+    
+    data = pd.DataFrame(data)
+    return data
+
 def atom_array_to_df(
     atom_array: biotite.structure.AtomArray | biotite.structure.AtomArrayStack,
 ) -> pd.DataFrame:
@@ -68,7 +119,7 @@ def atom_array_to_df(
         if key not in data:
             data[key] = atom_array.get_annotation(key)
     
-    cols = ["entity_type","charge","occupancy","res_id","atom_id"]
+    cols = ["entity_type","charge","res_id","atom_id"]
     for col in cols:
         data[col] = data[col].astype(int)
     

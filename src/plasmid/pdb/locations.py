@@ -61,6 +61,9 @@ class Location:
         """
         pos = np.intersect1d(self.positions, pos)
         return Location(pos)
+
+    def get_positions(self):
+        return self.positions
     
     def __len__(self):
         """
