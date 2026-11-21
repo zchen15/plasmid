@@ -21,13 +21,12 @@ class Viewer:
     background = "black"
     features = None
     
-    def __init__(self, rec, **kwargs):
-        """
-        Initialize the Viewer object and draw the record.
-        
+    def __init__(self, rec: "Record", **kwargs):
+        """Initializes the Viewer object and draws the record.
+
         Args:
             rec: Record object.
-            kwargs: settings that override the class defaults.
+            kwargs: Settings that override the class defaults.
         """
         for key, value in kwargs.items():
             if hasattr(self, key) and value is not None:

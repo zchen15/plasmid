@@ -66,3 +66,7 @@ def test_df_sum():
     assert x.values[0][1] == loc1 + (loc2 - 5) + loc3
     assert x.values[1][1] == loc1 + (loc2 + 5) + loc3
 
+    y = x.groupby(["chain_id"]).agg({"atom_id":"sum"}).reset_index()
+    print(y)
+    assert len(y) == 2
+

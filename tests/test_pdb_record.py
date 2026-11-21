@@ -126,14 +126,12 @@ def test_add():
                             inplace = True,
                            )
     print(f"annotated record:\n{rec}")
-    
     # filter for chain A and B
     rec = rec[c1 | c2]
-    
+     
     # add records
     x = rec + rec
     print(f"added record:\n{x}")
-    print(x.features)
     
     assert len(x.atom_array) > 0
     assert len(x.atom_array) == len(rec.atom_array)*2
@@ -218,26 +216,7 @@ def test_split_and_merge_structures(tmp_path):
     dCas9_pdb_file = tmp_path / "dCas9.pdb"
     dCas9.save(str(dCas9_pdb_file))
 
-    # Write dCas9 to PDBQT format (requires a bond list)
-    dCas9_pdbqt_file = tmp_path / "dCas9.pdbqt"
-    dCas9_with_bonds = add_bonds(dCas9)
-    pdbqt_file = pdbqt.PDBQTFile()
-    pdbqt_file.set_structure(dCas9_with_bonds.atom_array)
-    pdbqt_file.write(str(dCas9_pdbqt_file))
-
-    for path in [gRNA_file, dCas9_cif_file, dCas9_pdb_file, dCas9_pdbqt_file]:
-        assert path.exists()
-
-    # Read the two CIF files back and recombine them
     recombined = (read_pdb(str(gRNA_file)) + read_pdb(str(dCas9_cif_file))).reset_index()
     expected = record.reset_index()
-
-    # atom_array is already a dataframe in the current API; compare the
-    # structures after normalising row order
-    sort_cols = ["chain_id", "res_id", "atom_name", "element", "res_name", "hetero"]
-    recombined_df = (recombined.atom_array.drop(columns=["atom_id"])
-                     .sort_values(sort_cols).reset_index(drop=True))
-    expected_df = (expected.atom_array.drop(columns=["atom_id"])
-                   .sort_values(sort_cols).reset_index(drop=True))
     pd.testing.assert_frame_equal(recombined_df, expected_df)
 

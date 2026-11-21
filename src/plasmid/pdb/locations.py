@@ -12,15 +12,13 @@ class Location:
     positions = np.array([], dtype=int)
 
     def __init__(self, pos: list):
-        """
-        Initializes the Location object
+        """Initializes the Location object.
 
         Args:
             pos: list of positions.
-            kwargs: settings that override the class defaults.
 
         Returns:
-            Location object
+            Location: Location object.
         """
         self.positions = np.unique(pos)
                 
@@ -95,7 +93,6 @@ class Location:
         Returns:
             modified copy of object
         """
-        # check if this should be inplace or not
         if isinstance(other, Location):
             pos = np.concatenate((self.positions, other.positions))
             pos = np.unique(pos)
@@ -113,15 +110,28 @@ class Location:
         Returns:
             modified copy of object
         """
-        out = self.__add__(other)
-        return out
-        
+        return self.__add__(other)
+         
+    def __iadd__(self, other):
+        if isinstance(other, Location):
+            pos = np.concatenate((self.positions, other.positions))
+            self.positions = np.unique(pos)
+        elif isinstance(other, int):
+            self.positions+= other
+        return self
+         
     def __sub__(self, other):
         if isinstance(other, Location):
             pos = np.setdiff1d(self.positions, other.positions)
         elif isinstance(other, int):
             pos = self.positions - other
         return Location(pos)
+
+    def __isub__(self, other):
+        if isinstance(other, Location):
+            self.positions = np.setdiff1d(self.positions, other.positions)
+        elif isinstance(other, int):
+            self.positions-= other
 
     def __eq__(self, other):
         if isinstance(other, Location) and len(self.positions) == len(other.positions):

@@ -144,7 +144,7 @@ class Record:
         features["atom_id"] = [loc.remap(new_id) for loc in features["atom_id"]]
         stats = {"res_id":"sum", "atom_id":"sum"}
         cols = ["chain_id", "entity_type", "name", "representation", "color", "description"]
-        features = features.groupby(cols).agg(stats).reset_index()
+        features = features.groupby(cols, dropna=False).agg(stats).reset_index()
 
         # output
         out = Record(filename = self.filename,
@@ -559,20 +559,21 @@ class Record:
             modified copy of object
         """
         # sort and reassign atom_id of self
-        out = self.reset_index()
-        L = out.atom_array["atom_id"].max()
+        L = self.atom_array["atom_id"].max() + 1
         
         # sort and reassign atom_id of other
         other = other.reset_index()
         other.atom_array["atom_id"]+= L
         other.features["atom_id"]+= L
-
-        print('debug', other, out)
         
         # concatenate
-        out.atom_array = pd.concat([out.atom_array, other.atom_array])
-        out.features = pd.concat([out.features, other.features])
-        return out
+        atom_array = pd.concat([self.atom_array, other.atom_array])
+        features = pd.concat([self.features, other.features])
+        rec = Record(filename = self.filename,
+                    atom_array = atom_array,
+                    features = features,
+        )
+        return rec
 
     def merge(self, other:"Record"):
         """
