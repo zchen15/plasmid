@@ -1,14 +1,16 @@
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import numpy as np
-import pandas as pd
-
+import biotite.sequence
 import biotite.structure
 import biotite.structure.io
 import biotite.structure.io.pdbx
+import numpy as np
+import pandas as pd
 
 from .locations import Location
+
+if TYPE_CHECKING:
+    from .record import Record
 
 ENTITY_TYPE = {
     "ligand":0,
@@ -148,7 +150,7 @@ def df_to_atom_array(
         return df_to_atom_stack(df)
     
     df = df.reset_index(drop=True)
-    atom_array = biotite.structure.AtomArray(len(df))
+    atom_array: biotite.structure.AtomArray = biotite.structure.AtomArray(len(df))
     atom_array.coord = df[["x", "y", "z"]].to_numpy(dtype=float)
     atom_array.chain_id = df["chain_id"].to_numpy(dtype=str)
     atom_array.res_id = df["res_id"].to_numpy(dtype=int)
@@ -185,7 +187,7 @@ def to_mmcif(filename:str, df_atom_array, df_pep=None, df_seq=None, df_nuc=None)
 
     # get list of peptides
     if df_pep is None:
-        c0 = biotite.structure.filter_amino_acids(atom_array)
+        c0: np.ndarray = biotite.structure.filter_amino_acids(atom_array)
         df_pep = df.loc[c0, cols].drop_duplicates()
         df_pep = df_pep.sort_values(by=cols)
 
@@ -310,6 +312,54 @@ def add_bonds(record: "Record") -> "Record":
 _SSE_CODES = {-1: "c", 0: "c", 1: "a", 2: "b"}
 
 
+def sequence_df(atom_array) -> pd.DataFrame:
+    """
+    Convert an AtomArray or AtomArrayStack to a dataframe of polymer
+    sequences.
+
+    Args:
+        atom_array: biotite AtomArray or AtomArrayStack.
+
+    Returns:
+        Dataframe with one row per polymer chain and the columns
+        ``[chain_id, sequence]``.
+    """
+    df = atom_array_to_df(atom_array)
+    df = df[df["frame"] == 0] if "frame" in df.columns else df
+    polymer = df[df["entity_type"].isin(
+        [ENTITY_TYPE["amino_acid"], ENTITY_TYPE["nucleic_acid"]]
+    )]
+    rows = []
+    for chain_id, group in polymer.groupby("chain_id", sort=False):
+        sequence = ""
+        for res_id, res_name in group.groupby("res_id", sort=True)["res_name"].first().items():
+            try:
+                sequence += biotite.sequence.ProteinSequence.convert_letter_3to1(res_name)
+            except (ValueError, TypeError):
+                sequence += str(res_name)
+        rows.append([chain_id, sequence])
+    return pd.DataFrame(rows, columns=["chain_id", "sequence"])
+
+
+def get_sequence(record: "Record") -> pd.DataFrame:
+    """
+    Get the amino acid and nucleic acid sequences of a record.
+
+    Args:
+        record: Record object.
+
+    Returns:
+        Dataframe with one row per residue and the columns
+        ``[atom_id, chain_id, sequence, res_id, entity_type]``.
+    """
+    frames = [record.get_amino_acids(), record.get_nucleic_acids()]
+    frames = [frame for frame in frames if len(frame) > 0]
+    columns = ["atom_id", "chain_id", "sequence", "res_id", "entity_type"]
+    if len(frames) == 0:
+        return pd.DataFrame(columns=columns)
+    return pd.concat([frame[columns] for frame in frames], ignore_index=True)
+
+
 def get_protein_sse(record: "Record") -> pd.DataFrame:
     """
     Compute the secondary structure of each protein chain using P-SEA.
@@ -326,15 +376,15 @@ def get_protein_sse(record: "Record") -> pd.DataFrame:
     for atom_id in df["atom_id"].values:
         s1 = min(atom_id.positions)
         s2 = max(atom_id.positions)
-        sse = biotite.structure.annotate_sse(record.atom_array[s1:s2])
-
+        codes = biotite.structure.annotate_sse(record.atom_array[s1:s2])
+        sse: str = ""
         # biotite 2.0 uses integer PSeaElement codes, older versions letters
         try:
             sse = "".join(
-                _SSE_CODES.get(int(code), "c") for code in sse
+                _SSE_CODES.get(int(code), "c") for code in codes
             )
         except (TypeError, ValueError):
-            sse = "".join(sse)
+            sse = "".join(codes)
         out.append(sse)
     df = df.copy()
     df["dssp"] = out

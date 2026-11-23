@@ -109,9 +109,10 @@ def test_replace():
     val = 'TTTTTTAAAAAA'
     
     # check initial values
-    s1 = x[i]['start'].values[0]
+    loc = x.features.iloc[i]['location']
+    s1 = loc.start()
     s2 = s1 + len(val)
-
+    
     # set to new value
     x[i] = val
     seq = x.sequence[s1:s2]

@@ -1,6 +1,6 @@
 # Custom class for storing feature locations
 import numpy as np
-import copy
+
 
 class Location:
     """
@@ -9,18 +9,28 @@ class Location:
     Attributes:
         positions: unique positions stored by the location.
     """
+
     positions = np.array([], dtype=int)
 
-    def __init__(self, pos: list):
+    def __init__(self, pos: list | np.ndarray):
         """Initializes the Location object.
 
         Args:
-            pos: list of positions.
+            pos: list or array of positions.
 
         Returns:
             Location: Location object.
         """
         self.positions = np.unique(pos)
+                
+    def get_positions(self):
+        """
+        Transform list of indices into list of slices
+
+        Returns:
+            list of slices
+        """        
+        return self.positions
                 
     def get_slices(self):
         """
@@ -39,36 +49,34 @@ class Location:
         for i in range(len(s1)):
             out.append(slice(int(s1[i]), int(s2[i])+1))
         return out
-        
+        return out
+                
     def remap(self, pos:dict):
         """
         Remap atom_id
         """
         positions = [pos[i] for i in self.positions]
         return Location(positions)
-        
+                
     def contains(self, pos:list):
         """
         check if location contains all positions
         """
         return all(np.isin(self.positions, pos))
-        
+                
     def intersection(self, pos:list):
         """
         keep only positions that intersect
         """
-        pos = np.intersect1d(self.positions, pos)
-        return Location(pos)
-
-    def get_positions(self):
-        return self.positions
-    
+        positions = np.intersect1d(self.positions, pos)
+        return Location(positions)
+                
     def __len__(self):
         """
         Returns length of position indicies
         """
         return len(self.positions)
-        
+                
     def __str__(self):
         """
         Format list of indices into a string
@@ -76,20 +84,20 @@ class Location:
         out = [f"[{s.start}:{s.stop}]" for s in self.get_slices()]
         out = "+".join(out)
         return out
-
+                
     def __repr__(self):
         """
         Returns the representation of the string
         """
         return self.__str__()
-        
+                
     def __add__(self, other):
         """
         Performs self + other
         
         Args:
             other: Record object
-        
+            
         Returns:
             modified copy of object
         """
@@ -99,40 +107,41 @@ class Location:
         elif isinstance(other, int):
             pos = self.positions + other
         return Location(pos)
-        
+                
     def __radd__(self, other):
         """
         Performs other + self
         
         Args:
             other: Record object
-        
+            
         Returns:
             modified copy of object
         """
         return self.__add__(other)
-         
+                
     def __iadd__(self, other):
         if isinstance(other, Location):
             pos = np.concatenate((self.positions, other.positions))
             self.positions = np.unique(pos)
         elif isinstance(other, int):
-            self.positions+= other
+            self.positions += other
         return self
-         
+                
     def __sub__(self, other):
         if isinstance(other, Location):
             pos = np.setdiff1d(self.positions, other.positions)
         elif isinstance(other, int):
             pos = self.positions - other
         return Location(pos)
-
+                
     def __isub__(self, other):
         if isinstance(other, Location):
             self.positions = np.setdiff1d(self.positions, other.positions)
         elif isinstance(other, int):
-            self.positions-= other
-
+            self.positions -= other
+        return self
+                
     def __eq__(self, other):
         if isinstance(other, Location) and len(self.positions) == len(other.positions):
             return all(self.positions == other.positions)

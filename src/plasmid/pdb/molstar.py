@@ -2,14 +2,10 @@
 #
 # science libs
 import tempfile
-from typing import TYPE_CHECKING
 
 import molviewspec as mvs
 
-from .locations import Location
-
-if TYPE_CHECKING:
-    from .record import Record
+from .record import Record
 
 # Mapping of feature representation names (nglview/py3Dmol style) to the
 # representation types supported by molviewspec.
@@ -39,31 +35,6 @@ DEFAULT_REPRESENTATIONS = {
     "ion": "ball_and_stick",
     "solvent": "ball_and_stick",
 }
-
-
-def feature_selectors(feature):
-    """Builds molviewspec selectors for the residues covered by a feature.
-
-    Args:
-        feature: Row of a Record features table.
-
-    Returns:
-        List of :class:`molviewspec.ComponentExpression` covering the
-        feature's residue ranges.
-    """
-    res_id = feature["res_id"]
-    if not isinstance(res_id, Location):
-        res_id = Location(res_id)
-
-    chain_id = str(feature["chain_id"])
-    return [
-        mvs.ComponentExpression(
-            auth_asym_id=chain_id,
-            beg_auth_seq_id=int(s.start),
-            end_auth_seq_id=int(s.stop) - 1,
-        )
-        for s in res_id.get_slices()
-    ]
 
 
 def feature_representation(feature):
@@ -152,38 +123,61 @@ class Viewer:
             type="ball_and_stick"
         ).color(custom={"molstar_use_default_coloring": True})
 
-        if self.record.features is not None and len(self.record.features) > 0:
+        features = self.record.features
+        for i in range(len(features)):
+            feature = features.iloc[i]
+            atom_id = feature["atom_id"]
+            chain_id = feature["chain_id"]
+            res_id = feature["res_id"]
+            name = feature["name"]
+            color = feature["color"]
+            representation = feature["representation"]
+            description = feature["description"]
+            entity_type = feature["entity_type"]
+
+            selectors = [
+                mvs.ComponentExpression(
+                    auth_asym_id=str(chain_id),
+                    beg_auth_seq_id=int(s.start),
+                    end_auth_seq_id=int(s.stop) - 1,
+                )
+                for s in res_id.get_slices()
+            ]
+            if len(selectors) == 0:
+                continue
+
+            representation_type = feature_representation(
+                {"representation": representation, "entity_type": entity_type}
+            )
+            representation_builder = None
+            # reuse the default representations where possible so that
+            # feature colors are applied to the structure in place
+            if representation_type == "cartoon" and entity_type in (
+                "amino_acid", "nucleic_acid",
+            ):
+                representation_builder = polymer_cartoon
+                representation_selectors = selectors
+            elif representation_type == "ball_and_stick" and entity_type in (
+                "ligand", "ion", "solvent",
+            ):
+                representation_builder = ligand_ball_and_stick
+                representation_selectors = selectors
+            else:
+                representation_builder = structure.component(
+                    selector=selectors
+                ).representation(type=representation_type)
+                representation_selectors = None
+
+            format_feature_color(
+                representation_builder,
+                color,
+                selectors=representation_selectors,
+            )
+
             if self.verbose:
-                print(f"applying the following representations:\n{self.record.features}")
-            for _, feature in self.record.features.iterrows():
-                selectors = feature_selectors(feature)
-                if len(selectors) == 0:
-                    continue
-
-                representation_type = feature_representation(feature)
-                representation = None
-                # reuse the default representations where possible so that
-                # feature colors are applied to the structure in place
-                if representation_type == "cartoon" and feature.get("entity_type") in (
-                    "amino_acid", "nucleic_acid",
-                ):
-                    representation = polymer_cartoon
-                    representation_selectors = selectors
-                elif representation_type == "ball_and_stick" and feature.get("entity_type") in (
-                    "ligand", "ion", "solvent",
-                ):
-                    representation = ligand_ball_and_stick
-                    representation_selectors = selectors
-                else:
-                    representation = structure.component(
-                        selector=selectors
-                    ).representation(type=representation_type)
-                    representation_selectors = None
-
-                format_feature_color(
-                    representation,
-                    feature.get("color"),
-                    selectors=representation_selectors,
+                print(
+                    f"applying feature {name} ({representation}) with color {color} "
+                    f"to atoms {atom_id} with description {description} on chain {chain_id}"
                 )
         return structure
 

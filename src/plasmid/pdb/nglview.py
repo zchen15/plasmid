@@ -1,9 +1,14 @@
 # Module for nglview viewer functionality
 
 import tempfile
+
 from ..utils import library_safeload
+
 mdtraj = library_safeload("mdtraj")
 nglview = library_safeload("nglview")
+
+from .molstar import feature_representation
+
 
 class Viewer:
     '''
@@ -38,7 +43,7 @@ class Viewer:
         
     def format_view(self, view):
         '''
-        Apply the default representations to an nglview widget.
+        Apply the default representations and features to an nglview widget.
 
         Args:
             view: nglview.widget.NGLWidget object.
@@ -54,6 +59,26 @@ class Viewer:
         #view.add_representation('basepair', selection='nucleic')
         
         view.add_representation('ball+stick', selection='ligand', color='element')
+
+        # apply feature representations and colors
+        if self.rec.features is not None and len(self.rec.features) > 0:
+            if self.verbose:
+                print(f"applying the following representations:\n{self.rec.features}")
+            for _, feature in self.rec.features.iterrows():
+                if len(feature["atom_id"]) == 0:
+                    continue
+                color = feature.get("color")
+                if not isinstance(color, str) or not color.strip():
+                    color = None
+                kwargs = {}
+                if color is not None:
+                    kwargs["color"] = color.strip()
+                view.add_representation(
+                    feature_representation(feature),
+                    selection=list(feature["atom_id"].positions),
+                    **kwargs,
+                )
+
         view.camera = self.camera
         view.background = self.background
         return view

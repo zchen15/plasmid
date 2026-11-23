@@ -273,7 +273,7 @@ class Location:
             else:
                 if s1 >= stop and s2 <= start:
                     keep = False
-            if keep:
+            if not keep:
                 break
         return keep
         

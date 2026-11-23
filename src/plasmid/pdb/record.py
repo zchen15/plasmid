@@ -1,15 +1,14 @@
 # Module for browsing and editing pdb and mmCIF files
 
 # science libs
-import json
-
+import biotite.structure.io
 import numpy as np
 import pandas as pd
-import biotite.structure.io
+
+from .io import ENTITY_TYPE, atom_array_to_df, df_to_atom_array, df_to_atom_stack
 
 # custom libraries
 from .locations import Location
-from .io import atom_array_to_df, df_to_atom_array, df_to_atom_stack, ENTITY_TYPE
 
 # canonical columns of io.atom_array_to_df(); ``frame`` is added by read_pdb()
 ATOM_ARRAY_COLUMNS = [
@@ -88,9 +87,9 @@ class Record:
     """
     This class holds functions pertaining to modifying the atoms in a pdb file
     """
-    filename = None
-    atom_array = None
-    features = None
+    filename: str | None = None
+    atom_array: pd.DataFrame = pd.DataFrame()
+    features: pd.DataFrame | None = None
     
     def __init__(self, **kwargs):
         """Initializes a Record object with default or provided attributes.
@@ -250,8 +249,6 @@ class Record:
         c1= self.atom_array["entity_type"] == ENTITY_TYPE["nucleic_acid"]
         c2 = self.atom_array["frame"] == frame
         df = self.atom_array[c1 & c2]
-        ename = "nucleic_acid"
-        etype = ENTITY_TYPE[ename]
         
         out = []
         for chain_id in df["chain_id"].drop_duplicates().values:
@@ -271,7 +268,7 @@ class Record:
         out = pd.DataFrame(out, columns=["atom_id", "chain_id", "sequence", "res_id", "entity_type"])
         return out
         
-    def annotate_by_atom_id(self, atom_id:list, name:str, representation:str=None, color:str=None, description:dict=None, inplace:bool=False):
+    def annotate_by_atom_id(self, atom_id:list, name:str, representation:str|None=None, color:str|None=None, description:dict|None=None, inplace:bool=False):
         """Adds annotation features to the PDB structure at specified atom positions.
         
         Args:
@@ -493,7 +490,6 @@ class Record:
         """
         if isinstance(value, Record) and isinstance(key, np.ndarray) and key.dtype == bool:
             self.atom_array = self.atom_array.loc[~key]
-            features = trim_features(self.atom_array, self.features)
             self = self + value
         
         elif isinstance(value, Record) and isinstance(key, slice):
@@ -601,7 +597,7 @@ class Record:
         cols = ["atom_id","chain_id","res_id","res_name","atom_name","element"]
         x = atom_array[cols].drop_duplicates()
         if len(atom_array["atom_id"].drop_duplicates()) < len(x):
-            raise ValueError(f"merge(): duplicates of atom_id entries found in self.atom_array")
+            raise ValueError("merge(): duplicates of atom_id entries found in self.atom_array")
         
         # populate joint atom_id slots with other
         c = atom_array["element"].notna()
@@ -617,7 +613,7 @@ class Record:
         cols = ["atom_id","chain_id","res_id","res_name","atom_name","element"]
         x = atom_array[cols].drop_duplicates()
         if len(atom_array["atom_id"].drop_duplicates()) < len(x):
-            raise ValueError(f"merge(): duplicates of atom_id entries found in other.atom_array")
+            raise ValueError("merge(): duplicates of atom_id entries found in other.atom_array")
         
         # todo generate tests
         rec = Record(filename = self.filename,

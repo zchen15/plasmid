@@ -9,24 +9,26 @@ import matplotlib.colors as mcolors
 # 1. STANDALONE TERMINAL COLOR UTILITIES
 # ==========================================
 
-def get_ansi_fg(cname: Optional[str]) -> List[str]:
+def get_ansi_fg(cname) -> List[str]:
     """Get ANSI foreground escape codes."""
     if cname is None:
         return ['', '']
+    color = cname[0] if isinstance(cname, (list, tuple)) and len(cname) > 0 else cname
     try:
         # mcolors.to_rgb natively handles hex, named colors, and tuples
-        r, g, b = mcolors.to_rgb(cname)
+        r, g, b = mcolors.to_rgb(color)
         r, g, b = int(r * 255), int(g * 255), int(b * 255)
         return [f"\033[38;2;{r};{g};{b}m", "\033[39m"]
     except (ValueError, TypeError):
         return ['', '']
 
-def get_ansi_bg(cname: Optional[str]) -> List[str]:
+def get_ansi_bg(cname) -> List[str]:
     """Get ANSI background escape codes."""
     if cname is None:
         return ['', '']
+    color = cname[0] if isinstance(cname, (list, tuple)) and len(cname) > 0 else cname
     try:
-        r, g, b = mcolors.to_rgb(cname)
+        r, g, b = mcolors.to_rgb(color)
         r, g, b = int(r * 255), int(g * 255), int(b * 255)
         return [f"\033[48;2;{r};{g};{b}m", "\033[49m"]
     except (ValueError, TypeError):

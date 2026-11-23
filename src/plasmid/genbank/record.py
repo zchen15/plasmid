@@ -8,7 +8,6 @@ import Bio.SeqFeature
 import Bio.SeqRecord
 
 # system libraries
-import copy
 import json
 import time
 import datetime
@@ -443,11 +442,14 @@ class Record:
 
     def copy(self) -> "Record":
         """Return a deep copy of self."""
-        return copy.deepcopy(self)
+        out = Record(self.sequence, self.name)
+        out.features = self.features.copy()
+        out.annotations = self.annotations.copy()
+        return out
 
     # -- annotation ---------------------------------------------------------
 
-    def annotate(
+    def annotate_DNA(
         self,
         name: str,
         seq: str,
@@ -722,6 +724,9 @@ class Record:
             loc = self.features.iloc[key]["location"]
             return self.slice(loc.start(), loc.end())
         
+        if isinstance(key, list) and all(isinstance(k, str) for k in key):
+            return self.to_dataframe()[key]
+
         if isinstance(key, str) or isArrayType(key, str):
             if key in self.features.columns:
                 return self.features[key]
@@ -1020,6 +1025,6 @@ class Record:
         ref = df.to_dataframe()
         cols = ["name","feature","sequence","color"]
         for name, feature, seq, color in ref[cols].values:
-            out = out.annotate(name, seq, feature, color)
+            out = out.annotate_DNA(name, seq, feature, color)
         out.reset_index()
         return out
